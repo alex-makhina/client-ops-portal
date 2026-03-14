@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.13.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClientOpsPortal.Application\ClientOpsPortal.Application.csproj" />
+    <ProjectReference Include="..\ClientOpsPortal.Domain\ClientOpsPortal.Domain.csproj" />
+    <ProjectReference Include="..\ClientOpsPortal.Infrastructure\ClientOpsPortal.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

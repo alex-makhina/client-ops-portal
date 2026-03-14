@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
+    <Project Path="src/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
+    <Project Path="src/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
+    <Project Path="src/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="src/ClientOpsPortal.Application/DTOs/.gitkeep" />
+  </Folder>
+</Solution>
