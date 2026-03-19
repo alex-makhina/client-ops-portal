@@ -6,6 +6,7 @@ namespace ClientOpsPortal.Domain.Entities
     public class Subscription : AuditableEntity, IPeriodEntity
     {
         public Guid IdContract { get; set; }
+        public Guid IdService { get; set; }
         public Guid IdTariffPlan { get; set; }
         public DateTime BeginDate { get; set; } = DateTime.UtcNow;
         public DateTime? EndDate { get; set; }

@@ -3,10 +3,9 @@ using ClientOpsPortal.Domain.Interfaces.Entities;
 
 namespace ClientOpsPortal.Domain.Entities
 {
-    public class Abonent : AuditableEntity, IUserEntity
+    public class Abonent : User
     {
-        public string? ExternalId { get; set; }
-
+        public required string IdentificationNumber { get; set; }
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
         public string? MiddleName { get; set; }
