@@ -9,6 +9,6 @@ namespace ClientOpsPortal.Domain.Entities
         public required string Description { get; set; }
         public DateTime BeginDate { get; set; } = DateTime.UtcNow;
         public DateTime? EndDate { get; set; }
-        public ICollection<TariffPlan> TariffPlans { get; set; } = new List<TariffPlan>();
+        public ICollection<TariffPlan> TariffPlans { get; set; } = [];
     }
 }

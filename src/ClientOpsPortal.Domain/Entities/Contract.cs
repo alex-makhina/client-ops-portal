@@ -13,6 +13,6 @@ namespace ClientOpsPortal.Domain.Entities
 
         public Abonent? Abonent { get; set; }
         public Service? Service { get; set; }
-        public List<Subscription> Subscriptions { get; set; } = new List<Subscription>(capacity: 1);
+        public List<Subscription> Subscriptions { get; set; } = [];
     }
 }
