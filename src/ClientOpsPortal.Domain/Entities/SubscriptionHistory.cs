@@ -10,7 +10,7 @@ namespace ClientOpsPortal.Domain.Entities
         public SubscriptionActionStatus Status { get; set; }
         public Guid IdTariffPlan { get; set; }
         public DateTime StartDate { get; set; } = DateTime.UtcNow;
-        public List<SubscriptionHistoryStep> Steps { get; set; } = new List<SubscriptionHistoryStep>();
+        public List<SubscriptionHistoryStep> Steps { get; set; } = [];
 
         public TariffPlan? TariffPlan { get; set; }
         public Subscription? Subscription { get; set; }
