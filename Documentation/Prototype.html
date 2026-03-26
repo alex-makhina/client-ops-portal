@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClientOpsPortal CRM - Интерфейсы по ролям</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3b82f6;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .role-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 12px;
+        }
+
+        .role-selector label {
+            font-size: 14px;
+            color: #475569;
+        }
+
+        .role-selector select {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            min-height: calc(100vh - 64px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 24px 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            margin: 4px 0;
+            border-radius: 10px;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+        }
+
+        .nav-item.active {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            padding: 28px 32px;
+            overflow-y: auto;
+        }
+
+        /* Page header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* Search & Filters */
+        .search-bar {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 360px;
+            padding: 10px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 8px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            font-size: 14px;
+        }
+
+        /* Cards grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .service-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .service-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .service-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .service-desc {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .service-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .status-pending {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .status-inactive {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-btn {
+            cursor: pointer;
+            color: #94a3b8;
+            transition: color 0.2s;
+            font-size: 18px;
+        }
+
+        .action-btn:hover {
+            color: #3b82f6;
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px;
+            background: #f8fafc;
+            font-weight: 600;
+            font-size: 13px;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Client cards */
+        .client-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .client-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .client-info p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        /* Service row */
+        .service-row {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        /* Timeline */
+        .timeline {
+            margin-top: 16px;
+            position: relative;
+            padding-left: 24px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+            border-left: 2px solid #e2e8f0;
+            padding-left: 20px;
+            margin-left: 8px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #3b82f6;
+            border: 2px solid white;
+        }
+
+        .timeline-item.status-success::before {
+            background: #10b981;
+        }
+
+        .timeline-item.status-pending::before {
+            background: #f59e0b;
+        }
+
+        .timeline-item.status-error::before {
+            background: #ef4444;
+        }
+
+        .timeline-date {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .timeline-steps {
+            margin-top: 8px;
+            padding-left: 16px;
+        }
+
+        .timeline-step {
+            font-size: 12px;
+            color: #475569;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-status-success { color: #10b981; }
+        .step-status-pending { color: #f59e0b; }
+        .step-status-error { color: #ef4444; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            padding: 16px;
+            gap: 8px;
+        }
+
+        .page-btn {
+            padding: 6px 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 28px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            font-size: 24px;
+            cursor: pointer;
+            color: #94a3b8;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* Tariff table inside modal */
+        .tariff-table {
+            width: 100%;
+            margin-top: 12px;
+            border-collapse: collapse;
+        }
+
+        .tariff-table th, .tariff-table td {
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+        }
+
+        /* Report preview */
+        .report-preview {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            margin-top: 24px;
+            overflow: hidden;
+        }
+
+        .report-preview h3 {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 16px;
+        }
+
+        /* History panel */
+        .history-panel {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            margin-top: 24px;
+            overflow: hidden;
+        }
+
+        .history-panel h3 {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 16px;
+            background: #f8fafc;
+        }
+
+        /* Utility */
+        .hidden {
+            display: none;
+        }
+
+        .mt-4 {
+            margin-top: 16px;
+        }
+
+        .mb-2 {
+            margin-bottom: 8px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            🏢 ClientOpsPortal
+        </div>
+        <div class="role-selector">
+            <label>Роль:</label>
+            <select id="roleSelector">
+                <option value="admin">👑 Администратор</option>
+                <option value="serviceSpec">📦 Специалист по услугам</option>
+                <option value="analyst">📊 Аналитик</option>
+                <option value="clientSpec">👥 Специалист по работе с клиентами</option>
+                <option value="client">👤 Клиент (Личный кабинет)</option>
+            </select>
+        </div>
+        <div class="user-info">
+            <span id="userNameDisplay">Иванов И. (Администратор)</span>
+            <div class="avatar">ИИ</div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div class="sidebar" id="sidebar"></div>
+        <div class="main-content" id="mainContent"></div>
+    </div>
+
+    <!-- Модальное окно: Добавление/Редактирование пользователя (Employee) -->
+    <div id="modalUser" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalUserTitle">Добавление сотрудника</h2>
+                <span class="close-modal" onclick="closeModal('modalUser')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>Фамилия *</label>
+                <input type="text" id="userLastName" placeholder="Иванов">
+            </div>
+            <div class="form-group">
+                <label>Имя *</label>
+                <input type="text" id="userFirstName" placeholder="Иван">
+            </div>
+            <div class="form-group">
+                <label>Отчество</label>
+                <input type="text" id="userMiddleName" placeholder="Иванович">
+            </div>
+            <div class="form-group">
+                <label>Должность *</label>
+                <input type="text" id="userPost" placeholder="Старший менеджер">
+            </div>
+            <div class="form-group">
+                <label>Отдел</label>
+                <input type="text" id="userDepartment" placeholder="Клиентский сервис">
+            </div>
+            <div class="form-group">
+                <label>Логин *</label>
+                <input type="text" id="userLogin" placeholder="ivanov_ivan">
+            </div>
+            <div class="form-group">
+                <label>Пароль *</label>
+                <input type="password" id="userPassword" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label>Роль *</label>
+                <select id="userRole">
+                    <option>Администратор</option>
+                    <option>Специалист по услугам</option>
+                    <option>Аналитик</option>
+                    <option>Специалист по работе с клиентами</option>
+                    <option>Клиент</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalUser')">Отмена</button>
+                <button class="btn-primary" onclick="saveEmployee()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Добавление/Редактирование услуги -->
+    <div id="modalService" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalServiceTitle">Добавление услуги</h2>
+                <span class="close-modal" onclick="closeModal('modalService')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>Название услуги *</label>
+                <input type="text" id="serviceName" placeholder="Интернет">
+            </div>
+            <div class="form-group">
+                <label>Описание *</label>
+                <textarea id="serviceDesc" rows="3" placeholder="Описание услуги..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Дата начала</label>
+                <input type="date" id="serviceStartDate">
+            </div>
+            <div class="form-group">
+                <label>Тарифные планы</label>
+                <button class="btn-secondary" style="margin-bottom: 12px;" onclick="addTariffRow()">+ Добавить тариф</button>
+                <table class="tariff-table" id="tariffTable">
+                    <thead>
+                        <tr><th>Название</th><th>Описание</th><th>Цена</th><th></th></tr>
+                    </thead>
+                    <tbody id="tariffTableBody">
+                        <tr>
+                            <td><input type="text" placeholder="Старт" style="width:100%"></td>
+                            <td><input type="text" placeholder="100 Мбит/с" style="width:100%"></td>
+                            <td><input type="text" placeholder="500 ₽" style="width:100%"></td>
+                            <td><span class="action-btn" onclick="this.closest('tr').remove()">🗑️</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalService')">Отмена</button>
+                <button class="btn-primary" onclick="saveService()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Подключение услуги клиенту -->
+    <div id="modalConnectService" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Подключение услуги клиенту</h2>
+                <span class="close-modal" onclick="closeModal('modalConnectService')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>Услуга *</label>
+                <select id="connectServiceSelect" onchange="updateTariffOptions()">
+                    <option value="internet">Интернет</option>
+                    <option value="tv">Телевидение</option>
+                    <option value="phone">Телефония</option>
+                    <option value="vpn">VPN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Тариф *</label>
+                <div class="radio-group" id="tariffOptions">
+                    <label><input type="radio" name="tariff" value="start"> Старт (500 ₽)</label>
+                    <label><input type="radio" name="tariff" value="optima"> Оптима (750 ₽)</label>
+                    <label><input type="radio" name="tariff" value="premium"> Премиум (1200 ₽)</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Договор *</label>
+                <select id="connectContractSelect">
+                    <option value="Д-001">№ Д-001 (Интернет) - действующий</option>
+                    <option value="Д-002">№ Д-002 (Телевидение) - действующий</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Дата начала</label>
+                <input type="date" id="connectStartDate" value="2026-03-24">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalConnectService')">Отмена</button>
+                <button class="btn-primary" onclick="connectService()">Подключить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: История услуги -->
+    <div id="modalHistory" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>📋 История изменений услуги</h2>
+                <span class="close-modal" onclick="closeModal('modalHistory')">&times;</span>
+            </div>
+            <div id="historyContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Данные для хранения истории подписок
+        let subscriptionHistory = [
+            {
+                id: 1,
+                subscriptionId: 1,
+                actionType: "Активация",
+                status: "Успешно",
+                tariffPlanId: 1,
+                startDate: "2024-01-01",
+                steps: [
+                    { status: "Успешно", message: "Проверка баланса пройдена", createdAt: "2024-01-01 10:00:00" },
+                    { status: "Успешно", message: "Подключение услуги выполнено", createdAt: "2024-01-01 10:05:00" }
+                ]
+            },
+            {
+                id: 2,
+                subscriptionId: 1,
+                actionType: "Смена тарифа",
+                status: "В процессе",
+                tariffPlanId: 2,
+                startDate: "2025-03-15",
+                steps: [
+                    { status: "Успешно", message: "Проверка возможности смены тарифа", createdAt: "2025-03-15 09:00:00" },
+                    { status: "В процессе", message: "Ожидание подтверждения", createdAt: "2025-03-15 09:10:00" }
+                ]
+            },
+            {
+                id: 3,
+                subscriptionId: 2,
+                actionType: "Приостановка",
+                status: "Ошибка",
+                tariffPlanId: 1,
+                startDate: "2025-02-10",
+                steps: [
+                    { status: "Успешно", message: "Проверка задолженности", createdAt: "2025-02-10 14:00:00" },
+                    { status: "Ошибка", message: "Недостаточно средств для приостановки", createdAt: "2025-02-10 14:05:00" }
+                ]
+            }
+        ];
+
+        let employees = [
+            { id: 1, firstName: "Иван", lastName: "Иванов", middleName: "Иванович", post: "Администратор", department: "IT", email: "ivanov@crm.com", externalId: "ext_001", login: "ivanov_i", status: "active" },
+            { id: 2, firstName: "Анна", lastName: "Петрова", middleName: "Сергеевна", post: "Специалист по услугам", department: "Клиентский сервис", email: "petrova@crm.com", externalId: "ext_002", login: "petrova_a", status: "active" },
+            { id: 3, firstName: "Сергей", lastName: "Сидоров", middleName: "Петрович", post: "Аналитик", department: "Аналитика", email: "sidorov@crm.com", externalId: "ext_003", login: "sidorov_s", status: "active" }
+        ];
+
+        let nextEmployeeId = 4;
+        let nextHistoryId = 4;
+
+        function saveEmployee() {
+            const newEmployee = {
+                id: nextEmployeeId++,
+                firstName: document.getElementById('userFirstName').value,
+                lastName: document.getElementById('userLastName').value,
+                middleName: document.getElementById('userMiddleName').value,
+                post: document.getElementById('userPost').value,
+                department: document.getElementById('userDepartment').value,
+                email: document.getElementById('userEmail').value,
+                externalId: document.getElementById('userExternalId').value,
+                login: document.getElementById('userLogin').value,
+                status: document.querySelector('input[name="userStatus"]:checked').value
+            };
+            employees.push(newEmployee);
+            alert(`Сотрудник ${newEmployee.lastName} ${newEmployee.firstName} добавлен!`);
+            closeModal('modalUser');
+            if (document.getElementById('roleSelector').value === 'admin') {
+                renderContent('admin');
+            }
+        }
+
+        function saveService() {
+            alert('Услуга сохранена! История изменений будет записана в SubscriptionHistory');
+            closeModal('modalService');
+        }
+
+        function addTariffRow() {
+            const tbody = document.getElementById('tariffTableBody');
+            const newRow = tbody.insertRow();
+            newRow.innerHTML = `
+                <td><input type="text" placeholder="Новый тариф" style="width:100%"></td>
+                <td><input type="text" placeholder="Описание" style="width:100%"></td>
+                <td><input type="text" placeholder="0 ₽" style="width:100%"></td>
+                <td><span class="action-btn" onclick="this.closest('tr').remove()">🗑️</span></td>
+            `;
+        }
+
+        function updateTariffOptions() {
+            const service = document.getElementById('connectServiceSelect').value;
+            const container = document.getElementById('tariffOptions');
+            if (service === 'internet') {
+                container.innerHTML = `
+                    <label><input type="radio" name="tariff" value="start"> Старт (500 ₽)</label>
+                    <label><input type="radio" name="tariff" value="optima"> Оптима (750 ₽)</label>
+                    <label><input type="radio" name="tariff" value="premium"> Премиум (1200 ₽)</label>
+                `;
+            } else if (service === 'tv') {
+                container.innerHTML = `
+                    <label><input type="radio" name="tariff" value="basic"> Базовый (350 ₽)</label>
+                    <label><input type="radio" name="tariff" value="extended"> Расширенный (550 ₽)</label>
+                `;
+            } else if (service === 'phone') {
+                container.innerHTML = `
+                    <label><input type="radio" name="tariff" value="basic"> Базовый (300 ₽)</label>
+                    <label><input type="radio" name="tariff" value="unlimited"> Безлимит (600 ₽)</label>
+                `;
+            } else {
+                container.innerHTML = `
+                    <label><input type="radio" name="tariff" value="standard"> Стандарт (500 ₽)</label>
+                    <label><input type="radio" name="tariff" value="business"> Бизнес (1000 ₽)</label>
+                `;
+            }
+        }
+
+        function connectService() {
+            const service = document.getElementById('connectServiceSelect').options[document.getElementById('connectServiceSelect').selectedIndex].text;
+            const tariff = document.querySelector('input[name="tariff"]:checked')?.parentElement?.innerText || 'Стандартный тариф';
+            const contract = document.getElementById('connectContractSelect').value;
+            const startDate = document.getElementById('connectStartDate').value;
+            
+            // Создаем запись в истории подписки
+            const newHistory = {
+                id: nextHistoryId++,
+                subscriptionId: Math.floor(Math.random() * 100) + 1,
+                actionType: "Подключение услуги",
+                status: "Успешно",
+                tariffPlanId: 1,
+                startDate: startDate,
+                steps: [
+                    { status: "Успешно", message: `Проверка договора ${contract}`, createdAt: new Date().toISOString().slice(0,19).replace('T', ' ') },
+                    { status: "Успешно", message: `Подключение услуги "${service}" с тарифом "${tariff}"`, createdAt: new Date().toISOString().slice(0,19).replace('T', ' ') },
+                    { status: "Успешно", message: "Услуга успешно подключена", createdAt: new Date().toISOString().slice(0,19).replace('T', ' ') }
+                ]
+            };
+            subscriptionHistory.unshift(newHistory);
+            
+            alert(`Услуга "${service}" подключена! История операции сохранена в SubscriptionHistory`);
+            closeModal('modalConnectService');
+            
+            // Если открыта карточка клиента, обновляем таймлайн
+            if (document.getElementById('mainContent').innerHTML.includes('Карточка клиента')) {
+                showClientCardWithHistory();
+            }
+        }
+
+        function showHistory(subscriptionId, serviceName) {
+            const historyItems = subscriptionHistory.filter(h => h.subscriptionId === subscriptionId);
+            const historyContent = document.getElementById('historyContent');
+            
+            if (historyItems.length === 0) {
+                historyContent.innerHTML = '<p class="text-center" style="padding: 40px;">Нет записей в истории</p>';
+            } else {
+                historyContent.innerHTML = `
+                    <div class="timeline">
+                        ${historyItems.map(item => `
+                            <div class="timeline-item status-${item.status === 'Успешно' ? 'success' : (item.status === 'В процессе' ? 'pending' : 'error')}">
+                                <div class="timeline-date">${item.startDate}</div>
+                                <div class="timeline-title">${item.actionType} — ${item.status}</div>
+                                <div class="timeline-steps">
+                                    ${item.steps.map(step => `
+                                        <div class="timeline-step">
+                                            <span class="step-status-${step.status === 'Успешно' ? 'success' : (step.status === 'В процессе' ? 'pending' : 'error')}">
+                                                ${step.status === 'Успешно' ? '✅' : (step.status === 'В процессе' ? '⏳' : '❌')}
+                                            </span>
+                                            <span>${step.createdAt}: ${step.message}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            openModal('modalHistory');
+        }
+
+        function showClientCardWithHistory() {
+            document.getElementById('mainContent').innerHTML = `
+                <div class="page-header">
+                    <button class="btn-secondary" onclick="renderContent('clientSpec')">← Назад к списку</button>
+                    <h1 class="page-title">Карточка клиента: Иванов Иван Иванович</h1>
+                </div>
+                <div class="grid-2">
+                    <div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0;">
+                        <h3>📋 Информация</h3>
+                        <p style="margin-top: 16px;"><strong>Лицевой счет:</strong> 1234567890</p>
+                        <p><strong>ФИО:</strong> Иванов Иван Иванович</p>
+                        <p><strong>Телефон:</strong> +7 (999) 123-45-67</p>
+                        <p><strong>Email:</strong> ivanov@example.com</p>
+                        <button class="btn-secondary mt-4">✏️ Редактировать</button>
+                    </div>
+                    <div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0;">
+                        <h3>📄 Договоры</h3>
+                        <div class="service-row" style="margin-top: 16px;"><div><strong>№ Д-001</strong> — Интернет<br><small>с 01.01.2024, Активен</small></div></div>
+                        <div class="service-row"><div><strong>№ Д-002</strong> — Телевидение<br><small>с 15.02.2024, Активен</small></div></div>
+                        <button class="btn-secondary">+ Новый договор</button>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px;">
+                    <h3>🛠️ Услуги клиента</h3>
+                    <button class="btn-primary" onclick="openModal('modalConnectService')" style="margin-top: 16px;">+ Подключить услугу</button>
+                    <div class="service-row" style="margin-top: 16px;">
+                        <div><strong>📡 Интернет</strong> — Тариф "Премиум"<br><span class="status-badge status-active">Активна</span> с 01.01.2024</div>
+                        <div class="action-buttons">
+                            <span class="action-btn" onclick="showHistory(1, 'Интернет')">📜 История</span>
+                            <span class="action-btn">✏️</span>
+                        </div>
+                    </div>
+                    <div class="service-row">
+                        <div><strong>📺 Телевидение</strong> — Тариф "Базовый"<br><span class="status-badge status-active">Активна</span> с 15.02.2024</div>
+                        <div class="action-buttons">
+                            <span class="action-btn" onclick="showHistory(2, 'Телевидение')">📜 История</span>
+                            <span class="action-btn">✏️</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Роли и контент
+        const roleData = {
+            admin: {
+                name: "Иванов И. (Администратор)",
+                nav: [
+                    { icon: "👥", label: "Пользователи", active: true },
+                    { icon: "📦", label: "Услуги", active: false },
+                    { icon: "📊", label: "Отчеты", active: false },
+                    { icon: "👤", label: "Клиенты", active: false }
+                ],
+                content: getAdminContent
+            },
+            serviceSpec: {
+                name: "Петрова А. (Спец. услуг)",
+                nav: [
+                    { icon: "📦", label: "Услуги", active: true },
+                    { icon: "📊", label: "Отчеты", active: false },
+                    { icon: "👤", label: "Клиенты", active: false }
+                ],
+                content: getServiceSpecContent
+            },
+            analyst: {
+                name: "Сидоров С. (Аналитик)",
+                nav: [
+                    { icon: "📊", label: "Отчеты", active: true }
+                ],
+                content: getAnalystContent
+            },
+            clientSpec: {
+                name: "Кузнецова О. (Спец. клиентов)",
+                nav: [
+                    { icon: "👤", label: "Клиенты", active: true },
+                    { icon: "📦", label: "Услуги", active: false }
+                ],
+                content: getClientSpecContent
+            },
+            client: {
+                name: "Иванов Иван (Клиент)",
+                nav: [
+                    { icon: "🏠", label: "Личный кабинет", active: true },
+                    { icon: "📦", label: "Каталог услуг", active: false }
+                ],
+                content: getClientContent
+            }
+        };
+
+        function renderSidebar(role) {
+            const data = roleData[role];
+            const sidebar = document.getElementById('sidebar');
+            sidebar.innerHTML = data.nav.map(item => `
+                <div class="nav-item ${item.active ? 'active' : ''}">
+                    <span>${item.icon}</span> ${item.label}
+                </div>
+            `).join('');
+        }
+
+        function renderContent(role) {
+            const content = document.getElementById('mainContent');
+            content.innerHTML = roleData[role].content();
+        }
+
+        function updateUI(role) {
+            document.getElementById('userNameDisplay').innerText = roleData[role].name;
+            renderSidebar(role);
+            renderContent(role);
+        }
+
+        function getAdminContent() {
+            return `
+                <div class="page-header">
+                    <h1 class="page-title">👥 Пользователи системы </h1>
+                    <button class="btn-primary" onclick="openModal('modalUser')">+ Добавить сотрудника</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="🔍 Поиск по фамилии, имени, должности...">
+                </div>
+                <div class="filters">
+                    <select class="filter-select"><option>Все должности</option><option>Администратор</option><option>Специалист по услугам</option><option>Аналитик</option><option>Специалист по клиентам</option></select>
+                    <select class="filter-select"><option>Все статусы</option><option>Активен</option><option>Заблокирован</option></select>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>ID</th><th>ФИО</th><th>Должность</th><th>Отдел</th><th>Email</th><th>ExternalId</th><th>Статус</th><th>Действия</th></tr>
+                        </thead>
+                        <tbody>
+                            ${employees.map(emp => `
+                                <tr>
+                                    <td>${emp.id}</td>
+                                    <td>${emp.lastName} ${emp.firstName} ${emp.middleName || ''}</td>
+                                    <td>${emp.post}</td>
+                                    <td>${emp.department || '-'}</td>
+                                    <td>${emp.email}</td>
+                                    <td>${emp.externalId || '-'}</td>
+                                    <td><span class="status-badge ${emp.status === 'active' ? 'status-active' : 'status-inactive'}">${emp.status === 'active' ? 'Активен' : 'Заблокирован'}</span></td>
+                                    <td class="action-buttons"><span class="action-btn" onclick="openModal('modalUser')">✏️</span><span class="action-btn">🗑️</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div class="pagination"><button class="page-btn">◀</button><button class="page-btn active">1</button><button class="page-btn">2</button><button class="page-btn">▶</button></div>
+                </div>
+            `;
+        }
+
+        function getServiceSpecContent() {
+            return `
+                <div class="page-header">
+                    <h1 class="page-title">📦 Услуги (Справочник)</h1>
+                    <button class="btn-primary" onclick="openModal('modalService')">+ Добавить услугу</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="🔍 Поиск услуг...">
+                </div>
+                <div class="cards-grid">
+                    <div class="service-card"><div class="service-icon">📡</div><div class="service-name">Интернет</div><div class="service-desc">Высокоскоростной доступ в интернет</div><div class="service-meta"><span class="status-badge status-active">Активен</span><div class="action-buttons"><span class="action-btn" onclick="openModal('modalService')">✏️</span><span class="action-btn">🗑️</span></div></div></div>
+                    <div class="service-card"><div class="service-icon">📺</div><div class="service-name">Телевидение</div><div class="service-desc">150+ каналов в HD качестве</div><div class="service-meta"><span class="status-badge status-active">Активен</span><div class="action-buttons"><span class="action-btn" onclick="openModal('modalService')">✏️</span><span class="action-btn">🗑️</span></div></div></div>
+                    <div class="service-card"><div class="service-icon">☎️</div><div class="service-name">Телефония</div><div class="service-desc">500 минут бесплатно</div><div class="service-meta"><span class="status-badge status-active">Активен</span><div class="action-buttons"><span class="action-btn" onclick="openModal('modalService')">✏️</span><span class="action-btn">🗑️</span></div></div></div>
+                </div>
+            `;
+        }
+
+        function getAnalystContent() {
+            return `
+                <div class="page-header">
+                    <h1 class="page-title">📊 Формирование отчетов</h1>
+                </div>
+                <div style="background: white; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0;">
+                    <div class="form-group"><label>Тип отчета</label><select class="filter-select" style="width: 100%;"><option>Услуги на текущий момент</option><option>Активные подписки</option><option>Динамика подключений</option><option>История операций</option></select></div>
+                    <div class="form-group"><label>Период</label><div style="display: flex; gap: 12px;"><input type="date" style="padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;"><input type="date" style="padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;"></div></div>
+                    <div class="form-group"><label>Формат</label><select class="filter-select"><option>CSV</option><option>Excel</option><option>PDF</option></select></div>
+                    <div class="form-group"><label>Отправить на email</label><input type="email" placeholder="analyst@company.com" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+                    <div style="display: flex; gap: 12px;"><button class="btn-primary">Сформировать</button><button class="btn-secondary">Отправить</button></div>
+                </div>
+                <div class="report-preview"><h3>📄 Предпросмотр отчета: Услуги на 23.03.2026</h3><div class="table-container" style="border-radius: 0;"><table><thead><tr><th>Услуга</th><th>Активных подписок</th><th>Активных договоров</th><th>Доход (мес)</th></tr></thead><tbody><tr><td>Интернет</td><td>1,234</td><td>987</td><td>987,000 ₽</td></tr><tr><td>Телевидение</td><td>876</td><td>654</td><td>438,000 ₽</td></tr><tr><td>Телефония</td><td>543</td><td>432</td><td>216,000 ₽</td></tr><tr><td>VPN</td><td>234</td><td>198</td><td>99,000 ₽</td></tr><tr style="font-weight: bold;"><td>ИТОГО</td><td>2,887</td><td>2,271</td><td>1,740,000 ₽</td></tr></tbody></table></div><div style="padding: 16px; display: flex; gap: 12px; justify-content: flex-end;"><button class="btn-secondary">Скачать CSV</button><button class="btn-primary">Отправить</button></div></div>
+            `;
+        }
+
+        function getClientSpecContent() {
+            return `
+                <div class="page-header">
+                    <h1 class="page-title">👤 Поиск и управление клиентами</h1>
+                    <button class="btn-primary">+ Создать клиента</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="🔍 Поиск по ФИО, номеру счета или телефону..." style="max-width: 100%;">
+                </div>
+                <div class="filters">
+                    <select class="filter-select"><option>Поиск по ФИО</option><option>По номеру счета</option><option>По телефону</option><option>По договору</option></select>
+                    <button class="btn-primary" style="background: #f1f5f9; color: #334155;">Найти</button>
+                </div>
+                <div class="client-card"><div><h4>🧑 Иванов Иван Иванович</h4><p>Лицевой счет: 1234567890 | Телефон: +7 (999) 123-45-67</p><p>Активные услуги: 2 | Активные договоры: 1</p></div><button class="btn-primary" onclick="showClientCardWithHistory()">Открыть карточку</button></div>
+                <div class="client-card"><div><h4>🧑 Петрова Анна Сергеевна</h4><p>Лицевой счет: 1234567891 | Телефон: +7 (999) 234-56-78</p><p>Активные услуги: 1 | Активные договоры: 1</p></div><button class="btn-primary" onclick="showClientCardWithHistory()">Открыть карточку</button></div>
+            `;
+        }
+
+        function getClientContent() {
+            return `
+                <div class="page-header"><h1 class="page-title">🏠 Личный кабинет</h1></div>
+				<div class="grid-2">
+					<div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0;">
+						<h3>📋 Мои данные</h3>
+						<p style="margin-top: 16px;"><strong>Лицевой счет:</strong> 1234567890</p>
+						<p><strong>ФИО:</strong> Иванов Иван Иванович</p>
+						<p><strong>Телефон:</strong> +7 (999) 123-45-67</p>
+						<p><strong>Email:</strong> ivanov@example.com</p>
+						<button class="btn-secondary mt-4">✏️ Редактировать</button>
+					</div>
+					<div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0;">
+						<h3>📄 Договоры</h3>
+						<div class="service-row" style="margin-top: 16px;"><div><strong>№ Д-001</strong> — Интернет<br><small>с 01.01.2024, Активен</small></div></div>
+						<div class="service-row"><div><strong>№ Д-002</strong> — Телевидение<br><small>с 15.02.2024, Активен</small></div></div>
+						<button class="btn-secondary">+ Новый договор</button>
+					</div>
+				</div>
+				<div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px;">
+                    <h3>🛠️ Мои услуги</h3>
+                    <button class="btn-primary" onclick="switchToCatalog()" style="margin-top: 16px;">+ Подключить услугу</button>
+                    <div class="service-row" style="margin-top: 16px;">
+                        <div><strong>📡 Интернет</strong> — Тариф "Премиум"<br><span class="status-badge status-active">Активна</span> с 01.01.2024</div>
+                        <div class="action-buttons">
+                            <span class="action-btn" onclick="showHistory(1, 'Интернет')">📜 История</span>
+                            <span class="action-btn">✏️</span>
+                        </div>
+                    </div>
+                    <div class="service-row">
+                        <div><strong>📺 Телевидение</strong> — Тариф "Базовый"<br><span class="status-badge status-active">Активна</span> с 15.02.2024</div>
+                        <div class="action-buttons">
+                            <span class="action-btn" onclick="showHistory(2, 'Телевидение')">📜 История</span>
+                            <span class="action-btn">✏️</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchToCatalog() {
+            document.getElementById('mainContent').innerHTML = `
+                <div class="page-header"><button class="btn-secondary" onclick="updateUI('client')">← Назад в личный кабинет</button><h1 class="page-title">📦 Каталог услуг</h1></div>
+                <div class="cards-grid">
+                    <div class="service-card"><div class="service-icon">📡</div><div class="service-name">Интернет</div><div class="service-desc">Скорость до 500 Мбит/с</div><div class="service-meta"><span class="status-badge status-active">Доступно</span><button class="btn-primary" style="padding: 6px 12px;" onclick="openModal('modalConnectService')">Подключить</button></div></div>
+                    <div class="service-card"><div class="service-icon">📺</div><div class="service-name">Телевидение</div><div class="service-desc">150+ каналов в HD</div><div class="service-meta"><span class="status-badge status-active">Доступно</span><button class="btn-primary" style="padding: 6px 12px;" onclick="openModal('modalConnectService')">Подключить</button></div></div>
+                    <div class="service-card"><div class="service-icon">☎️</div><div class="service-name">Телефония</div><div class="service-desc">500 минут бесплатно</div><div class="service-meta"><span class="status-badge status-active">Доступно</span><button class="btn-primary" style="padding: 6px 12px;" onclick="openModal('modalConnectService')">Подключить</button></div></div>
+                </div>
+            `;
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.getElementById('roleSelector').addEventListener('change', (e) => {
+            updateUI(e.target.value);
+        });
+
+        updateUI('admin');
+    </script>
+</body>
+</html>

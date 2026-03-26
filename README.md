@@ -5,14 +5,7 @@
     <details open>
       <summary><a href="https://github.com/alex-makhina/client-ops-portal/tree/main/Documentation">Documentation</a></summary>
       <ul>
-        <li>
-          <details>
-            <summary><a href="https://github.com/alex-makhina/client-ops-portal/tree/main/Documentation/Mockups">Mockups</a></summary>
-            <ul>
-              <li><a href="https://github.com/alex-makhina/client-ops-portal/blob/main/Documentation/Mockups/01.pdf">01_Name</a></li>
-            </ul>
-          </details>
-        </li>
+		<li><a href="https://raw.githack.com/alex-makhina/client-ops-portal/CreatePrototype/Documentation/Prototype.html">Prototype</a></li>     
         <li>
           <details>
             <summary><a href="https://github.com/alex-makhina/client-ops-portal/tree/main/Documentation/Requirements">Requirements</a></summary>
