@@ -1,0 +1,42 @@
+﻿using ClientOpsPortal.Domain.Entities;
+using ClientOpsPortal.Infrastructure.Data.Context;
+using ClientOpsPortal.Infrastructure.Data.Interceptors;
+using ClientOpsPortal.Infrastructure.Data.Seed;
+using ClientOpsPortal.Infrastructure.Data.Seed.App;
+using ClientOpsPortal.Infrastructure.Data.Seed.Auth;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace ClientOpsPortal.Infrastructure
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddEFCore(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddScoped<AuditableInterceptor>();
+            services.AddDbContext<ClientOpsPortalDbContext>((sp, options) => {
+                var interceptor = sp.GetRequiredService<AuditableInterceptor>();
+
+                options.UseNpgsql(configuration.GetConnectionString("AppConnection"))
+                    .AddInterceptors(interceptor);
+            });
+
+            services.AddDbContext<AuthDbContext>(options => {
+                options.UseNpgsql(configuration.GetConnectionString("AppAuthConnection"));
+            });
+
+            services.AddScoped<AuthDbSeeder>();
+            services.AddScoped<AppDbSeeder>();
+            services.AddScoped<IDatabaseSeeder, DatabaseSeeder>();
+
+            services.Scan(scan => scan
+                .FromAssemblies(typeof(DependencyInjection).Assembly)
+                .AddClasses(classes => classes.Where(c => c.Name.EndsWith("Repository") && !c.IsAbstract))
+                .AsImplementedInterfaces()
+                .WithScopedLifetime());
+
+            return services;
+        }
+    }
+}

@@ -7,8 +7,8 @@ namespace ClientOpsPortal.Domain.Entities
     {
         public required string Name { get; set; }
         public required string Description { get; set; }
-        public DateTime BeginDate { get; set; } = DateTime.UtcNow;
-        public DateTime? EndDate { get; set; }
+        public DateTimeOffset BeginDate { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset? EndDate { get; set; }
         public ICollection<TariffPlan> TariffPlans { get; set; } = [];
     }
 }

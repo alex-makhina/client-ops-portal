@@ -2,7 +2,7 @@
 {
     public interface ICreationAuditableEntity : IBaseEntity
     {
-        DateTime CreatedAt { get; set; }
+        DateTimeOffset CreatedAt { get; set; }
         string? CreatedBy { get; set; }
     }
 }

@@ -5,7 +5,7 @@ namespace ClientOpsPortal.Domain.Entities
 {
     public class SubscriptionHistoryStep : CreationAuditableEntity
     {
-        public Guid IdSubscriptionHistory { get; set; }
+        public Guid SubscriptionHistoryId { get; set; }
         public SubscriptionActionStatus Status { get; set; }
         public string? Message { get; set; }
     }

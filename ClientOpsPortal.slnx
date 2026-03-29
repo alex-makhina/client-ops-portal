@@ -1,11 +1,12 @@
 <Solution>
   <Folder Name="/src/">
+    <File Path="docker-compose.yml" />
     <Project Path="src/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
     <Project Path="src/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
     <Project Path="src/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
     <Project Path="src/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <File Path="src/ClientOpsPortal.Application/DTOs/.gitkeep" />
+    <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" Id="de2f9098-9562-4c60-8a26-2cbd24fc1c47" />
   </Folder>
 </Solution>
