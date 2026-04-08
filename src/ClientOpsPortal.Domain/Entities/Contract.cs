@@ -12,7 +12,6 @@ namespace ClientOpsPortal.Domain.Entities
         public DateTimeOffset? EndDate { get; set; }
 
         public Abonent? Abonent { get; set; }
-        public Service? Service { get; set; }
         public List<Subscription> Subscriptions { get; set; } = [];
     }
 }
