@@ -2,7 +2,7 @@
 {
     public interface IPeriodEntity : IBaseEntity
     {
-        DateTime BeginDate { get; set; }
-        DateTime? EndDate { get; set; }
+        DateTimeOffset BeginDate { get; set; }
+        DateTimeOffset? EndDate { get; set; }
     }
 }

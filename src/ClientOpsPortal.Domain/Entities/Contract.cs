@@ -7,9 +7,9 @@ namespace ClientOpsPortal.Domain.Entities
     {
         public required string ContractNumber { get; set; }
 
-        public Guid IdAbonent { get; set; }
-        public DateTime BeginDate { get; set; } = DateTime.UtcNow;
-        public DateTime? EndDate { get; set; }
+        public Guid AbonentId { get; set; }
+        public DateTimeOffset BeginDate { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset? EndDate { get; set; }
 
         public Abonent? Abonent { get; set; }
         public Service? Service { get; set; }
