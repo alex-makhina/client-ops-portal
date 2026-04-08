@@ -10,7 +10,6 @@ namespace ClientOpsPortal.Infrastructure.Data.Repositories
         {
             return query
                 .Include(x => x.Abonent)
-                .Include(x => x.Service)
                 .Include(x => x.Subscriptions);
         }
     }
