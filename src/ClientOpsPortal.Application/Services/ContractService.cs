@@ -1,0 +1,67 @@
+﻿using ClientOpsPortal.Application.DTOs;
+using ClientOpsPortal.Application.Interfaces;
+using ClientOpsPortal.Application.Mappings;
+using ClientOpsPortal.Domain.Entities;
+using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Repositories;
+using System.Linq.Expressions;
+
+namespace ClientOpsPortal.Application.Services
+{
+    public class ContractService : IContractService
+    {
+        private readonly IGenericRepository<Contract> _contractRepository;
+
+        public ContractService(IGenericRepository<Contract> contractRepository)
+        {
+            _contractRepository = contractRepository;
+        }
+
+        public async Task<ContractDataDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
+        {
+            var contract = await _contractRepository.GetByIdAsync(id, withIncludes, ct);
+            return contract?.ToContractDto();
+        }
+
+        public async Task<IReadOnlyCollection<ContractDataDto>> GetAllAsync(bool withIncludes = false, CancellationToken ct = default)
+        {
+            var contracts = await _contractRepository.GetAllAsync(withIncludes, ct);
+            return contracts.Select(c => c.ToContractDto()).ToList();
+        }
+
+        public async Task<ContractDataDto> CreateAsync(ContractDataDto createDto, CancellationToken ct = default)
+        {
+            var contract = createDto.ToEntity();
+            await _contractRepository.AddAsync(contract, ct);
+            return contract.ToContractDto();
+        }
+
+        public async Task<ContractDataDto> UpdateAsync(Guid id, UpdateContractDto updateDto, CancellationToken ct = default)
+        {
+            var contract = await _contractRepository.GetByIdAsync(id, false, ct);
+            if (contract == null)
+                throw new EntityNotFoundException(typeof(Contract), id);
+
+            updateDto.UpdateEntity(contract);
+            await _contractRepository.UpdateAsync(contract, ct);
+            return contract.ToContractDto();
+        }
+
+        public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+        {
+            await _contractRepository.DeleteAsync(id, ct);
+        }
+
+        public async Task<IReadOnlyCollection<ContractDataDto>> GetWhereAsync(Expression<Func<Contract, bool>> predicate, bool withIncludes = false, CancellationToken ct = default)
+        {
+            var contracts = await _contractRepository.GetWhereAsync(predicate, withIncludes, ct);
+            return contracts.Select(c => c.ToContractDto()).ToList();
+        }
+
+        public async Task<IReadOnlyCollection<ContractShortDataDto>> GetShortContractsByAbonentAsync(Guid abonentId, CancellationToken ct = default)
+        {
+            var contracts = await _contractRepository.GetWhereAsync(c => c.AbonentId == abonentId, false, ct);
+            return contracts.Select(c => c.ToShortDto()).ToList();
+        }
+    }
+}

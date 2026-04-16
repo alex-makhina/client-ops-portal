@@ -5,6 +5,7 @@ using ClientOpsPortal.Infrastructure;
 using ClientOpsPortal.Infrastructure.Data;
 using ClientOpsPortal.Infrastructure.Data.Context;
 using Microsoft.AspNetCore.Identity;
+using ClientOpsPortal.Application;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<ICurrentUserService,CurrentUserService>();
+
+builder.Services.AddApplicationServices();
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
     .AddEntityFrameworkStores<AuthDbContext>()

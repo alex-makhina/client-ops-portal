@@ -1,6 +1,8 @@
 ﻿using ClientOpsPortal.Domain.Entities;
+using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Infrastructure.Data.Context;
 using ClientOpsPortal.Infrastructure.Data.Interceptors;
+using ClientOpsPortal.Infrastructure.Data.Repositories;
 using ClientOpsPortal.Infrastructure.Data.Seed;
 using ClientOpsPortal.Infrastructure.Data.Seed.App;
 using ClientOpsPortal.Infrastructure.Data.Seed.Auth;
@@ -25,6 +27,8 @@ namespace ClientOpsPortal.Infrastructure
             services.AddDbContext<AuthDbContext>(options => {
                 options.UseNpgsql(configuration.GetConnectionString("AppAuthConnection"));
             });
+
+            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
             services.AddScoped<AuthDbSeeder>();
             services.AddScoped<AppDbSeeder>();
