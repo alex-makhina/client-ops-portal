@@ -55,23 +55,12 @@ namespace ClientOpsPortal.Application.Mappings
 
         public static void UpdateEntity(this UpdateEmployeeDto updateDto, Employee entity)
         {
-            if (!string.IsNullOrWhiteSpace(updateDto.StaffNumber))
-                entity.StaffNumber = updateDto.StaffNumber;
-
-            if (!string.IsNullOrWhiteSpace(updateDto.FirstName))
-                entity.FirstName = updateDto.FirstName;
-
-            if (!string.IsNullOrWhiteSpace(updateDto.LastName))
-                entity.LastName = updateDto.LastName;
-
-            if (updateDto.MiddleName != null)  
-                entity.MiddleName = updateDto.MiddleName;
-
-            if (!string.IsNullOrWhiteSpace(updateDto.Post))
-                entity.Post = updateDto.Post;
-
-            if (updateDto.Department != null)  
-                entity.Department = updateDto.Department;
+            entity.StaffNumber = updateDto.StaffNumber;
+            entity.FirstName = updateDto.FirstName;
+            entity.LastName = updateDto.LastName;
+            entity.MiddleName = updateDto.MiddleName;
+            entity.Post = updateDto.Post; 
+            entity.Department = updateDto.Department;
         }
     }
 }

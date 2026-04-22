@@ -36,8 +36,11 @@ namespace ClientOpsPortal.Application.Services
 
         public async Task<SubscriptionDto> CreateAsync(SubscriptionDto createDto, CancellationToken ct = default)
         {
-            var subscription = createDto.ToEntity();
+            var subscription = createDto.ToEntity();       
+            var history = CreateHistory(subscription.Id, SubscriptionActionType.Open, SubscriptionActionStatus.Pending, subscription.TariffPlanId);
+
             await _subscriptionRepository.AddAsync(subscription, ct);
+            await _historyRepository.AddAsync(history, ct);
             return subscription.ToSubscriptionDto();
         }
 
@@ -84,23 +87,11 @@ namespace ClientOpsPortal.Application.Services
             if (subscription == null)
                 throw new EntityNotFoundException(typeof(Subscription), subscriptionId);
 
-            var history = new SubscriptionHistory
-            {
-                Id = Guid.NewGuid(),
-                SubscriptionId = subscriptionId,
-                ActionType = SubscriptionActionType.TariffChange,
-                Status = SubscriptionActionStatus.Pending,
-                TariffPlanId = newTariffPlanId,
-                StartDate = DateTimeOffset.UtcNow
-            };
-            await _historyRepository.AddAsync(history, ct);
-
+            var history = CreateHistory(subscription.Id, SubscriptionActionType.TariffChange, SubscriptionActionStatus.Pending, subscription.TariffPlanId);
             subscription.TariffPlanId = newTariffPlanId;
+
             await _subscriptionRepository.UpdateAsync(subscription, ct);
-
-            history.Status = SubscriptionActionStatus.Completed;
-            await _historyRepository.UpdateAsync(history, ct);
-
+            await _historyRepository.AddAsync(history, ct);
             return subscription.ToSubscriptionDto();
         }
 
@@ -110,22 +101,11 @@ namespace ClientOpsPortal.Application.Services
             if (subscription == null)
                 throw new EntityNotFoundException(typeof(Subscription), subscriptionId);
 
-            var history = new SubscriptionHistory
-            {
-                Id = Guid.NewGuid(),
-                SubscriptionId = subscriptionId,
-                ActionType = SubscriptionActionType.Close,
-                Status = SubscriptionActionStatus.Pending,
-                TariffPlanId = subscription.TariffPlanId,
-                StartDate = DateTimeOffset.UtcNow
-            };
-            await _historyRepository.AddAsync(history, ct);
-
+            var history = CreateHistory(subscription.Id, SubscriptionActionType.Close, SubscriptionActionStatus.Pending, subscription.TariffPlanId);
             subscription.EndDate = DateTimeOffset.UtcNow;
-            await _subscriptionRepository.UpdateAsync(subscription, ct);
 
-            history.Status = SubscriptionActionStatus.Completed;
-            await _historyRepository.UpdateAsync(history, ct);
+            await _subscriptionRepository.UpdateAsync(subscription, ct);
+            await _historyRepository.AddAsync(history, ct);
 
             return subscription.ToSubscriptionDto();
         }
@@ -143,6 +123,28 @@ namespace ClientOpsPortal.Application.Services
                 true, ct);
 
             return subscriptions.Select(s => s.ToSubscriptionFullDataDto()).ToList();
+        }
+
+        public SubscriptionHistory CreateHistory(Guid subscriptionId, SubscriptionActionType actionType, SubscriptionActionStatus status, Guid tariffId)
+        {
+            var subscriptionHistory = new SubscriptionHistory
+            {
+                Id = Guid.NewGuid(),
+                SubscriptionId = subscriptionId,
+                ActionType = actionType,
+                Status = status,
+                TariffPlanId = tariffId,
+                StartDate = DateTimeOffset.UtcNow
+            };
+
+            subscriptionHistory.Steps.Add(new SubscriptionHistoryStep
+            {
+                Id = new Guid(),
+                SubscriptionHistoryId = subscriptionHistory.Id,
+                Status = status
+            });
+
+            return subscriptionHistory;
         }
     }
 }

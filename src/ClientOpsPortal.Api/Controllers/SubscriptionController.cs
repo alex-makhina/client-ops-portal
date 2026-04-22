@@ -65,7 +65,7 @@ namespace ClientOpsPortal.Api.Controllers
             return Ok(subscriptions);
         }
 
-        [HttpPost]
+        [HttpPost("connect")]
         public async Task<IActionResult> Create(SubscriptionDto createDto, CancellationToken ct = default)
         {
             try
