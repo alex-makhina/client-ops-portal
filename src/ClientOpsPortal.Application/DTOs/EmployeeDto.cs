@@ -37,11 +37,11 @@ namespace ClientOpsPortal.Application.DTOs
 
     public class UpdateEmployeeDto : BaseDto
     {
-        public string? StaffNumber { get; set; }
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
+        public required string StaffNumber { get; set; }
+        public required string FirstName { get; set; }
+        public required string LastName { get; set; }
         public string? MiddleName { get; set; }
-        public string? Post { get; set; }
+        public required string Post { get; set; }
         public string? Department { get; set; }
     } 
 }

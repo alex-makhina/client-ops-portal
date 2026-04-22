@@ -35,6 +35,9 @@ namespace ClientOpsPortal.Application.Services
 
         public async Task<ServiceDto> CreateAsync(CreateServiceDto createDto, CancellationToken ct = default)
         {
+            if (!await IsServiceNameUniqueAsync(createDto.Name, null, ct))
+                throw new InvalidOperationException($"Услуга с названием '{createDto.Name}' уже существует");
+
             var service = createDto.ToEntity();
             await _serviceRepository.AddAsync(service, ct);
 
@@ -46,6 +49,12 @@ namespace ClientOpsPortal.Application.Services
             var service = await _serviceRepository.GetByIdAsync(id, false, ct);
             if (service == null)
                 throw new EntityNotFoundException(typeof(Service), id);
+
+            if (!string.IsNullOrWhiteSpace(updateDto.Name) && service.Name != updateDto.Name)
+            {
+                if (!await IsServiceNameUniqueAsync(updateDto.Name, id, ct))
+                    throw new InvalidOperationException($"Услуга с названием '{updateDto.Name}' уже существует");
+            }
 
             if (!string.IsNullOrWhiteSpace(updateDto.Name))
                 service.Name = updateDto.Name;
@@ -121,6 +130,21 @@ namespace ClientOpsPortal.Application.Services
                 var newTariff = item.ToEntityFromUpdateItem(serviceId);
                 await _tariffPlanRepository.AddAsync(newTariff, ct);
             }
+        }
+
+        public async Task<bool> IsServiceNameUniqueAsync(string name, Guid? excludeId = null, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+
+            var services = await _serviceRepository.GetWhereAsync(
+                s => s.Name.ToLower() == name.ToLower(),
+                false, ct);
+
+            if (excludeId.HasValue)
+                return !services.Any(s => s.Id != excludeId.Value);
+
+            return !services.Any();
         }
     }
 }

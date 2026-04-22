@@ -35,6 +35,12 @@ namespace ClientOpsPortal.Application.Services
 
         public async Task<AbonentDto> CreateAsync(CreateAbonentDto createDto, CancellationToken ct = default)
         {
+            if (!await IsAbonentIdentificationNumberUniqueAsync(createDto.IdentificationNumber, null, ct))
+                throw new InvalidOperationException($"Абонент с индентификационным номером '{createDto.IdentificationNumber}' уже существует");
+
+            if (!await IsAccountNumberUniqueAsync(createDto.IdentificationNumber, null, ct))
+                throw new InvalidOperationException($"Абонент со счетом '{createDto.AccountNumber}' уже существует");
+
             var abonent = createDto.ToEntity();
             await _abonentRepository.AddAsync(abonent, ct);
             return abonent.ToAbonentDto();
@@ -45,6 +51,18 @@ namespace ClientOpsPortal.Application.Services
             var abonent = await _abonentRepository.GetByIdAsync(id, false, ct);
             if (abonent == null)
                 throw new EntityNotFoundException(typeof(Abonent), id);
+
+            if (!string.IsNullOrWhiteSpace(updateDto.IdentificationNumber) && abonent.IdentificationNumber != updateDto.IdentificationNumber)
+            {
+                if (!await IsAbonentIdentificationNumberUniqueAsync(updateDto.IdentificationNumber, id, ct))
+                    throw new InvalidOperationException($"Абонент с индентификационным номером '{updateDto.IdentificationNumber}' уже существует");
+            }
+
+            if (!string.IsNullOrWhiteSpace(updateDto.AccountNumber) && abonent.AccountNumber != updateDto.AccountNumber)
+            {
+                if (!await IsAccountNumberUniqueAsync(updateDto.AccountNumber, id, ct))
+                    throw new InvalidOperationException($"Абонент со счетом '{updateDto.AccountNumber}' уже существует");
+            }
 
             updateDto.UpdateEntity(abonent);
             await _abonentRepository.UpdateAsync(abonent, ct);
@@ -93,6 +111,36 @@ namespace ClientOpsPortal.Application.Services
                 return null;
 
             return contract.Abonent.ToAbonentDto();
+        }
+
+        public async Task<bool> IsAbonentIdentificationNumberUniqueAsync(string number, Guid? excludeId = null, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(number))
+                return false;
+
+            var services = await _abonentRepository.GetWhereAsync(
+                s => s.IdentificationNumber.ToLower() == number.ToLower(),
+                false, ct);
+
+            if (excludeId.HasValue)
+                return !services.Any(s => s.Id != excludeId.Value);
+
+            return !services.Any();
+        }
+
+        public async Task<bool> IsAccountNumberUniqueAsync(string number, Guid? excludeId = null, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(number))
+                return false;
+
+            var services = await _abonentRepository.GetWhereAsync(
+                s => s.AccountNumber.ToLower() == number.ToLower(),
+                false, ct);
+
+            if (excludeId.HasValue)
+                return !services.Any(s => s.Id != excludeId.Value);
+
+            return !services.Any();
         }
     }
 }

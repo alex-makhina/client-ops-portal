@@ -82,8 +82,6 @@ namespace ClientOpsPortal.Application.Mappings
             }
 
             return service;
-        }
-
-       
+        }     
     }
 }
