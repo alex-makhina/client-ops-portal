@@ -43,7 +43,6 @@ namespace ClientOpsPortal.Application.Mappings
             return new Employee
             {
                 Id = Guid.NewGuid(),
-                UserId = createDto.UserId,
                 StaffNumber = createDto.StaffNumber,
                 FirstName = createDto.FirstName,
                 LastName = createDto.LastName,

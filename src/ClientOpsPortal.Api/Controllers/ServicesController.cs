@@ -2,17 +2,21 @@
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class ServicesController : ControllerBase
+    [Authorize]
+    public class ServicesController : BaseController
     {
         private readonly IServiceService _serviceService;
 
-        public ServicesController(IServiceService serviceService)
+        public ServicesController(
+            IServiceService serviceService,
+            ICurrentUserService currentUserService)
+            : base(currentUserService)
         {
             _serviceService = serviceService;
         }
@@ -50,6 +54,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "ServiceManager")]
         public async Task<IActionResult> Create(CreateServiceDto createDto, CancellationToken ct = default)
         {
             try
@@ -64,6 +69,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "ServiceManager")]
         public async Task<IActionResult> Update(Guid id, UpdateServiceDto updateDto, CancellationToken ct = default)
         {
             try
@@ -78,6 +84,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ServiceManager")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
         {
             try

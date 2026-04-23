@@ -8,7 +8,7 @@ namespace ClientOpsPortal.Application.DTOs
 {  
     public class AbonentDto : AuditableDto
     {
-        public required string UserId { get; set; }
+        public Guid UserId { get; set; }
         public required string IdentificationNumber { get; set; }
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
@@ -24,8 +24,6 @@ namespace ClientOpsPortal.Application.DTOs
 
     public class CreateAbonentDto : BaseDto
     {
-        public required string UserId { get; set; }
-
         [Required(ErrorMessage = "Идентификационный номер обязателен")]
         [StringLength(20, MinimumLength = 5, ErrorMessage = "Идентификационный номер должен содержать от 5 до 20 символов")]
         [RegularExpression(@"^[A-Z0-9]+$", ErrorMessage = "Идентификационный номер может содержать только заглавные буквы и цифры")]
@@ -49,6 +47,10 @@ namespace ClientOpsPortal.Application.DTOs
         [StringLength(20, MinimumLength = 3, ErrorMessage = "Номер лицевого счета должен содержать от 3 до 20 символов")]
         [RegularExpression(@"^[A-Z0-9\-]+$", ErrorMessage = "Номер лицевого счета может содержать только заглавные буквы, цифры и дефисы")]
         public required string AccountNumber { get; set; }
+
+        [Required(ErrorMessage = "Email обязателен")]
+        [EmailAddress(ErrorMessage = "Некорректный формат email")]
+        public required string Email { get; set; }
     }
 
     public class UpdateAbonentDto : BaseDto

@@ -3,6 +3,7 @@ using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -11,12 +12,14 @@ namespace ClientOpsPortal.UnitTests.Services;
 public class ServicesControllerTests
 {
     private readonly Mock<IServiceService> _serviceMock;
+    private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly ServicesController _controller;
 
     public ServicesControllerTests()
     {
         _serviceMock = new Mock<IServiceService>();
-        _controller = new ServicesController(_serviceMock.Object);
+        _currentUserServiceMock = new Mock<ICurrentUserService>();
+        _controller = new ServicesController(_serviceMock.Object, _currentUserServiceMock.Object);
     }
 
     [Fact]

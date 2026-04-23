@@ -2,17 +2,21 @@
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class EmployeesController : ControllerBase
+    [Authorize]
+    public class EmployeesController : BaseController
     {
         private readonly IEmployeeService _employeeService;
 
-        public EmployeesController(IEmployeeService employeeService)
+        public EmployeesController(
+            IEmployeeService employeeService,
+            ICurrentUserService currentUserService)
+            : base(currentUserService)
         {
             _employeeService = employeeService;
         }
@@ -73,6 +77,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(CreateEmployeeDto createDto, CancellationToken ct = default)
         {
             try
@@ -87,6 +92,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, UpdateEmployeeDto updateDto, CancellationToken ct = default)
         {
             try
@@ -105,6 +111,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
         {
             try

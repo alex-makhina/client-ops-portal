@@ -1,19 +1,26 @@
 ﻿using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class ContractsController : ControllerBase
+    [Authorize]
+    public class ContractsController : BaseController
     {
         private readonly IContractService _contractService;
+        private readonly IAbonentService _abonentService;
 
-        public ContractsController(IContractService contractService)
+        public ContractsController(
+            IContractService contractService,
+            IAbonentService abonentService,
+            ICurrentUserService currentUserService)
+            : base(currentUserService)
         {
             _contractService = contractService;
+            _abonentService = abonentService;
         }
 
         [HttpGet]
@@ -35,11 +42,19 @@ namespace ClientOpsPortal.Api.Controllers
         [HttpGet("by-abonent/{abonentId}")]
         public async Task<IActionResult> GetByAbonent(Guid abonentId, [FromQuery] bool withIncludes = true, CancellationToken ct = default)
         {
+            if (User.IsInRole("Abonent"))
+            {
+                var abonent = await _abonentService.GetByIdAsync(abonentId, false, ct);
+                if (abonent == null || !IsCurrentUserAbonentOwner(abonent.UserId))
+                    return Forbid();
+            }
+
             var contracts = await _contractService.GetShortContractsByAbonentAsync(abonentId, ct);
             return Ok(contracts);
         }
 
         [HttpPost]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Create(ContractDataDto createDto, CancellationToken ct = default)
         {
             try
@@ -54,6 +69,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Update(Guid id, UpdateContractDto updateDto, CancellationToken ct = default)
         {
             try
@@ -68,6 +84,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
         {
             try

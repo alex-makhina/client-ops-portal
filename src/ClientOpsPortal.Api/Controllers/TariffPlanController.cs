@@ -2,17 +2,21 @@
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class TariffPlansController : ControllerBase
+    [Authorize]
+    public class TariffPlansController : BaseController
     {
         private readonly ITariffPlanService _tariffPlanService;
 
-        public TariffPlansController(ITariffPlanService tariffPlanService)
+        public TariffPlansController(
+            ITariffPlanService tariffPlanService,
+            ICurrentUserService currentUserService)
+            : base(currentUserService)
         {
             _tariffPlanService = tariffPlanService;
         }
@@ -48,6 +52,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "ServiceManager")]
         public async Task<IActionResult> Create(CreateTariffPlanDto createDto, CancellationToken ct = default)
         {
             try
@@ -62,6 +67,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "ServiceManager")]
         public async Task<IActionResult> Update(Guid id, UpdateTariffPlanDto updateDto, CancellationToken ct = default)
         {
             try
@@ -76,6 +82,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ServiceManager")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
         {
             try

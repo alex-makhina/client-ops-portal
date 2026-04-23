@@ -10,7 +10,7 @@ namespace ClientOpsPortal.Domain.Entities
         public required string LastName { get; set; }
         public string? MiddleName { get; set; }
         public string FullName => $"{LastName} {FirstName} {MiddleName}".Trim();
-        public required string UserId { get; set; }
+        public Guid UserId { get; set; }
         public required string AccountNumber { get; set; }
 
         public User? User { get; set; }

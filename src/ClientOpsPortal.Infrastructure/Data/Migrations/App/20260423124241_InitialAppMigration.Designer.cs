@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
 {
     [DbContext(typeof(ClientOpsPortalDbContext))]
-    [Migration("20260408111234_RemoveServiceFromContractMigration")]
-    partial class RemoveServiceFromContractMigration
+    [Migration("20260423124241_InitialAppMigration")]
+    partial class InitialAppMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -67,9 +67,8 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -164,9 +163,8 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -365,10 +363,29 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
 
             modelBuilder.Entity("ClientOpsPortal.Domain.Entities.User", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("IdentityProvider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExternalId")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -378,7 +395,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.HasOne("ClientOpsPortal.Domain.Entities.User", "User")
                         .WithOne("Abonent")
                         .HasForeignKey("ClientOpsPortal.Domain.Entities.Abonent", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -389,7 +406,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.HasOne("ClientOpsPortal.Domain.Entities.Abonent", "Abonent")
                         .WithMany()
                         .HasForeignKey("AbonentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Abonent");
@@ -400,7 +417,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.HasOne("ClientOpsPortal.Domain.Entities.User", "User")
                         .WithOne("Employee")
                         .HasForeignKey("ClientOpsPortal.Domain.Entities.Employee", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -411,19 +428,19 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.HasOne("ClientOpsPortal.Domain.Entities.Contract", "Contract")
                         .WithMany("Subscriptions")
                         .HasForeignKey("ContractId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ClientOpsPortal.Domain.Entities.Service", "Service")
                         .WithMany()
                         .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ClientOpsPortal.Domain.Entities.TariffPlan", "TariffPlan")
                         .WithMany()
                         .HasForeignKey("TariffPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Contract");
@@ -438,13 +455,13 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.HasOne("ClientOpsPortal.Domain.Entities.Subscription", "Subscription")
                         .WithMany()
                         .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ClientOpsPortal.Domain.Entities.TariffPlan", "TariffPlan")
                         .WithMany()
                         .HasForeignKey("TariffPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Subscription");
@@ -457,7 +474,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.HasOne("ClientOpsPortal.Domain.Entities.SubscriptionHistory", null)
                         .WithMany("Steps")
                         .HasForeignKey("SubscriptionHistoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -466,7 +483,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     b.HasOne("ClientOpsPortal.Domain.Entities.Service", "Service")
                         .WithMany("TariffPlans")
                         .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Service");

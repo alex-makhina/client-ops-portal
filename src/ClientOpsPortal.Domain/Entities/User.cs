@@ -1,11 +1,10 @@
-﻿using ClientOpsPortal.Domain.Entities.Common;
-using ClientOpsPortal.Domain.Interfaces.Entities;
-
-namespace ClientOpsPortal.Domain.Entities
+﻿namespace ClientOpsPortal.Domain.Entities
 {
-    public class User
+    public class User : BaseEntity
     {
-        public string Id { get; set; } = null!;
+        public string ExternalId { get; set; } = string.Empty;
+        public string IdentityProvider { get; set; } = "Identity";
+        public string Email { get; set; } = string.Empty;
 
         public Abonent? Abonent { get; set; }
         public Employee? Employee { get; set; }

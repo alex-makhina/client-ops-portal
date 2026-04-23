@@ -12,13 +12,19 @@ namespace ClientOpsPortal.Application.Services
     {
         private readonly IGenericRepository<Abonent> _abonentRepository;
         private readonly IGenericRepository<Contract> _contractRepository;
+        private readonly IIdentityService _identityService;
+        private readonly INotificationService _notificationService;
 
         public AbonentService(
             IGenericRepository<Abonent> abonentRepository,
-            IGenericRepository<Contract> contractRepository)
+            IGenericRepository<Contract> contractRepository,
+            IIdentityService identityService,
+            INotificationService notificationService)
         {
             _abonentRepository = abonentRepository;
             _contractRepository = contractRepository;
+            _identityService = identityService;
+            _notificationService = notificationService;
         }
 
         public async Task<AbonentDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -38,11 +44,20 @@ namespace ClientOpsPortal.Application.Services
             if (!await IsAbonentIdentificationNumberUniqueAsync(createDto.IdentificationNumber, null, ct))
                 throw new InvalidOperationException($"Абонент с индентификационным номером '{createDto.IdentificationNumber}' уже существует");
 
-            if (!await IsAccountNumberUniqueAsync(createDto.IdentificationNumber, null, ct))
+            if (!await IsAccountNumberUniqueAsync(createDto.AccountNumber, null, ct))
                 throw new InvalidOperationException($"Абонент со счетом '{createDto.AccountNumber}' уже существует");
 
+            var userName = createDto.AccountNumber;
+            var password = _identityService.GenerateRandomPassword();
+
+            var user = await _identityService.CreateUserAsync(userName, createDto.Email, password, "Abonent", ct);
+
             var abonent = createDto.ToEntity();
+            abonent.UserId = user.Id;
             await _abonentRepository.AddAsync(abonent, ct);
+
+            await _notificationService.SendWelcomeWithPasswordAsync(createDto.Email, userName, password, ct);
+
             return abonent.ToAbonentDto();
         }
 

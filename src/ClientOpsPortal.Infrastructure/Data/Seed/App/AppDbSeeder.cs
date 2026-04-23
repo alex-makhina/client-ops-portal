@@ -24,18 +24,44 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.App
 
             _logger.LogInformation("Seeding reference data...");
 
+            var adminUserRecord = new User
+            {
+                Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                ExternalId = "11111111-1111-1111-1111-111111111111",
+                IdentityProvider = "Identity",
+                Email = "admin@clientopsportal.com"
+            };
+            await context.Users.AddAsync(adminUserRecord, cancellationToken);
+
+            var managerUserRecord = new User
+            {
+                Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                ExternalId = "22222222-2222-2222-2222-222222222222",
+                IdentityProvider = "Identity",
+                Email = "manager@clientopsportal.com"
+            };
+            await context.Users.AddAsync(managerUserRecord, cancellationToken);
+
+            var abonentUserRecord = new User
+            {
+                Id = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+                ExternalId = "33333333-3333-3333-3333-333333333333",
+                IdentityProvider = "Identity",
+                Email = "ivanov@example.com"
+            };
+            await context.Users.AddAsync(abonentUserRecord, cancellationToken);
+
             var manager = new Employee
             {
                 Id = Guid.Parse("a2b3c4d5-e6f7-4a8b-c9d0-e1f2a3b4c5d6"),
                 FirstName = "John",
                 LastName = "Smith",
-                UserId = Guid.Parse("22222222-2222-2222-2222-222222222222").ToString(),
+                UserId = managerUserRecord.Id,
                 StaffNumber = "111111",
                 Post = "manager",
                 CreatedAt = DateTimeOffset.UtcNow
             };
             await context.Employees.AddAsync(manager, cancellationToken);
-            await context.Users.AddAsync(new User { Id = manager.UserId });
 
             var abonent = new Abonent
             {
@@ -43,13 +69,12 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.App
                 FirstName = "Иван",
                 LastName = "Иванов",
                 MiddleName = "Иванович",
-                UserId = Guid.Parse("33333333-3333-3333-3333-333333333333").ToString(),
+                UserId = abonentUserRecord.Id,
                 IdentificationNumber = "888888888",
-                AccountNumber = "1234567890",                
+                AccountNumber = "1234567890",
                 CreatedAt = DateTimeOffset.UtcNow
             };
             await context.Abonents.AddAsync(abonent, cancellationToken);
-            await context.Users.AddAsync(new User { Id = abonent.UserId });
 
             var services = new List<Service>
             {

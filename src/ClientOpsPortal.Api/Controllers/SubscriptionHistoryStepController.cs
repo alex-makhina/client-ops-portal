@@ -2,17 +2,21 @@
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Services;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class SubscriptionHistoryStepsController : ControllerBase
+    [Authorize]
+    public class SubscriptionHistoryStepsController : BaseController
     {
         private readonly ISubscriptionHistoryStepService _stepService;
 
-        public SubscriptionHistoryStepsController(ISubscriptionHistoryStepService stepService)
+        public SubscriptionHistoryStepsController(
+            ISubscriptionHistoryStepService stepService,
+            ICurrentUserService currentUserService)
+            : base(currentUserService)
         {
             _stepService = stepService;
         }

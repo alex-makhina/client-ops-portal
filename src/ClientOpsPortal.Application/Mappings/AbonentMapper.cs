@@ -37,7 +37,6 @@ namespace ClientOpsPortal.Application.Mappings
             return new Abonent
             {
                 Id = Guid.NewGuid(),
-                UserId = createDto.UserId,
                 IdentificationNumber = createDto.IdentificationNumber,
                 FirstName = createDto.FirstName,
                 LastName = createDto.LastName,
@@ -45,7 +44,7 @@ namespace ClientOpsPortal.Application.Mappings
                 AccountNumber = createDto.AccountNumber
             };
         }
- 
+  
         public static void UpdateEntity(this UpdateAbonentDto updateDto, Abonent entity)
         {
             entity.IdentificationNumber = updateDto.IdentificationNumber;
