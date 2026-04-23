@@ -16,6 +16,7 @@ namespace ClientOpsPortal.Application
             services.AddScoped<ITariffPlanService, TariffPlanService>();
             services.AddScoped<ISubscriptionHistoryService, SubscriptionHistoryService>();
             services.AddScoped<ISubscriptionHistoryStepService, SubscriptionHistoryStepService>();
+            services.AddScoped<IReportsService, ReportsService>();
 
             return services;
         }

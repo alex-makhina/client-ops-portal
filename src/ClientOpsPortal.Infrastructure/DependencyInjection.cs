@@ -1,5 +1,4 @@
-﻿using ClientOpsPortal.Domain.Entities;
-using ClientOpsPortal.Domain.Interfaces.Repositories;
+﻿using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Infrastructure.Data.Context;
 using ClientOpsPortal.Infrastructure.Data.Interceptors;
 using ClientOpsPortal.Infrastructure.Data.Repositories;
@@ -29,6 +28,7 @@ namespace ClientOpsPortal.Infrastructure
             });
 
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            services.AddScoped<IReportsRepository, ReportsRepository>();
 
             services.AddScoped<AuthDbSeeder>();
             services.AddScoped<AppDbSeeder>();
