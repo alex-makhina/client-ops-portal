@@ -7,7 +7,7 @@ namespace ClientOpsPortal.Application.DTOs
 {  
     public class EmployeeDto : AuditableDto
     {
-        public required string UserId { get; set; }
+        public Guid UserId { get; set; }
         public required string StaffNumber { get; set; }
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
@@ -26,13 +26,13 @@ namespace ClientOpsPortal.Application.DTOs
 
     public class CreateEmployeeDto : BaseDto
     {
-        public required string UserId { get; set; }
         public required string StaffNumber { get; set; }
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
         public string? MiddleName { get; set; }
         public required string Post { get; set; }
         public string? Department { get; set; }
+        public required string Email { get; set; }
     }
 
     public class UpdateEmployeeDto : BaseDto

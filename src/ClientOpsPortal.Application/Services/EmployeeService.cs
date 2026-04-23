@@ -11,10 +11,17 @@ namespace ClientOpsPortal.Application.Services
     public class EmployeeService : IEmployeeService
     {
         private readonly IGenericRepository<Employee> _employeeRepository;
+        private readonly IIdentityService _identityService;
+        private readonly INotificationService _notificationService;
 
-        public EmployeeService(IGenericRepository<Employee> employeeRepository)
+        public EmployeeService(
+            IGenericRepository<Employee> employeeRepository,
+            IIdentityService identityService,
+            INotificationService notificationService)
         {
             _employeeRepository = employeeRepository;
+            _identityService = identityService;
+            _notificationService = notificationService;
         }
 
         public async Task<EmployeeDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -35,8 +42,17 @@ namespace ClientOpsPortal.Application.Services
             if (existingEmployee != null)
                 throw new InvalidOperationException($"Сотрудник с табельным номером {createDto.StaffNumber} уже существует");
 
+            var userName = createDto.StaffNumber;
+            var password = _identityService.GenerateRandomPassword();
+
+            var user = await _identityService.CreateUserAsync(userName, createDto.Email, password, "Employee", ct);
+
             var employee = createDto.ToEntity();
+            employee.UserId = user.Id;
             await _employeeRepository.AddAsync(employee, ct);
+
+            await _notificationService.SendWelcomeWithPasswordAsync(createDto.Email, userName, password, ct);
+
             return employee.ToEmployeeDto();
         }
 

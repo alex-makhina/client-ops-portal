@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class InitialAppMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -34,7 +34,10 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ExternalId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    IdentityProvider = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -61,7 +64,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -73,7 +76,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     LastName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     MiddleName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    UserId = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     AccountNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
@@ -88,7 +91,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -100,7 +103,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     LastName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     MiddleName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    UserId = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Post = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Department = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -116,7 +119,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -128,7 +131,6 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                     AbonentId = table.Column<Guid>(type: "uuid", nullable: false),
                     BeginDate = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     EndDate = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    ServiceId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -142,12 +144,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                         column: x => x.AbonentId,
                         principalTable: "Abonents",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Contracts_Services_ServiceId",
-                        column: x => x.ServiceId,
-                        principalTable: "Services",
-                        principalColumn: "Id");
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -173,19 +170,19 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                         column: x => x.ContractId,
                         principalTable: "Contracts",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Subscriptions_Services_ServiceId",
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Subscriptions_TariffPlans_TariffPlanId",
                         column: x => x.TariffPlanId,
                         principalTable: "TariffPlans",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -211,13 +208,13 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                         column: x => x.SubscriptionId,
                         principalTable: "Subscriptions",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_SubscriptionHistories_TariffPlans_TariffPlanId",
                         column: x => x.TariffPlanId,
                         principalTable: "TariffPlans",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -239,7 +236,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                         column: x => x.SubscriptionHistoryId,
                         principalTable: "SubscriptionHistories",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -252,11 +249,6 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                 name: "IX_Contracts_AbonentId",
                 table: "Contracts",
                 column: "AbonentId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Contracts_ServiceId",
-                table: "Contracts",
-                column: "ServiceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Employees_UserId",
@@ -298,6 +290,12 @@ namespace ClientOpsPortal.Infrastructure.Data.Migrations.App
                 name: "IX_TariffPlans_ServiceId",
                 table: "TariffPlans",
                 column: "ServiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_ExternalId",
+                table: "Users",
+                column: "ExternalId",
+                unique: true);
         }
 
         /// <inheritdoc />

@@ -3,17 +3,21 @@ using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Enums;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class SubscriptionHistoriesController : ControllerBase
+    [Authorize]
+    public class SubscriptionHistoriesController : BaseController
     {
         private readonly ISubscriptionHistoryService _historyService;
 
-        public SubscriptionHistoriesController(ISubscriptionHistoryService historyService)
+        public SubscriptionHistoriesController(
+            ISubscriptionHistoryService historyService,
+            ICurrentUserService currentUserService)
+            : base(currentUserService)
         {
             _historyService = historyService;
         }

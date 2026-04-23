@@ -31,7 +31,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.Auth
 
             _logger.LogInformation("Seeding roles and users...");
 
-            var roles = new[] { "Admin", "Manager", "Abonent", "DataAnalyst", "ServiceManager" };
+            var roles = new[] { "Admin", "Manager", "Abonent", "DataAnalyst", "ServiceManager", "Employee" };
             foreach (var roleName in roles)
             {
                 if (!await _roleManager.RoleExistsAsync(roleName))
@@ -47,7 +47,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.Auth
 
             var adminUser = new ApplicationUser
             {
-                Id = Guid.Parse("11111111-1111-1111-1111-111111111111"), 
+                Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 UserName = "admin",
                 Email = "admin@clientopsportal.com",
                 EmailConfirmed = true
@@ -63,7 +63,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.Auth
             var managerUser = new ApplicationUser
             {
                 Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                UserName = "manager",
+                UserName = "111111",
                 Email = "manager@clientopsportal.com",
                 EmailConfirmed = true
             };
@@ -78,7 +78,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.Auth
             var abonentUser = new ApplicationUser
             {
                 Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
-                UserName = "1234567890",
+                UserName = "1234567890", 
                 Email = "ivanov@example.com",
                 EmailConfirmed = true
             };

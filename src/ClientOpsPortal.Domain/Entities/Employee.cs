@@ -9,7 +9,7 @@ namespace ClientOpsPortal.Domain.Entities
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
         public string? MiddleName { get; set; }
-        public required string UserId { get; set; }
+        public Guid UserId { get; set; }
         public required string Post { get; set; }
         public string? Department { get; set; }
 

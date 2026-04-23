@@ -2,19 +2,29 @@
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
+using ClientOpsPortal.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class SubscriptionsController : ControllerBase
+    [Authorize]
+    public class SubscriptionsController : BaseController
     {
         private readonly ISubscriptionService _subscriptionService;
+        private readonly IContractService _contractService;
+        private readonly IAbonentService _abonentService;
 
-        public SubscriptionsController(ISubscriptionService subscriptionService)
+        public SubscriptionsController(
+            ISubscriptionService subscriptionService,
+            IContractService contractService,
+            IAbonentService abonentService,
+            ICurrentUserService currentUserService)
+            : base(currentUserService)
         {
             _subscriptionService = subscriptionService;
+            _contractService = contractService;
+            _abonentService = abonentService;
         }
 
         [HttpGet]
@@ -55,6 +65,13 @@ namespace ClientOpsPortal.Api.Controllers
             [FromQuery] bool onlyActive = true,
             CancellationToken ct = default)
         {
+            if (User.IsInRole("Abonent"))
+            {
+                var abonent = await _abonentService.GetByIdAsync(abonentId, false, ct);
+                if (abonent == null || !IsCurrentUserAbonentOwner(abonent.UserId))
+                    return Forbid();
+            }
+
             var subscriptions = await _subscriptionService.GetSubscriptionsByAbonentIdAsync(abonentId, onlyActive, ct);
 
             if (!subscriptions.Any())
@@ -66,10 +83,22 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPost("connect")]
+        [Authorize(Roles = "Manager,Abonent")]
         public async Task<IActionResult> Create(SubscriptionDto createDto, CancellationToken ct = default)
         {
             try
             {
+                if (User.IsInRole("Abonent"))
+                {
+                    var contract = await _contractService.GetByIdAsync(createDto.ContractId, false, ct);
+                    if (contract == null)
+                        return BadRequest("Договор не найден");
+
+                    var abonent = await _abonentService.GetByIdAsync(contract.AbonentId, false, ct);
+                    if (abonent == null || !IsCurrentUserAbonentOwner(abonent.UserId))
+                        return Forbid();
+                }
+
                 var subscription = await _subscriptionService.CreateAsync(createDto, ct);
                 return CreatedAtAction(nameof(GetById), new { id = subscription.Id }, subscription);
             }
@@ -80,10 +109,15 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Manager,Abonent")]
         public async Task<IActionResult> Update(Guid id, UpdateSubscriptionDto updateDto, CancellationToken ct = default)
         {
             try
             {
+                if (User.IsInRole("Abonent") &&
+                    !await IsSubscriptionOwnerAsync(id, _subscriptionService, _contractService, _abonentService, ct))
+                    return Forbid();
+
                 var subscription = await _subscriptionService.UpdateAsync(id, updateDto, ct);
                 return Ok(subscription);
             }
@@ -94,10 +128,15 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPatch("{id}/change-tariff")]
+        [Authorize(Roles = "Manager,Abonent")]
         public async Task<IActionResult> ChangeTariffPlan(Guid id, [FromQuery] Guid newTariffPlanId, CancellationToken ct = default)
         {
             try
             {
+                if (User.IsInRole("Abonent") &&
+                    !await IsSubscriptionOwnerAsync(id, _subscriptionService, _contractService, _abonentService, ct))
+                    return Forbid();
+
                 var subscription = await _subscriptionService.ChangeTariffPlanAsync(id, newTariffPlanId, ct);
                 return Ok(subscription);
             }
@@ -108,10 +147,15 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPatch("{id}/cancel")]
+        [Authorize(Roles = "Manager,Abonent")]
         public async Task<IActionResult> CancelSubscription(Guid id, CancellationToken ct = default)
         {
             try
             {
+                if (User.IsInRole("Abonent") &&
+                    !await IsSubscriptionOwnerAsync(id, _subscriptionService, _contractService, _abonentService, ct))
+                    return Forbid();
+
                 var subscription = await _subscriptionService.CancelSubscriptionAsync(id, ct);
                 return Ok(subscription);
             }
@@ -122,6 +166,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
         {
             try
