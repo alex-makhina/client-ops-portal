@@ -1,9 +1,11 @@
-﻿using ClientOpsPortal.Application.DTOs;
+﻿using AutoBogus;
+using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Services;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using Moq;
+using Shouldly;
 using System.Linq.Expressions;
 
 namespace ClientOpsPortal.UnitTests.Services;
@@ -12,138 +14,218 @@ public class ServiceServiceTests
 {
     private readonly Mock<IGenericRepository<Service>> _serviceRepoMock;
     private readonly Mock<IGenericRepository<TariffPlan>> _tariffRepoMock;
-    private readonly ServiceService _service;
+    private readonly ServiceService _sut;
 
     public ServiceServiceTests()
     {
         _serviceRepoMock = new Mock<IGenericRepository<Service>>();
         _tariffRepoMock = new Mock<IGenericRepository<TariffPlan>>();
-        _service = new ServiceService(_serviceRepoMock.Object, _tariffRepoMock.Object);
+        _sut = new ServiceService(_serviceRepoMock.Object, _tariffRepoMock.Object);
     }
 
     [Fact]
-    public async Task CreateAsync_UniqueName_ReturnsCreatedDto()
+    public async Task CreateAsync_WhenNameIsUnique_ReturnsCreatedDto()
     {
         // Arrange
-        var createDto = new CreateServiceDto { Name = "Домашний Интернет", Description = "Описание" };
-        _serviceRepoMock.Setup(r => r.GetWhereAsync(It.IsAny<Expression<Func<Service, bool>>>(), false, default))
+        var createDto = CreateCreateServiceDto();
+
+        _serviceRepoMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Service, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Service>());
-        _serviceRepoMock.Setup(r => r.AddAsync(It.IsAny<Service>(), default)).Returns(Task.CompletedTask);
+
+        _serviceRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<Service>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.CreateAsync(createDto);
+        var result = await _sut.CreateAsync(createDto);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(createDto.Name, result.Name);
-        _serviceRepoMock.Verify(r => r.AddAsync(It.IsAny<Service>(), default), Times.Once);
+        result.ShouldNotBeNull();
+        result.Name.ShouldBe(createDto.Name);
+        result.Description.ShouldBe(createDto.Description);
+
+        _serviceRepoMock.Verify(
+            r => r.AddAsync(
+                It.Is<Service>(s => s.Name == createDto.Name && s.Description == createDto.Description),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task CreateAsync_DuplicateName_ThrowsInvalidOperationException()
+    public async Task CreateAsync_WhenDuplicateName_ThrowsInvalidOperationException()
     {
         // Arrange
-        var createDto = new CreateServiceDto
-        {
-            Name = "Существующая Услуга",
-            Description = "Тестовое описание"
-        };
+        var createDto = CreateCreateServiceDto();
+        var existingService = CreateService(createDto.Name, createDto.Description);
 
-        _serviceRepoMock.Setup(r => r.GetWhereAsync(It.IsAny<Expression<Func<Service, bool>>>(), false, default))
-            .ReturnsAsync(new[] 
-            { 
-                new Service 
-                { 
-                    Id = Guid.NewGuid(), 
-                    Name = "Существующая Услуга",
-                    Description = "Тестовое описание"
-                } 
-            });
+        _serviceRepoMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Service, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { existingService });
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CreateAsync(createDto));
-        Assert.Contains("уже существует", ex.Message);
-        _serviceRepoMock.Verify(r => r.AddAsync(It.IsAny<Service>(), default), Times.Never);
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => _sut.CreateAsync(createDto));
+
+        exception.Message.ShouldContain("уже существует");
+
+        _serviceRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<Service>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task UpdateAsync_ValidDto_UpdatesServiceAndReturnsDto()
+    public async Task UpdateAsync_WhenValidDto_UpdatesServiceAndReturnsDto()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
-        var existingService = new Service { Id = serviceId, Name = "Старое название", Description = "Старое" };
-        var updateDto = new UpdateServiceDto { Name = "Новое название", Description = "Новое" };
+        var existingService = CreateService("Старое название", "Старое описание", serviceId);
+        var updateDto = CreateUpdateServiceDto("Новое название", "Новое описание");
 
-        _serviceRepoMock.Setup(r => r.GetByIdAsync(serviceId, false, default)).ReturnsAsync(existingService);
-        _serviceRepoMock.Setup(r => r.GetWhereAsync(It.IsAny<Expression<Func<Service, bool>>>(), false, default))
+        var existingTariffPlans = new List<TariffPlan>();
+
+        _serviceRepoMock
+            .Setup(r => r.GetByIdAsync(serviceId, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingService);
+
+        _serviceRepoMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Service, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Service>());
-        _serviceRepoMock.Setup(r => r.UpdateAsync(existingService, default)).Returns(Task.CompletedTask);
+
+        _tariffRepoMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<TariffPlan, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingTariffPlans); 
+
+        _serviceRepoMock
+            .Setup(r => r.UpdateAsync(It.IsAny<Service>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.UpdateAsync(serviceId, updateDto);
+        var result = await _sut.UpdateAsync(serviceId, updateDto);
 
         // Assert
-        Assert.Equal(updateDto.Name, result.Name);
-        _serviceRepoMock.Verify(r => r.UpdateAsync(existingService, default), Times.Once);
+        result.ShouldNotBeNull();
+        result.Name.ShouldBe(updateDto.Name);
+        result.Description.ShouldBe(updateDto.Description);
+
+        _serviceRepoMock.Verify(
+            r => r.UpdateAsync(
+                It.Is<Service>(s => s.Name == updateDto.Name && s.Description == updateDto.Description),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task UpdateAsync_ServiceNotFound_ThrowsEntityNotFoundException()
+    public async Task UpdateAsync_WhenServiceNotFound_ThrowsEntityNotFoundException()
     {
         // Arrange
-        _serviceRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), false, default)).ReturnsAsync((Service?)null);
+        var serviceId = Guid.NewGuid();
+        var updateDto = CreateUpdateServiceDto();
+
+        _serviceRepoMock
+            .Setup(r => r.GetByIdAsync(serviceId, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Service?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<EntityNotFoundException>(() =>
-            _service.UpdateAsync(Guid.NewGuid(), 
-            new UpdateServiceDto 
-            { 
-                Name = "Тестовое название",
-                Description = "Тестовое описание"
-            }));
+        await Should.ThrowAsync<EntityNotFoundException>(
+            () => _sut.UpdateAsync(serviceId, updateDto));
+
+        _serviceRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<Service>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task UpdateAsync_WithTariffPlans_SyncsAddUpdateDelete()
+    public async Task UpdateAsync_WhenTariffPlansProvided_SyncsAddUpdateDelete()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
         var tariffToUpdateId = Guid.NewGuid();
-        var tariffToDeleteId = Guid.NewGuid(); 
-        var existingService = new Service { Id = serviceId, Name = "Test", Description = "Тестовое описание" };
+        var tariffToDeleteId = Guid.NewGuid();
 
+        var existingService = CreateService("Test", "Test Description", serviceId);
         var existingTariffs = new[]
         {
-        new TariffPlan { Id = tariffToUpdateId, ServiceId = serviceId, Name = "Старый", Price = 100, Description = "Тестовое описание" },
-        new TariffPlan { Id = tariffToDeleteId, ServiceId = serviceId, Name = "На удаление", Price = 50, Description = "Тестовое описание" }
-    };
-
-        _tariffRepoMock.Setup(r => r.GetWhereAsync(It.IsAny<Expression<Func<TariffPlan, bool>>>(), false, default))
-            .ReturnsAsync(existingTariffs);
+            CreateTariffPlan(tariffToUpdateId, "Старый", 100, serviceId),
+            CreateTariffPlan(tariffToDeleteId, "На удаление", 50, serviceId)
+        };
 
         var updateDto = new UpdateServiceDto
         {
             Name = "Test",
-            Description = "Тестовое описание",
+            Description = "Test Description",
             TariffPlans = new List<UpdateTariffPlanFromServiceDto>
-        {
-            new() { Id = tariffToUpdateId, Name = "Обновленный", Price = 150, Description = "Обновленное описание" },
-            new() { Id = Guid.Empty, Name = "Новый", Price = 200, Description = "Новое описание" }
-        }
+            {
+                new()
+                {
+                    Id = tariffToUpdateId,
+                    Name = "Обновленный",
+                    Price = 150,
+                    Description = "Обновленное описание"
+                },
+                new()
+                {
+                    Id = Guid.Empty,
+                    Name = "Новый",
+                    Price = 200,
+                    Description = "Новое описание"
+                }
+            }
         };
 
-        _serviceRepoMock.Setup(r => r.GetByIdAsync(serviceId, false, default)).ReturnsAsync(existingService);
-        _serviceRepoMock.Setup(r => r.GetWhereAsync(It.IsAny<Expression<Func<Service, bool>>>(), false, default))
+        _serviceRepoMock
+            .Setup(r => r.GetByIdAsync(serviceId, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingService);
+
+        _tariffRepoMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<TariffPlan, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingTariffs);
+
+        _serviceRepoMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Service, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Service>());
-        _serviceRepoMock.Setup(r => r.UpdateAsync(It.IsAny<Service>(), default)).Returns(Task.CompletedTask);
+
+        _serviceRepoMock
+            .Setup(r => r.UpdateAsync(It.IsAny<Service>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
-        await _service.UpdateAsync(serviceId, updateDto);
+        await _sut.UpdateAsync(serviceId, updateDto);
 
         // Assert
-        _tariffRepoMock.Verify(r => r.DeleteAsync(tariffToDeleteId, default), Times.Once);
-        _tariffRepoMock.Verify(r => r.UpdateAsync(It.Is<TariffPlan>(t => t.Id == tariffToUpdateId), default), Times.Once);
-        _tariffRepoMock.Verify(r => r.AddAsync(It.Is<TariffPlan>(t => t.Name == "Новый"), default), Times.Once);
+        _tariffRepoMock.Verify(
+            r => r.DeleteAsync(tariffToDeleteId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _tariffRepoMock.Verify(
+            r => r.UpdateAsync(
+                It.Is<TariffPlan>(t => t.Id == tariffToUpdateId && t.Name == "Обновленный" && t.Price == 150),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _tariffRepoMock.Verify(
+            r => r.AddAsync(
+                It.Is<TariffPlan>(t => t.Name == "Новый" && t.Price == 200 && t.ServiceId == serviceId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -151,51 +233,108 @@ public class ServiceServiceTests
     {
         // Arrange
         var now = DateTimeOffset.UtcNow;
-        var services = new[]
-        {
-            new Service { Id = Guid.NewGuid(), Name = "Active1", EndDate = null, Description = "Описание1" },
-            new Service { Id = Guid.NewGuid(), Name = "Active2", EndDate = now.AddDays(10), Description = "Описание2" },
-            new Service { Id = Guid.NewGuid(), Name = "Expired", EndDate = now.AddDays(-1), Description = "Описание3" }
-        };
+        var activeService1 = CreateService("Active1", "Description1", endDate: null);
+        var activeService2 = CreateService("Active2", "Description2", endDate: now.AddDays(10));
+        var expiredService = CreateService("Expired", "Description3", endDate: now.AddDays(-1));
 
-        _serviceRepoMock.Setup(r => r.GetWhereAsync(It.IsAny<Expression<Func<Service, bool>>>(), false, default))
-            .ReturnsAsync(services.Where(s => s.EndDate == null || s.EndDate > now).ToList());
+        var allServices = new[] { activeService1, activeService2, expiredService };
+        var activeServices = allServices
+            .Where(s => s.EndDate == null || s.EndDate > now)
+            .ToList();
+
+        _serviceRepoMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Service, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activeServices);
 
         // Act
-        var result = await _service.GetActiveServicesAsync();
+        var result = await _sut.GetActiveServicesAsync();
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.DoesNotContain(result, s => s.Name == "Expired");
+        result.ShouldNotBeNull();
+        result.Count.ShouldBe(2);
+        result.ShouldNotContain(s => s.Name == "Expired");
+        result.ShouldContain(s => s.Name == "Active1");
+        result.ShouldContain(s => s.Name == "Active2");
     }
 
     [Fact]
-    public async Task GetFullServiceDataAsync_ValidId_ReturnsFullDataDto()
+    public async Task GetFullServiceDataAsync_WhenValidId_ReturnsFullDataDto()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
-        var service = new Service { Id = serviceId, Name = "FullTest", Description = "Тестовове описание" };
-        _serviceRepoMock.Setup(r => r.GetByIdAsync(serviceId, true, default)).ReturnsAsync(service);
+        var service = CreateService("FullTest", "Test Description", serviceId);
+
+        _serviceRepoMock
+            .Setup(r => r.GetByIdAsync(serviceId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(service);
 
         // Act
-        var result = await _service.GetFullServiceDataAsync(serviceId);
+        var result = await _sut.GetFullServiceDataAsync(serviceId);
 
         // Assert
-        Assert.NotNull(result);
-        _serviceRepoMock.Verify(r => r.GetByIdAsync(serviceId, true, default), Times.Once);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(serviceId);
+        result.Name.ShouldBe(service.Name);
+
+        _serviceRepoMock.Verify(
+            r => r.GetByIdAsync(serviceId, true, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task DeleteAsync_ValidId_CallsRepositoryDelete()
+    public async Task DeleteAsync_WhenValidId_CallsRepositoryDelete()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
-        _serviceRepoMock.Setup(r => r.DeleteAsync(serviceId, default)).Returns(Task.CompletedTask);
+
+        _serviceRepoMock
+            .Setup(r => r.DeleteAsync(serviceId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
-        await _service.DeleteAsync(serviceId);
+        await _sut.DeleteAsync(serviceId);
 
         // Assert
-        _serviceRepoMock.Verify(r => r.DeleteAsync(serviceId, default), Times.Once);
+        _serviceRepoMock.Verify(
+            r => r.DeleteAsync(serviceId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
+
+    #region Helper Methods
+
+    private static CreateServiceDto CreateCreateServiceDto() =>
+        new AutoFaker<CreateServiceDto>()
+            .RuleFor(dto => dto.Name, f => f.Commerce.ProductName())
+            .RuleFor(dto => dto.Description, f => f.Lorem.Sentence())
+            .Generate();
+
+    private static UpdateServiceDto CreateUpdateServiceDto(string? name = null, string? description = null) =>
+        new AutoFaker<UpdateServiceDto>()
+            .RuleFor(dto => dto.Name, f => name ?? f.Commerce.ProductName())
+            .RuleFor(dto => dto.Description, f => description ?? f.Lorem.Sentence())
+            .RuleFor(dto => dto.TariffPlans, new List<UpdateTariffPlanFromServiceDto>())
+            .Generate();
+
+    private static Service CreateService(string name, string description, Guid? id = null, DateTimeOffset? endDate = null) =>
+        new AutoFaker<Service>()
+            .RuleFor(s => s.Id, _ => id ?? Guid.NewGuid())
+            .RuleFor(s => s.Name, _ => name)
+            .RuleFor(s => s.Description, _ => description)
+            .RuleFor(s => s.EndDate, _ => endDate)
+            .RuleFor(s => s.TariffPlans, new List<TariffPlan>())
+            .Generate();
+
+    private static TariffPlan CreateTariffPlan(Guid id, string name, decimal price, Guid serviceId) =>
+        new AutoFaker<TariffPlan>()
+            .RuleFor(t => t.Id, _ => id)
+            .RuleFor(t => t.Name, _ => name)
+            .RuleFor(t => t.Price, _ => price)
+            .RuleFor(t => t.ServiceId, _ => serviceId)
+            .RuleFor(t => t.Description, f => f.Lorem.Sentence())
+            .Generate();
+
+    #endregion
 }

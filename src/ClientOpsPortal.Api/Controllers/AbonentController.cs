@@ -43,7 +43,9 @@ namespace ClientOpsPortal.Api.Controllers
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetByAccountNumber(string accountNumber, [FromQuery] bool withIncludes = true, CancellationToken ct = default)
         {
-            var abonent = await _abonentService.GetWhereAsync(a => a.AccountNumber == accountNumber, false, ct);
+            var abonents = await _abonentService.GetWhereAsync(a => a.AccountNumber == accountNumber, false, ct);
+            var abonent = abonents.FirstOrDefault();
+
             if (abonent == null)
                 return NotFound($"Абонент с лицевым счетом {accountNumber} не найден");
             return Ok(abonent);
