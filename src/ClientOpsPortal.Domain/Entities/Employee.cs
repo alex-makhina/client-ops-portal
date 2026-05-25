@@ -12,6 +12,7 @@ namespace ClientOpsPortal.Domain.Entities
         public Guid UserId { get; set; }
         public required string Post { get; set; }
         public string? Department { get; set; }
+        public bool IsActive { get; set; } = true;
 
         public User? User { get; set; }
     }

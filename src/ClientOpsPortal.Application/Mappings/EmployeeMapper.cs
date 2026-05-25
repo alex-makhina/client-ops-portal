@@ -20,6 +20,7 @@ namespace ClientOpsPortal.Application.Mappings
                 MiddleName = employee.MiddleName,
                 Post = employee.Post,
                 Department = employee.Department,
+                IsActive = employee.IsActive,
                 CreatedAt = employee.CreatedAt,
                 CreatedBy = employee.CreatedBy, 
                 UpdatedAt = employee.UpdatedAt,
@@ -48,7 +49,8 @@ namespace ClientOpsPortal.Application.Mappings
                 LastName = createDto.LastName,
                 MiddleName = createDto.MiddleName,
                 Post = createDto.Post,
-                Department = createDto.Department
+                Department = createDto.Department,
+                IsActive = true
             };
         }
 
@@ -60,6 +62,22 @@ namespace ClientOpsPortal.Application.Mappings
             entity.MiddleName = updateDto.MiddleName;
             entity.Post = updateDto.Post; 
             entity.Department = updateDto.Department;
+        }
+
+        public static UserListItemDto ToUserListItemDto(this Employee employee, string login, string role)
+        {
+            return new UserListItemDto
+            {
+                EmployeeId = employee.Id,
+                StaffNumber = employee.StaffNumber,
+                FullName = $"{employee.LastName} {employee.FirstName} {employee.MiddleName}".Trim(),
+                Post = employee.Post,
+                Department = employee.Department,
+                Email = employee.User?.Email ?? string.Empty,
+                Login = login,
+                Role = role,
+                IsActive = employee.IsActive
+            };
         }
     }
 }

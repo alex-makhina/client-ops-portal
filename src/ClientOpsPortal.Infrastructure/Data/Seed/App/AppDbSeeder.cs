@@ -51,6 +51,21 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.App
             };
             await context.Users.AddAsync(abonentUserRecord, cancellationToken);
 
+            var adminEmployee = new Employee
+            {
+                Id = Guid.Parse("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"),
+                FirstName = "Admin",
+                LastName = "Super",
+                MiddleName = "System",
+                UserId = adminUserRecord.Id,
+                StaffNumber = "000001",
+                Post = "Администратор",
+                Department = "IT",
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            await context.Employees.AddAsync(adminEmployee, cancellationToken);
+
             var manager = new Employee
             {
                 Id = Guid.Parse("a2b3c4d5-e6f7-4a8b-c9d0-e1f2a3b4c5d6"),
@@ -59,6 +74,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.App
                 UserId = managerUserRecord.Id,
                 StaffNumber = "111111",
                 Post = "manager",
+                IsActive = true,
                 CreatedAt = DateTimeOffset.UtcNow
             };
             await context.Employees.AddAsync(manager, cancellationToken);

@@ -1,0 +1,238 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+
+@using ClientOpsPortal.Web.Features.UserManagement.Models
+@using ClientOpsPortal.Web.Features.UserManagement.Services
+
+@inject IUserManagementService UserManagementService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+
+<RadzenCard>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="mb-0">Управление пользователями</h3>
+        <RadzenButton Text="Создать пользователя" ButtonStyle="ButtonStyle.Primary" Icon="person_add" Click="@OpenCreateDialog" />
+    </div>
+    <RadzenDataGrid @ref="@grid"
+                     Data="@users"
+                     TItem="UserListItem"
+                     AllowPaging="true"
+                     PageSize="15"
+                     AllowSorting="true"
+                     AllowFiltering="true"
+                     FilterMode="FilterMode.Simple"
+                     Style="margin-top: 12px;">
+        <Columns>
+            <RadzenDataGridColumn TItem="UserListItem" Property="StaffNumber" Title="Таб. номер" Width="120px" Sortable="true" Filterable="true" />
+            <RadzenDataGridColumn TItem="UserListItem" Property="FullName" Title="ФИО" Sortable="true" Filterable="true" />
+            <RadzenDataGridColumn TItem="UserListItem" Property="Post" Title="Должность" Sortable="true" Filterable="true" />
+            <RadzenDataGridColumn TItem="UserListItem" Property="Department" Title="Отдел" Sortable="true" Filterable="true" />
+            <RadzenDataGridColumn TItem="UserListItem" Property="Email" Title="Email" Sortable="true" Filterable="true" />
+            <RadzenDataGridColumn TItem="UserListItem" Property="Login" Title="Логин" Sortable="true" Filterable="true" />
+            <RadzenDataGridColumn TItem="UserListItem" Property="Role" Title="Роль" Sortable="true" Filterable="true" />
+            <RadzenDataGridColumn TItem="UserListItem" Property="IsActive" Title="Статус" Sortable="true" Filterable="true" Width="140px">
+                <Template Context="item">
+                    <RadzenChip Text="@GetStatusText(item.IsActive)"
+                                Style="@GetStatusChipStyle(item.IsActive)"
+                                Size="ChipSize.Small" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="UserListItem" Title="Действия" Width="200px">
+                <Template Context="item">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                                  Click="@(args => OpenEditDialog(item))" />
+                    <RadzenButton Icon="@GetToggleIcon(item.IsActive)"
+                                  ButtonStyle="@GetToggleButtonStyle(item.IsActive)"
+                                  Size="ButtonSize.Small"
+                                  Click="@(args => ToggleStatus(item))" />
+                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                                  Click="@(args => ConfirmDelete(item))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenCard>
+
+@code {
+    private RadzenDataGrid<UserListItem>? grid;
+    private List<UserListItem> users = new();
+    private List<string> availableRoles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            users = await UserManagementService.GetAllUsersAsync();
+            availableRoles = await UserManagementService.GetAvailableRolesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var result = await DialogService.OpenAsync<UserEditDialog>(
+            "Создание пользователя",
+            new Dictionary<string, object?>
+            {
+                { "IsEditMode", false },
+                { "AvailableRoles", availableRoles }
+            },
+            new Radzen.DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+        );
+
+        if (result is UserEditDialogResult dialogResult)
+        {
+            await HandleUserSave(dialogResult);
+        }
+    }
+
+    private async Task OpenEditDialog(UserListItem item)
+    {
+        var nameParts = item.FullName.Split(' ');
+
+        var result = await DialogService.OpenAsync<UserEditDialog>(
+            "Редактирование пользователя",
+            new Dictionary<string, object?>
+            {
+                { "IsEditMode", true },
+                { "EmployeeId", item.EmployeeId },
+                { "StaffNumber", item.StaffNumber },
+                { "LastName", nameParts.Length > 0 ? nameParts[0] : string.Empty },
+                { "FirstName", nameParts.Length > 1 ? nameParts[1] : string.Empty },
+                { "MiddleName", nameParts.Length > 2 ? nameParts[2] : null },
+                { "Post", item.Post },
+                { "Department", item.Department },
+                { "Email", item.Email },
+                { "Login", item.Login },
+                { "Role", item.Role },
+                { "AvailableRoles", availableRoles }
+            },
+            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+        );
+
+        if (result is UserEditDialogResult dialogResult)
+        {
+            await HandleUserSave(dialogResult);
+        }
+    }
+
+    private async Task HandleUserSave(UserEditDialogResult data)
+    {
+        try
+        {
+            bool success;
+            if (data.IsEditMode)
+            {
+                var request = new UpdateUserRequest
+                {
+                    StaffNumber = data.StaffNumber,
+                    FirstName = data.FirstName,
+                    LastName = data.LastName,
+                    MiddleName = data.MiddleName,
+                    Post = data.Post,
+                    Department = data.Department,
+                    Role = data.Role
+                };
+                success = await UserManagementService.UpdateUserAsync(data.EmployeeId, request);
+            }
+            else
+            {
+                var request = new CreateUserRequest
+                {
+                    StaffNumber = data.StaffNumber,
+                    FirstName = data.FirstName,
+                    LastName = data.LastName,
+                    MiddleName = data.MiddleName,
+                    Post = data.Post,
+                    Department = data.Department,
+                    Email = data.Email,
+                    Login = data.Login,
+                    Password = data.Password,
+                    Role = data.Role
+                };
+                success = await UserManagementService.CreateUserAsync(request);
+            }
+
+            if (success)
+            {
+                await LoadData();
+                if (grid != null)
+                    await grid.Reload();
+            }
+            else
+            {
+                Console.Error.WriteLine("Error saving user");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error saving user: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleStatus(UserListItem item)
+    {
+        try
+        {
+            var success = await UserManagementService.ToggleUserStatusAsync(item.EmployeeId);
+            if (success)
+            {
+                await LoadData();
+                if (grid != null)
+                    await grid.Reload();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error toggling status: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete(UserListItem item)
+    {
+        var confirmed = await DialogService.OpenAsync<DeleteConfirmDialog>(
+            "Подтверждение удаления",
+            new Dictionary<string, object?>
+            {
+                { "UserName", item.FullName }
+            },
+            new DialogOptions { Width = "450px", CloseDialogOnOverlayClick = false }
+        );
+
+        if (confirmed is bool isConfirmed && isConfirmed)
+        {
+            await DeleteUser(item);
+        }
+    }
+
+    private async Task DeleteUser(UserListItem item)
+    {
+        try
+        {
+            var success = await UserManagementService.DeleteUserAsync(item.EmployeeId);
+            if (success)
+            {
+                await LoadData();
+                if (grid != null)
+                    await grid.Reload();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error deleting user: {ex.Message}");
+        }
+    }
+
+    private string GetStatusText(bool isActive) => isActive ? "Активен" : "Заблокирован";
+    private string GetStatusChipStyle(bool isActive) => isActive ? "Success" : "Danger";
+    private string GetToggleIcon(bool isActive) => isActive ? "block" : "check_circle";
+    private ButtonStyle GetToggleButtonStyle(bool isActive) => isActive ? ButtonStyle.Danger : ButtonStyle.Success;
+}

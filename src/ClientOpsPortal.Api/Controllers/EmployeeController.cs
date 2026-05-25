@@ -12,13 +12,16 @@ namespace ClientOpsPortal.Api.Controllers
     public class EmployeesController : BaseController
     {
         private readonly IEmployeeService _employeeService;
+        private readonly IUserManagementService _userManagementService;
 
         public EmployeesController(
             IEmployeeService employeeService,
+            IUserManagementService userManagementService,
             ICurrentUserService currentUserService)
             : base(currentUserService)
         {
             _employeeService = employeeService;
+            _userManagementService = userManagementService;
         }
 
         [HttpGet]
@@ -123,6 +126,86 @@ namespace ClientOpsPortal.Api.Controllers
             {
                 return NotFound($"Сотрудник с ID {id} не найден");
             }
+        }
+
+        [HttpGet("admin/list")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAdminUserList(CancellationToken ct = default)
+        {
+            var users = await _userManagementService.GetAllUsersAsync(ct);
+            return Ok(users);
+        }
+
+        [HttpPost("admin/create")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreateAdminUser([FromBody] CreateEmployeeDto createDto, CancellationToken ct = default)
+        {
+            try
+            {
+                var employee = await _userManagementService.CreateUserAsync(createDto, ct);
+                return CreatedAtAction(nameof(GetAdminUserList), null, employee);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPut("admin/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateAdminUser(Guid id, [FromBody] UpdateEmployeeDto updateDto, CancellationToken ct = default)
+        {
+            try
+            {
+                var employee = await _userManagementService.UpdateUserAsync(id, updateDto, ct);
+                return Ok(employee);
+            }
+            catch (EntityNotFoundException)
+            {
+                return NotFound($"Сотрудник с ID {id} не найден");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPatch("admin/{id}/status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ToggleUserStatus(Guid id, CancellationToken ct = default)
+        {
+            try
+            {
+                await _userManagementService.ToggleUserStatusAsync(id, ct);
+                return NoContent();
+            }
+            catch (EntityNotFoundException)
+            {
+                return NotFound($"Сотрудник с ID {id} не найден");
+            }
+        }
+
+        [HttpDelete("admin/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteAdminUser(Guid id, CancellationToken ct = default)
+        {
+            try
+            {
+                await _userManagementService.DeleteUserAsync(id, ct);
+                return NoContent();
+            }
+            catch (EntityNotFoundException)
+            {
+                return NotFound($"Сотрудник с ID {id} не найден");
+            }
+        }
+
+        [HttpGet("admin/roles")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAvailableRoles(CancellationToken ct = default)
+        {
+            var roles = await _userManagementService.GetAvailableRolesAsync(ct);
+            return Ok(roles);
         }
     }
 }

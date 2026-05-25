@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+
+@inject NavigationManager Navigation
+@inject IAuthService AuthService
+
+<RadzenComponents />
+
+<AuthorizeView>
+    <Authorized>
+        <RadzenHeader Style="background: var(--rz-primary); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; height: 48px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <strong>ClientOps Portal</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span>@context.User.Identity?.Name</span>
+                <RadzenButton Text="Выйти" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@Logout" />
+            </div>
+        </RadzenHeader>
+        <RadzenSidebar Style="padding-top: 48px; width: 250px;">
+            <NavMenu />
+        </RadzenSidebar>
+        <RadzenBody Style="padding: 20px;">
+            @Body
+        </RadzenBody>
+    </Authorized>
+    <NotAuthorized>
+        <RadzenBody Style="padding: 0;">
+            @Body
+        </RadzenBody>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}
