@@ -38,7 +38,7 @@ namespace ClientOpsPortal.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _userManager.FindByNameAsync(request.LoginIdentifier);
+            var user = await _userManager.FindByNameAsync(request.Login);
             if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
             {
                 return Unauthorized("Invalid username or password");
@@ -119,7 +119,7 @@ namespace ClientOpsPortal.Api.Controllers
 
     public class LoginRequest
     {
-        public required string LoginIdentifier { get; set; }
+        public required string Login { get; set; }
         public required string Password { get; set; }
     }
 

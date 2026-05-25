@@ -1,0 +1,116 @@
+@inject DialogService DialogService
+
+<RadzenCard Style="min-width: 500px;">
+    <h4 class="mb-0">@(IsEditMode ? "Редактирование пользователя" : "Создание пользователя")</h4>
+    <div class="p-3">
+        <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
+            @errorMessage
+        </RadzenAlert>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <RadzenTextBox @bind-Value="@StaffNumber" Placeholder="Табельный номер" />
+            <RadzenTextBox @bind-Value="@LastName" Placeholder="Фамилия" />
+            <RadzenTextBox @bind-Value="@FirstName" Placeholder="Имя" />
+            <RadzenTextBox @bind-Value="@MiddleName" Placeholder="Отчество" />
+            <RadzenTextBox @bind-Value="@Post" Placeholder="Должность" />
+            <RadzenTextBox @bind-Value="@Department" Placeholder="Отдел" />
+            <RadzenTextBox @bind-Value="@Email" Placeholder="Email" />
+            <RadzenTextBox @bind-Value="@Login" Placeholder="Логин" />
+            @if (!IsEditMode)
+            {
+                <RadzenPassword @bind-Value="@Password" Placeholder="Пароль" Style="grid-column: span 2;" />
+            }
+            <RadzenDropDown @bind-Value="@Role"
+                            Data="@AvailableRoles"
+                            Placeholder="Выберите роль"
+                            Style="grid-column: span 2;" />
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+            <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="@Close" />
+            <RadzenButton Text="@GetSaveButtonText()"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="@Save" />
+        </div>
+    </div>
+</RadzenCard>
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; }
+    [Parameter]
+    public Guid EmployeeId { get; set; }
+    [Parameter]
+    public string StaffNumber { get; set; } = string.Empty;
+    [Parameter]
+    public string FirstName { get; set; } = string.Empty;
+    [Parameter]
+    public string LastName { get; set; } = string.Empty;
+    [Parameter]
+    public string? MiddleName { get; set; }
+    [Parameter]
+    public string Post { get; set; } = string.Empty;
+    [Parameter]
+    public string? Department { get; set; }
+    [Parameter]
+    public string Email { get; set; } = string.Empty;
+    [Parameter]
+    public string Login { get; set; } = string.Empty;
+    [Parameter]
+    public string? Password { get; set; }
+    [Parameter]
+    public string Role { get; set; } = string.Empty;
+    [Parameter]
+    public List<string> AvailableRoles { get; set; } = new();
+
+    private bool showError;
+    private string errorMessage = string.Empty;
+
+    private void Close()
+    {
+        DialogService.Close(null);
+    }
+
+    private async Task Save()
+    {
+        showError = false;
+
+        if (string.IsNullOrWhiteSpace(StaffNumber) ||
+            string.IsNullOrWhiteSpace(FirstName) ||
+            string.IsNullOrWhiteSpace(LastName) ||
+            string.IsNullOrWhiteSpace(Post) ||
+            string.IsNullOrWhiteSpace(Email) ||
+            string.IsNullOrWhiteSpace(Login) ||
+            string.IsNullOrWhiteSpace(Role))
+        {
+            showError = true;
+            errorMessage = "Заполните все обязательные поля";
+            return;
+        }
+
+        if (!IsEditMode && string.IsNullOrWhiteSpace(Password))
+        {
+            showError = true;
+            errorMessage = "Введите пароль для нового пользователя";
+            return;
+        }
+
+        var result = new UserEditDialogResult
+        {
+            IsEditMode = IsEditMode,
+            EmployeeId = EmployeeId,
+            StaffNumber = StaffNumber,
+            FirstName = FirstName,
+            LastName = LastName,
+            MiddleName = MiddleName,
+            Post = Post,
+            Department = Department,
+            Email = Email,
+            Login = Login,
+            Password = Password,
+            Role = Role
+        };
+
+        DialogService.Close(result);
+    }
+
+    private string GetSaveButtonText() => IsEditMode ? "Сохранить" : "Создать";
+}

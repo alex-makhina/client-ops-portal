@@ -1,0 +1,68 @@
+@page "/login"
+
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<RadzenCard Style="max-width: 400px; margin: 100px auto;">
+    <h3 class="mb-0">Вход в систему</h3>
+    <div class="p-3">
+        <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 16px;">
+            @errorMessage
+        </RadzenAlert>
+        <RadzenTextBox @bind-Value="@login" Placeholder="Логин" Style="margin-bottom: 12px; width: 100%;" />
+        <RadzenPassword @bind-Value="@password" Placeholder="Пароль" Style="margin-bottom: 20px; width: 100%;" />
+        <RadzenButton Text="Войти" ButtonStyle="ButtonStyle.Primary" Click="@HandleLogin" Disabled="@isLoading" Style="width: 100%;" />
+    </div>
+</RadzenCard>
+
+@code {
+    private string login = string.Empty;
+    private string password = string.Empty;
+    private bool isLoading;
+    private bool showError;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await AuthService.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+        {
+            showError = true;
+            errorMessage = "Введите логин и пароль";
+            return;
+        }
+
+        isLoading = true;
+        showError = false;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(login, password);
+            if (result != null)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                showError = true;
+                errorMessage = "Неверный логин или пароль";
+            }
+        }
+        catch (Exception ex)
+        {
+            showError = true;
+            errorMessage = $"Ошибка подключения: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

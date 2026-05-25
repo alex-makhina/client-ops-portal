@@ -23,6 +23,17 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<ICurrentUserService,CurrentUserService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowBlazorClient", policy =>
+    {
+        policy.WithOrigins("http://127.0.0.1:5022", "http://localhost:5022")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 builder.Services.AddApplicationServices();
 builder.Services.AddEmailSettings(builder.Configuration);
 
@@ -77,6 +88,7 @@ else
 }
 app.UseStatusCodePages();
 
+app.UseCors("AllowBlazorClient");
 app.UseAuthentication();
 app.UseAuthorization();
 

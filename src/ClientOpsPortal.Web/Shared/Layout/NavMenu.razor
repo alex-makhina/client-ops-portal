@@ -1,0 +1,7 @@
+<RadzenPanelMenu>
+    <RadzenPanelMenuItem Icon="home" Text="Главная" Path="/" />
+    <AuthorizeView Roles="Admin">
+        <RadzenPanelMenuItem Icon="people" Text="Управление пользователями" Path="/admin/users" />
+    </AuthorizeView>
+    <RadzenPanelMenuItem Icon="info" Text="О системе" Path="/about" />
+</RadzenPanelMenu>

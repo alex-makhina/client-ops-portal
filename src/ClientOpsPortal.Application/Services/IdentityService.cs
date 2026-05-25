@@ -77,6 +77,72 @@ namespace ClientOpsPortal.Application.Services
             return newPassword;
         }
 
+        public async Task BlockUserAsync(Guid applicationUserId, CancellationToken ct = default)
+        {
+            var appUser = await _userManager.FindByIdAsync(applicationUserId.ToString());
+            if (appUser == null)
+                throw new InvalidOperationException($"ApplicationUser with ID '{applicationUserId}' not found");
+
+            appUser.LockoutEnabled = true;
+            appUser.LockoutEnd = DateTimeOffset.MaxValue;
+            var result = await _userManager.UpdateAsync(appUser);
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to block user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+        }
+
+        public async Task UnblockUserAsync(Guid applicationUserId, CancellationToken ct = default)
+        {
+            var appUser = await _userManager.FindByIdAsync(applicationUserId.ToString());
+            if (appUser == null)
+                throw new InvalidOperationException($"ApplicationUser with ID '{applicationUserId}' not found");
+
+            appUser.LockoutEnabled = false;
+            appUser.LockoutEnd = null;
+            var result = await _userManager.UpdateAsync(appUser);
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to unblock user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+        }
+
+        public async Task<IList<string>> GetUserRolesAsync(Guid applicationUserId, CancellationToken ct = default)
+        {
+            var appUser = await _userManager.FindByIdAsync(applicationUserId.ToString());
+            if (appUser == null)
+                throw new InvalidOperationException($"ApplicationUser with ID '{applicationUserId}' not found");
+
+            return await _userManager.GetRolesAsync(appUser);
+        }
+
+        public async Task SetUserRoleAsync(Guid applicationUserId, string role, CancellationToken ct = default)
+        {
+            var appUser = await _userManager.FindByIdAsync(applicationUserId.ToString());
+            if (appUser == null)
+                throw new InvalidOperationException($"ApplicationUser with ID '{applicationUserId}' not found");
+
+            if (!await _roleManager.RoleExistsAsync(role))
+            {
+                await _roleManager.CreateAsync(new ApplicationRole { Name = role, Description = $"{role} role" });
+            }
+
+            var currentRoles = await _userManager.GetRolesAsync(appUser);
+            if (currentRoles.Any())
+            {
+                await _userManager.RemoveFromRolesAsync(appUser, currentRoles);
+            }
+
+            await _userManager.AddToRoleAsync(appUser, role);
+        }
+
+        public async Task<ApplicationUser?> FindApplicationUserByExternalIdAsync(string externalId, CancellationToken ct = default)
+        {
+            return await _userManager.FindByIdAsync(externalId);
+        }
+
         public string GenerateRandomPassword()
         {
             const string lower = "abcdefghijklmnopqrstuvwxyz";
