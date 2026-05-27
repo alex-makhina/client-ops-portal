@@ -1,4 +1,5 @@
-﻿using ClientOpsPortal.Web.Features.ServiceManagement.Models;
+﻿using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests;
+using ClientOpsPortal.Web.Features.ServiceManagement.Models.Responses;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;

@@ -1,0 +1,61 @@
+﻿@* ServiceBasicInfo.razor - упрощённая версия *@
+@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
+
+<div style="margin-bottom: 24px;">
+    <h5>Основная информация</h5>
+    <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">
+                Название услуги <span style="color: red;">*</span>
+            </label>
+            <RadzenTextBox @bind-Value="Name"
+                           Placeholder="Например: Интернет"
+                           Style="width: 100%;" />
+            <small style="color: #666; font-size: 12px;">
+                От 3 до 100 символов
+            </small>
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">
+                Описание <span style="color: red;">*</span>
+            </label>
+            <RadzenTextArea @bind-Value="Description"
+                            Placeholder="Описание услуги..."
+                            Rows="3"
+                            Style="width: 100%;" />
+            <small style="color: #666; font-size: 12px;">
+                От 10 до 500 символов
+            </small>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+                <label style="display: block; margin-bottom: 4px; font-weight: 500;">
+                    Дата начала <span style="color: red;">*</span>
+                </label>
+                <RadzenDatePicker @bind-Value="BeginDate"
+                                  Placeholder="дд.мм.гггг"
+                                  Style="width: 100%;" />
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Дата окончания</label>
+                <RadzenDatePicker @bind-Value="EndDate"
+                                  Placeholder="дд.мм.гггг"
+                                  Style="width: 100%;" />
+                <small style="color: #666; font-size: 12px;">
+                    Оставьте пустым, если услуга бессрочная
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Name { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> NameChanged { get; set; }
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> DescriptionChanged { get; set; }
+    [Parameter] public DateTimeOffset BeginDate { get; set; } = DateTimeOffset.UtcNow;
+    [Parameter] public EventCallback<DateTimeOffset> BeginDateChanged { get; set; }
+    [Parameter] public DateTimeOffset? EndDate { get; set; }
+    [Parameter] public EventCallback<DateTimeOffset?> EndDateChanged { get; set; }
+}
