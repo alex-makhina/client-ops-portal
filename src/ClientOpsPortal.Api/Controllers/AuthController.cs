@@ -63,7 +63,7 @@ namespace ClientOpsPortal.Api.Controllers
                 return NotFound("User not found");
 
             var resetToken = await _identityService.GeneratePasswordResetTokenAsync(request.LoginIdentifier, CancellationToken.None);
-            var resetLink = $"http://localhost:5022/set-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
+            var resetLink = $"http://localhost:62000/set-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
             await _notificationService.SendPasswordSetLinkAsync(user.Email ?? string.Empty, user.UserName ?? string.Empty, resetLink, CancellationToken.None);
 
             return Ok(new { message = "Password reset link has been sent to your email." });

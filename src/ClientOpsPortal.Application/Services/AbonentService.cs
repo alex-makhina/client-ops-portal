@@ -14,23 +14,34 @@ namespace ClientOpsPortal.Application.Services
         private readonly IGenericRepository<Contract> _contractRepository;
         private readonly IIdentityService _identityService;
         private readonly INotificationService _notificationService;
+        private readonly IGenericRepository<User> _userRepository;
 
         public AbonentService(
             IGenericRepository<Abonent> abonentRepository,
             IGenericRepository<Contract> contractRepository,
             IIdentityService identityService,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IGenericRepository<User> userRepository)
         {
             _abonentRepository = abonentRepository;
             _contractRepository = contractRepository;
             _identityService = identityService;
             _notificationService = notificationService;
+            _userRepository = userRepository;
         }
 
         public async Task<AbonentDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
         {
             var abonent = await _abonentRepository.GetByIdAsync(id, withIncludes, ct);
             return abonent?.ToAbonentDto();
+        }
+
+        public async Task<AbonentDto?> GetByIdUserAsync(string external_id_user, CancellationToken ct = default)
+        {
+            var users = await _userRepository.GetWhereAsync(u => u.ExternalId == external_id_user, false, ct);
+            var user = users.FirstOrDefault();
+            var abonents = await _abonentRepository.GetWhereAsync(x => x.UserId == user!.Id, false, ct);
+            return abonents.Select(a => a.ToAbonentDto()).FirstOrDefault();
         }
 
         public async Task<IReadOnlyCollection<AbonentDto>> GetAllAsync(bool withIncludes = false, CancellationToken ct = default)
@@ -51,7 +62,7 @@ namespace ClientOpsPortal.Application.Services
             var user = await _identityService.CreateUserAsync(userName, createDto.Email, password, "Abonent", ct);
 
             var resetToken = await _identityService.GeneratePasswordResetTokenAsync(userName, ct);
-            var resetLink = $"http://localhost:5022/set-password?userId={user.ExternalId}&token={Uri.EscapeDataString(resetToken)}";
+            var resetLink = $"http://localhost:62000/set-password?userId={user.ExternalId}&token={Uri.EscapeDataString(resetToken)}";
 
             var abonent = createDto.ToEntity();
             abonent.AccountNumber = accountNumber;
