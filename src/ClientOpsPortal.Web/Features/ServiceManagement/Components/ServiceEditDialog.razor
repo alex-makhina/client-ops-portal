@@ -1,0 +1,267 @@
+﻿@* ServiceEditDialog.razor *@
+@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
+@using ClientOpsPortal.Web.Features.ServiceManagement.Validators
+@inject DialogService DialogService
+
+<RadzenCard Style="min-width: 650px; max-width: 800px;">
+    <div class="p-3">
+        <RadzenAlert @bind-Visible="showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
+            @errorMessage
+        </RadzenAlert>
+
+        <!-- Основная информация -->
+        <div style="margin-bottom: 24px;">
+            <h5>Основная информация</h5>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <div>
+                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">
+                        Название услуги <span style="color: red;">*</span>
+                    </label>
+                    <RadzenTextBox @bind-Value="serviceName"
+                                   Placeholder="Например: Интернет"
+                                   Style="width: 100%;" />
+                    <small style="color: #666; font-size: 12px;">
+                        От 3 до 100 символов
+                    </small>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">
+                        Описание <span style="color: red;">*</span>
+                    </label>
+                    <RadzenTextArea @bind-Value="serviceDescription"
+                                    Placeholder="Описание услуги..."
+                                    Rows="3"
+                                    Style="width: 100%;" />
+                    <small style="color: #666; font-size: 12px;">
+                        От 10 до 500 символов
+                    </small>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-weight: 500;">
+                            Дата начала <span style="color: red;">*</span>
+                        </label>
+                        <RadzenDatePicker @bind-Value="serviceBeginDate"
+                                          Placeholder="дд.мм.гггг"
+                                          Style="width: 100%;" />
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-weight: 500;">Дата окончания</label>
+                        <RadzenDatePicker @bind-Value="serviceEndDate"
+                                          Placeholder="дд.мм.гггг"
+                                          Style="width: 100%;" />
+                        <small style="color: #666; font-size: 12px;">
+                            Оставьте пустым, если услуга бессрочная
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Тарифные планы -->
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h5>Тарифные планы</h5>
+                <RadzenButton Text=" Добавить тариф"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Size="ButtonSize.Small"
+                              Icon="add"
+                              Click="AddTariffPlan" />
+            </div>
+
+            @if (tariffPlansList.Count == 0)
+            {
+                <div style="text-align: center; padding: 30px; color: #666; border: 1px dashed #ccc; border-radius: 8px;">
+                    Нет тарифных планов. Нажмите "+ Добавить тариф"
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    @for (int i = 0; i < tariffPlansList.Count; i++)
+                    {
+                        var index = i;
+                        var tariff = tariffPlansList[index];
+                        <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background-color: #fafafa;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <strong>Тарифный план @(index + 1)</strong>
+                                <RadzenButton Icon="delete"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Size="ButtonSize.Small"
+                                              Click="() => RemoveTariffPlan(index)" />
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
+                                        Название <span style="color: red;">*</span>
+                                    </label>
+                                    <RadzenTextBox @bind-Value="tariff.Name"
+                                                   Placeholder="Например: Старт"
+                                                   Style="width: 100%;" />
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
+                                        Цена <span style="color: red;">*</span>
+                                    </label>
+                                    <RadzenNumeric @bind-Value="tariff.Price"
+                                                   Placeholder="0"
+                                                   Min="0"
+                                                   Format="C2"
+                                                   Style="width: 100%;" />
+                                </div>
+                                <div style="grid-column: span 2;">
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Описание</label>
+                                    <RadzenTextArea @bind-Value="tariff.Description"
+                                                    Placeholder="Описание тарифа"
+                                                    Rows="2"
+                                                    Style="width: 100%;" />
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
+                                        Дата начала <span style="color: red;">*</span>
+                                    </label>
+                                    <RadzenDatePicker @bind-Value="tariff.BeginDate"
+                                                      Placeholder="дд.мм.гггг"
+                                                      Style="width: 100%;" />
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Дата окончания</label>
+                                    <RadzenDatePicker @bind-Value="tariff.EndDate"
+                                                      Placeholder="дд.мм.гггг"
+                                                      Style="width: 100%;" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px;">
+            <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="Close" />
+            <RadzenButton Text="@GetSaveButtonText()"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Icon="save"
+                          Click="Save" />
+        </div>
+    </div>
+</RadzenCard>
+
+@code {
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public Guid ServiceId { get; set; }
+    [Parameter] public string Name { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public DateTimeOffset BeginDate { get; set; } = DateTimeOffset.UtcNow;
+    [Parameter] public DateTimeOffset? EndDate { get; set; }
+    [Parameter] public List<TariffPlanRequest> TariffPlans { get; set; } = new();
+
+    // Локальные поля для редактирования
+    private string serviceName = string.Empty;
+    private string serviceDescription = string.Empty;
+    private DateTimeOffset serviceBeginDate = DateTimeOffset.UtcNow;
+    private DateTimeOffset? serviceEndDate;
+    private List<TariffPlanRequest> tariffPlansList = new();
+
+    private bool showError;
+    private string errorMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        // Инициализация локальных полей из параметров
+        serviceName = Name;
+        serviceDescription = Description;
+        serviceBeginDate = BeginDate;
+        serviceEndDate = EndDate;
+        tariffPlansList = TariffPlans?.ToList() ?? new List<TariffPlanRequest>();
+
+        Console.WriteLine($"ServiceEditDialog инициализирован: IsEditMode={IsEditMode}, Name={serviceName}, Tariffs={tariffPlansList.Count}");
+    }
+
+    private void Close() => DialogService.Close(null);
+
+    private void AddTariffPlan()
+    {
+        tariffPlansList.Add(new TariffPlanRequest
+        {
+            Id = Guid.Empty,
+            Name = string.Empty,
+            Description = string.Empty,
+            Price = 0,
+            ServiceId = ServiceId,
+            BeginDate = DateTimeOffset.UtcNow,
+            EndDate = null
+        });
+        StateHasChanged();
+        Console.WriteLine($"Добавлен тариф. Всего: {tariffPlansList.Count}");
+    }
+
+    private void RemoveTariffPlan(int index)
+    {
+        if (index >= 0 && index < tariffPlansList.Count)
+        {
+            tariffPlansList.RemoveAt(index);
+            StateHasChanged();
+            Console.WriteLine($"Удален тариф. Осталось: {tariffPlansList.Count}");
+        }
+    }
+
+    private async Task Save()
+    {
+        showError = false;
+
+        // Валидация услуги
+        var serviceError = ServiceTariffValidator.ValidateService(serviceName, serviceDescription, serviceBeginDate, serviceEndDate);
+        if (serviceError != null)
+        {
+            showError = true;
+            errorMessage = serviceError;
+            return;
+        }
+
+        // Валидация тарифов
+        for (int i = 0; i < tariffPlansList.Count; i++)
+        {
+            var tariffError = ServiceTariffValidator.ValidateTariffPlan(tariffPlansList[i], i);
+            if (tariffError != null)
+            {
+                showError = true;
+                errorMessage = tariffError;
+                return;
+            }
+        }
+
+        if (IsEditMode)
+        {
+            var result = new UpdateServiceRequest
+            {
+                IsEditMode = true,
+                ServiceId = ServiceId,
+                Name = serviceName.Trim(),
+                Description = serviceDescription.Trim(),
+                BeginDate = serviceBeginDate,
+                EndDate = serviceEndDate,
+                TariffPlans = tariffPlansList.ToList()
+            };
+            Console.WriteLine($"Сохранение изменений для услуги: {result.Name}");
+            DialogService.Close(result);
+        }
+        else
+        {
+            var result = new CreateServiceRequest
+            {
+                Name = serviceName.Trim(),
+                Description = serviceDescription.Trim(),
+                BeginDate = serviceBeginDate,
+                EndDate = serviceEndDate,
+                TariffPlans = tariffPlansList.ToList()
+            };
+            Console.WriteLine($"Создание новой услуги: {result.Name}");
+            DialogService.Close(result);
+        }
+    }
+
+    private string GetSaveButtonText() => IsEditMode ? "Сохранить" : "Создать";
+}
