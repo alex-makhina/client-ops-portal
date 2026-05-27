@@ -1,0 +1,342 @@
+﻿@page "/servicemanager/services"
+@attribute [Authorize(Roles = "ServiceManager")]
+
+@using ClientOpsPortal.Web.Features.ServiceManagement.Models
+@using ClientOpsPortal.Web.Features.ServiceManagement.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject IServiceManagementService ServiceManagementService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+
+@if (isLoading)
+{
+    <RadzenCard>
+        <div style="text-align: center; padding: 50px;">
+            <RadzenSpinner />
+            <p style="margin-top: 16px; color: #666;">Загрузка услуг...</p>
+        </div>
+    </RadzenCard>
+}
+else if (errorMessage != null)
+{
+    <RadzenCard>
+        <div style="text-align: center; padding: 50px;">
+            <RadzenIcon Icon="error_outline" Style="color: #dc3545; font-size: 48px;" />
+            <p style="color: #dc3545; margin-top: 16px;">@errorMessage</p>
+            <RadzenButton Text="Повторить" 
+                          ButtonStyle="ButtonStyle.Primary" 
+                          Click="@(() => LoadData())" 
+                          Style="margin-top: 16px;" />
+        </div>
+    </RadzenCard>
+}
+else
+{
+    <RadzenCard>
+        <div style="margin-bottom: 24px; padding-top: 34px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <h3 style="margin: 0; color: #1a1a1a; font-weight: 600;">Справочник услуг</h3>
+                    <p style="margin: 8px 0 0 0; color: #666; font-size: 14px;">Управление каталогом услуг и тарифных планов</p>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <div style="flex: 1;">
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; font-size: 18px;">🔍</span>
+                        <input type="text"
+                               placeholder="Поиск по названию или описанию..."
+                               value="@searchTerm"
+                               @oninput="OnSearchInput"
+                               class="search-input"
+                               style="width: 100%; padding: 12px 16px 12px 44px; border-radius: 10px; border: 1px solid #e0e0e0; font-size: 14px; transition: all 0.2s; outline: none; background-color: #fafafa; height: 40px;" />
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; background-color: #f8f9fa; padding: 0 16px; border-radius: 10px; height: 40px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox"
+                                   checked="@showOnlyActive"
+                                   @onchange="OnShowOnlyActiveChanged"
+                                   style="width: 18px; height: 18px; cursor: pointer; accent-color: #1b6ec2;" />
+                            <span style="color: #333; font-size: 14px; font-weight: 500;">Только активные</span>
+                        </label>
+                    </div>
+                    <RadzenButton Text="Создать услугу"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Icon="add"
+                                  Click="@OpenCreateDialog"
+                                  Style="border-radius: 10px; padding: 0 20px; height: 40px;" />
+                </div>
+            </div>
+        </div>
+
+        @if (filteredServices.Count == 0)
+        {
+            <div style="text-align: center; padding: 60px 20px;">
+                <RadzenIcon Icon="inbox" Style="color: #ccc; font-size: 64px;" />
+                <p style="color: #999; margin-top: 16px;">
+                    @if (!string.IsNullOrWhiteSpace(searchTerm))
+                    {
+                        <span>Услуги по запросу "<strong>@searchTerm</strong>" не найдены</span>
+                    }
+                    else if (showOnlyActive)
+                    {
+                        <span>Нет активных услуг</span>
+                    }
+                    else
+                    {
+                        <span>Услуги не найдены</span>
+                    }
+                </p>
+                @if (!string.IsNullOrWhiteSpace(searchTerm) || showOnlyActive)
+                {
+                    <RadzenButton Text="Сбросить фильтры" 
+                                  ButtonStyle="ButtonStyle.Secondary" 
+                                  Click="@ResetFilters" 
+                                  Size="ButtonSize.Small" />
+                }
+            </div>
+        }
+        else
+        {
+             <div style="display: grid; grid-template-columns: repeat(2, minmax(350px, 1fr)); gap: 16px;">
+                @foreach (var service in filteredServices)
+                {
+                    var isActive = IsActive(service);
+                    var cardBackgroundColor = isActive ? "#fff" : "#f5f5f5";
+                    var borderColor = isActive ? "#e8e8e8" : "#e0e0e0";
+                    
+                    <div style="border: 1px solid @borderColor; border-radius: 12px; padding: 16px; background-color: @cardBackgroundColor; transition: all 0.2s ease; cursor: pointer;"
+                         @onclick="@(() => OpenEditDialog(service))">
+                        <div style="display: flex; flex-direction: column; height: 100%;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <h4 style="margin: 0; color: #333; font-size: 16px; @(isActive ? "" : "opacity: 0.7;")">@service.Name</h4>
+                                </div>
+                            </div>
+                            <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; line-height: 1.4; @(isActive ? "" : "opacity: 0.7;")">@service.Description</p>
+                            <div style="display: flex; gap: 12px; font-size: 11px; color: #999; margin-top: auto; @(isActive ? "" : "opacity: 0.7;")">
+                                <span>Начало: @service.BeginDate.ToString("dd.MM.yyyy")</span>
+                                @if (service.EndDate.HasValue)
+                                {
+                                    <span>Окончание: @service.EndDate.Value.ToString("dd.MM.yyyy")</span>
+                                }
+                                else
+                                {
+                                    <span>Бессрочно</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </RadzenCard>
+}
+
+@code {
+    private List<ServiceListItem> services = new();
+    private List<ServiceListItem> filteredServices = new();
+    private bool isLoading = true;
+    private string? errorMessage = null;
+    private string searchTerm = string.Empty;
+    private bool showOnlyActive = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        try
+        {
+            services = await ServiceManagementService.GetAllServicesAsync();
+            FilterServices();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.Error.WriteLine($"Ошибка загрузки услуг: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ResetFilters()
+    {
+        searchTerm = string.Empty;
+        showOnlyActive = false;
+        FilterServices();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var result = await DialogService.OpenAsync<ServiceEditDialog>(
+            "Добавление услуги",
+            new Dictionary<string, object?>
+            {
+                { "IsEditMode", false },
+                { "ServiceId", Guid.Empty },
+                { "Name", string.Empty },
+                { "Description", string.Empty },
+                { "BeginDate", DateTimeOffset.UtcNow },
+                { "EndDate", (DateTimeOffset?)null },
+                { "CreateTariffPlans", new List<CreateTariffPlanFromServiceRequest>() }
+            },
+            new DialogOptions { Width = "750px", CloseDialogOnOverlayClick = false, Resizable = true, Draggable = true }
+        );
+
+        if (result is CreateServiceRequest createResult)
+        {
+            await HandleServiceSave(createResult);
+        }
+    }
+
+    private async Task OpenEditDialog(ServiceListItem service)
+    {
+        var fullService = await ServiceManagementService.GetFullServiceByIdAsync(service.Id);
+
+        var updateTariffPlans = fullService?.TariffPlans?.Select(tp => new UpdateTariffPlanFromServiceRequest
+        {
+            Id = tp.Id,
+            Name = tp.Name,
+            Description = tp.Description,
+            Price = tp.Price,
+            BeginDate = tp.BeginDate.ToUniversalTime(),
+            EndDate = tp.EndDate?.ToUniversalTime()
+        }).ToList() ?? new List<UpdateTariffPlanFromServiceRequest>();
+
+        var result = await DialogService.OpenAsync<ServiceEditDialog>(
+            "Редактирование услуги",
+            new Dictionary<string, object?>
+            {
+                { "IsEditMode", true },
+                { "ServiceId", service.Id },
+                { "Name", fullService?.Name ?? service.Name },
+                { "Description", fullService?.Description ?? service.Description },
+                { "BeginDate", (fullService?.BeginDate ?? service.BeginDate).ToUniversalTime() },
+                { "EndDate", (fullService?.EndDate ?? service.EndDate)?.ToUniversalTime() },
+                { "UpdateTariffPlans", updateTariffPlans }
+            },
+            new DialogOptions { Width = "750px", CloseDialogOnOverlayClick = false, Resizable = true, Draggable = true }
+        );
+
+        if (result is UpdateServiceRequest updateResult)
+        {
+            await HandleServiceSave(updateResult);
+        }
+    }
+
+    private async Task HandleServiceSave(object data)
+    {
+        try
+        {
+            bool success = false;
+
+            if (data is UpdateServiceRequest updateData)
+            {
+                var request = new UpdateServiceRequest
+                {
+                    Name = updateData.Name?.Trim(),
+                    Description = updateData.Description?.Trim(),
+                    BeginDate = updateData.BeginDate.ToUniversalTime(),
+                    EndDate = updateData.EndDate?.ToUniversalTime(),
+                    TariffPlans = updateData.TariffPlans?.Select(tp => new UpdateTariffPlanFromServiceRequest
+                    {
+                        Id = tp.Id,
+                        Name = tp.Name?.Trim(),
+                        Description = tp.Description?.Trim(),
+                        Price = tp.Price,
+                        BeginDate = tp.BeginDate.ToUniversalTime(),
+                        EndDate = tp.EndDate?.ToUniversalTime()
+                    }).ToList() ?? new List<UpdateTariffPlanFromServiceRequest>()
+                };
+
+                success = await ServiceManagementService.UpdateServiceAsync(updateData.ServiceId, request);
+            }
+            else if (data is CreateServiceRequest createData)
+            {
+                var request = new CreateServiceRequest
+                {
+                    Name = createData.Name?.Trim(),
+                    Description = createData.Description?.Trim(),
+                    BeginDate = createData.BeginDate.ToUniversalTime(),
+                    EndDate = createData.EndDate?.ToUniversalTime(),
+                    TariffPlans = createData.TariffPlans?.Select(tp => new CreateTariffPlanFromServiceRequest
+                    {
+                        Name = tp.Name?.Trim(),
+                        Description = tp.Description?.Trim(),
+                        Price = tp.Price,
+                        BeginDate = tp.BeginDate.ToUniversalTime(),
+                        EndDate = tp.EndDate?.ToUniversalTime()
+                    }).ToList() ?? new List<CreateTariffPlanFromServiceRequest>()
+                };
+
+                success = await ServiceManagementService.CreateServiceAsync(request);
+            }
+
+            if (success)
+            {
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = "Не удалось сохранить услугу";
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка: {ex.Message}";
+            Console.Error.WriteLine($"Error saving service: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        FilterServices();
+    }
+
+    private void OnShowOnlyActiveChanged(ChangeEventArgs e)
+    {
+        showOnlyActive = e.Value is true;
+        FilterServices();
+    }
+
+    private void FilterServices()
+    {
+        var query = services.AsEnumerable();
+        
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(s => s.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                                     s.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        if (showOnlyActive)
+        {
+            query = query.Where(s => IsActive(s));
+        }
+        
+        filteredServices = query.ToList();
+        StateHasChanged();
+    }
+
+    private bool IsActive(ServiceListItem service)
+    {
+        return service.EndDate == null || service.EndDate > DateTimeOffset.UtcNow;
+    }
+}

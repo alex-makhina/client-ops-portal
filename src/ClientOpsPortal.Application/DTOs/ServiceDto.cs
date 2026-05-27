@@ -55,7 +55,10 @@ namespace ClientOpsPortal.Application.DTOs
 
         [Required(ErrorMessage = "Описание услуги обязательно")]
         [StringLength(500, MinimumLength = 10, ErrorMessage = "Описание услуги должно содержать от 10 до 500 символов")]
-        public required string Description { get; set; }  
+        public required string Description { get; set; }
+
+        [Required(ErrorMessage = "Дата начала обязательна")]
+        public DateTimeOffset BeginDate { get; set; }
 
         public DateTimeOffset? EndDate { get; set; }
 
