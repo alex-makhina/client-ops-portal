@@ -7,5 +7,6 @@ namespace ClientOpsPortal.Web.Features.Auth.Services
         Task<AuthResponse?> LoginAsync(string loginIdentifier, string password);
         Task LogoutAsync();
         Task<bool> IsAuthenticatedAsync();
+        Task<HttpResponseMessage> SetPassword(Guid userId, string token, string newPass);
     }
 }

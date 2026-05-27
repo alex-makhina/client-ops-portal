@@ -1,0 +1,37 @@
+namespace ClientOpsPortal.Web.Features.ClientCard.Models
+{
+    public class SubscriptionItem
+    {
+        public Guid Id { get; set; }
+        public Guid ContractId { get; set; }
+        public Guid ServiceId { get; set; }
+        public string ServiceName { get; set; } = string.Empty;
+        public Guid TariffPlanId { get; set; }
+        public string TariffPlanName { get; set; } = string.Empty;
+        public DateTimeOffset BeginDate { get; set; }
+        public DateTimeOffset? EndDate { get; set; }
+        public bool IsActive => EndDate == null || EndDate > DateTimeOffset.UtcNow;
+    }
+
+    public class ConnectServiceModel
+    {
+        public Guid ContractId { get; set; }
+        public Guid ServiceId { get; set; }
+        public Guid TariffPlanId { get; set; }
+        public DateTimeOffset BeginDate { get; set; } = DateTimeOffset.UtcNow;
+    }
+
+    public class ServiceOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+
+    public class TariffPlanOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+    }
+}

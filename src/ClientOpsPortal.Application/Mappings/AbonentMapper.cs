@@ -27,6 +27,7 @@ namespace ClientOpsPortal.Application.Mappings
         {
             return new AbonentShortDataDto
             {
+                Id = abonent.Id,
                 FullName = abonent.FullName,
                 AccountNumber = abonent.AccountNumber
             };
@@ -41,7 +42,7 @@ namespace ClientOpsPortal.Application.Mappings
                 FirstName = createDto.FirstName,
                 LastName = createDto.LastName,
                 MiddleName = createDto.MiddleName,
-                AccountNumber = createDto.AccountNumber
+                AccountNumber = string.Empty // will be set by service after generation
             };
         }
   

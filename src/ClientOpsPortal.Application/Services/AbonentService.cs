@@ -44,21 +44,29 @@ namespace ClientOpsPortal.Application.Services
             if (!await IsAbonentIdentificationNumberUniqueAsync(createDto.IdentificationNumber, null, ct))
                 throw new InvalidOperationException($"Абонент с индентификационным номером '{createDto.IdentificationNumber}' уже существует");
 
-            if (!await IsAccountNumberUniqueAsync(createDto.AccountNumber, null, ct))
-                throw new InvalidOperationException($"Абонент со счетом '{createDto.AccountNumber}' уже существует");
-
-            var userName = createDto.AccountNumber;
+            var accountNumber = GenerateAccountNumber();
+            var userName = accountNumber;
             var password = _identityService.GenerateRandomPassword();
 
             var user = await _identityService.CreateUserAsync(userName, createDto.Email, password, "Abonent", ct);
 
+            var resetToken = await _identityService.GeneratePasswordResetTokenAsync(userName, ct);
+            var resetLink = $"http://localhost:5022/set-password?userId={user.ExternalId}&token={Uri.EscapeDataString(resetToken)}";
+
             var abonent = createDto.ToEntity();
+            abonent.AccountNumber = accountNumber;
             abonent.UserId = user.Id;
             await _abonentRepository.AddAsync(abonent, ct);
 
-            await _notificationService.SendWelcomeWithPasswordAsync(createDto.Email, userName, password, ct);
+            await _notificationService.SendPasswordSetLinkAsync(createDto.Email, userName, resetLink, ct);
 
             return abonent.ToAbonentDto();
+        }
+
+        private static string GenerateAccountNumber()
+        {
+            var randomHex = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            return $"ACC-{randomHex}";
         }
 
         public async Task<AbonentDto> UpdateAsync(Guid id, UpdateAbonentDto updateDto, CancellationToken ct = default)

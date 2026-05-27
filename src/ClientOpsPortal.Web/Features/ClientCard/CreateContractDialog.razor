@@ -1,0 +1,75 @@
+@inject DialogService DialogService
+@using System.Globalization
+
+<RadzenCard Style="min-width: 500px;">
+    <h4 class="mb-0" style="margin-bottom: 20px;">📄 Новый договор</h4>
+
+    <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
+        @errorMessage
+    </RadzenAlert>
+
+    <div style="display: grid; gap: 12px;">
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Номер договора *</label>
+            <RadzenTextBox @bind-Value="@ContractNumber" Placeholder="Например: Д-001" Style="width: 100%;" />
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Дата начала</label>
+            <input type="date"
+                   value="@BeginDateString"
+                   @onchange="OnDateChanged"
+                   style="width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; box-sizing: border-box;" />
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="@Close" />
+        <RadzenButton Text="Создать" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
+    </div>
+</RadzenCard>
+
+@code {
+    [Parameter]
+    public string ContractNumber { get; set; } = string.Empty;
+    [Parameter]
+    public DateTimeOffset BeginDate { get; set; } = DateTimeOffset.UtcNow;
+
+    private bool showError;
+    private string errorMessage = string.Empty;
+
+    private string BeginDateString => BeginDate.LocalDateTime.ToString("yyyy-MM-dd");
+
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+        {
+            BeginDate = new DateTimeOffset(dt, TimeSpan.FromHours(3));
+        }
+    }
+
+    private void Close()
+    {
+        DialogService.Close(null);
+    }
+
+    private async Task Save()
+    {
+        showError = false;
+
+        if (string.IsNullOrWhiteSpace(ContractNumber))
+        {
+            showError = true;
+            errorMessage = "Введите номер договора";
+            return;
+        }
+
+        var result = new CreateContractDialogResult
+        {
+            ContractNumber = ContractNumber,
+            BeginDate = BeginDate
+        };
+
+        DialogService.Close(result);
+    }
+}

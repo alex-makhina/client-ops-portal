@@ -3,6 +3,10 @@
     <AuthorizeView Roles="Admin">
         <RadzenPanelMenuItem Icon="people" Text="Управление пользователями" Path="/admin/users" />
     </AuthorizeView>
+    <AuthorizeView Roles="Manager">
+        <RadzenPanelMenuItem Icon="search" Text="Поиск абонента" Path="/manager/search-abonent" />
+        <RadzenPanelMenuItem Icon="person_add" Text="Регистрация нового абонента" Path="/manager/register-abonent" />
+    </AuthorizeView>
     <AuthorizeView Roles="ServiceManager">
         <RadzenPanelMenuItem Icon="backup_table" Text="Справочник услуг" Path="/servicemanager/services" />
     </AuthorizeView>

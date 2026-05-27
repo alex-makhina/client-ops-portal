@@ -29,6 +29,7 @@ namespace ClientOpsPortal.Application.Mappings
         {
             return new ServiceShortDataDto
             {
+                Id = service.Id,
                 Name = service.Name,
                 Description = service.Description,
                 BeginDate = service.BeginDate,

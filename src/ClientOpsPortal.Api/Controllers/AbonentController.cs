@@ -73,8 +73,23 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Manager,Abonent")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Create(CreateAbonentDto createDto, CancellationToken ct = default)
+        {
+            try
+            {
+                var abonent = await _abonentService.CreateAsync(createDto, ct);
+                return CreatedAtAction(nameof(GetById), new { id = abonent.Id }, abonent);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("register")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> Register(CreateAbonentDto createDto, CancellationToken ct = default)
         {
             try
             {

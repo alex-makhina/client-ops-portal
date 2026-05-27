@@ -18,6 +18,7 @@ namespace ClientOpsPortal.Application.DTOs
 
     public class AbonentShortDataDto
     {
+        public Guid Id { get; set; }
         public required string AccountNumber { get; set; }
         public required string FullName { get; set; }
     }
@@ -43,10 +44,9 @@ namespace ClientOpsPortal.Application.DTOs
         [RegularExpression(@"^[А-Яа-яA-Za-z\s\-]*$", ErrorMessage = "Отчество может содержать только буквы, пробелы и дефисы")]
         public required string? MiddleName { get; set; }
 
-        [Required(ErrorMessage = "Номер лицевого счета обязателен")]
         [StringLength(20, MinimumLength = 3, ErrorMessage = "Номер лицевого счета должен содержать от 3 до 20 символов")]
         [RegularExpression(@"^[A-Z0-9\-]+$", ErrorMessage = "Номер лицевого счета может содержать только заглавные буквы, цифры и дефисы")]
-        public required string AccountNumber { get; set; }
+        public string? AccountNumber { get; set; }
 
         [Required(ErrorMessage = "Email обязателен")]
         [EmailAddress(ErrorMessage = "Некорректный формат email")]

@@ -58,6 +58,15 @@ namespace ClientOpsPortal.Application.Services
             return user;
         }
 
+        public async Task<string> GeneratePasswordResetTokenAsync(string userName, CancellationToken ct = default)
+        {
+            var appUser = await _userManager.FindByNameAsync(userName);
+            if (appUser == null)
+                throw new InvalidOperationException($"User '{userName}' not found");
+
+            return await _userManager.GeneratePasswordResetTokenAsync(appUser);
+        }
+
         public async Task<string> ResetPasswordAsync(string userName, CancellationToken ct = default)
         {
             var appUser = await _userManager.FindByNameAsync(userName);

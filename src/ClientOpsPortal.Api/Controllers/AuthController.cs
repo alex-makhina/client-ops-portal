@@ -62,31 +62,27 @@ namespace ClientOpsPortal.Api.Controllers
             if (user == null)
                 return NotFound("User not found");
 
-            var newPassword = await _identityService.ResetPasswordAsync(request.LoginIdentifier, CancellationToken.None);
+            var resetToken = await _identityService.GeneratePasswordResetTokenAsync(request.LoginIdentifier, CancellationToken.None);
+            var resetLink = $"http://localhost:5022/set-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
+            await _notificationService.SendPasswordSetLinkAsync(user.Email ?? string.Empty, user.UserName ?? string.Empty, resetLink, CancellationToken.None);
 
-            await _notificationService.SendPasswordResetAsync(user.Email ?? string.Empty, newPassword, CancellationToken.None);
-
-            return Ok(new ForgotPasswordResponse
-            {
-                TemporaryPassword = newPassword,
-                Message = "Password has been reset. The temporary password has been sent to your email."
-            });
+            return Ok(new { message = "Password reset link has been sent to your email." });
         }
 
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        [HttpPost("set-password")]
+        public async Task<IActionResult> SetPassword([FromBody] SetPasswordRequest request)
         {
-            var user = await _userManager.FindByNameAsync(request.LoginIdentifier);
+            var user = await _userManager.FindByIdAsync(request.UserId.ToString());
             if (user == null)
                 return NotFound("User not found");
 
-            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
             if (!result.Succeeded)
             {
                 return BadRequest(result.Errors.Select(e => e.Description));
             }
 
-            return Ok(new { message = "Password changed successfully" });
+            return Ok(new { message = "Password set successfully" });
         }
 
         private string GenerateJwtToken(ApplicationUser user, IList<string> roles)
@@ -146,6 +142,13 @@ namespace ClientOpsPortal.Api.Controllers
     {
         public required string LoginIdentifier { get; set; }
         public required string CurrentPassword { get; set; }
+        public required string NewPassword { get; set; }
+    }
+
+    public class SetPasswordRequest
+    {
+        public required Guid UserId { get; set; }
+        public required string Token { get; set; }
         public required string NewPassword { get; set; }
     }
 }

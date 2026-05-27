@@ -18,37 +18,18 @@ namespace ClientOpsPortal.Application.Services
             _logger = logger;
         }
 
-        public async Task SendPasswordResetAsync(string email, string temporaryPassword, CancellationToken ct = default)
+        public async Task SendPasswordSetLinkAsync(string email, string login, string resetLink, CancellationToken ct = default)
         {
-            var subject = "Password Reset - ClientOpsPortal";
+            var subject = "Welcome to ClientOpsPortal - Set Your Password";
             var body = $"""
                 Hello,
 
-                Your password has been reset. Below is your temporary password:
-
-                Temporary Password: {temporaryPassword}
-
-                Please log in and change your password immediately.
-
-                Best regards,
-                ClientOpsPortal Team
-                """;
-
-            await SendEmailAsync(email, subject, body, ct);
-        }
-
-        public async Task SendWelcomeWithPasswordAsync(string email, string login, string password, CancellationToken ct = default)
-        {
-            var subject = "Welcome to ClientOpsPortal";
-            var body = $"""
-                Hello,
-
-                Your account has been created. Below are your login credentials:
+                Your account has been created. Please set your password using the link below:
 
                 Login: {login}
-                Password: {password}
+                Set Password: {resetLink}
 
-                Please log in and change your password after first login.
+                This link will expire after some time. If you did not request this, please ignore this email.
 
                 Best regards,
                 ClientOpsPortal Team
