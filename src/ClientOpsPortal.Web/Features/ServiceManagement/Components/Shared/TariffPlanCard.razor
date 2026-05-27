@@ -1,0 +1,56 @@
+﻿@* TariffPlanCard.razor *@
+@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
+
+<div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background-color: #fafafa; transition: all 0.2s;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <strong style="font-size: 14px; color: #333;">Тарифный план @Index</strong>
+        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="OnRemove" />
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
+                Название <span style="color: red;">*</span>
+            </label>
+            <RadzenTextBox @bind-Value="Model.Name"
+                           Placeholder="Например: Старт"
+                           Style="width: 100%;" />
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
+                Цена <span style="color: red;">*</span>
+            </label>
+            <RadzenNumeric @bind-Value="Model.Price"
+                           Placeholder="0"
+                           Min="0"
+                           Format="C2"
+                           Style="width: 100%;" />
+        </div>
+        <div style="grid-column: span 2;">
+            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Описание</label>
+            <RadzenTextArea @bind-Value="Model.Description"
+                            Placeholder="Описание тарифа"
+                            Rows="2"
+                            Style="width: 100%;" />
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
+                Дата начала <span style="color: red;">*</span>
+            </label>
+            <RadzenDatePicker @bind-Value="Model.BeginDate"
+                              Placeholder="дд.мм.гггг"
+                              Style="width: 100%;" />
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Дата окончания</label>
+            <RadzenDatePicker @bind-Value="Model.EndDate"
+                              Placeholder="дд.мм.гггг"
+                              Style="width: 100%;" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public TariffPlanRequest Model { get; set; } = null!;
+    [Parameter] public int Index { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+}

@@ -1,0 +1,324 @@
+﻿@page "/servicemanager/services"
+@attribute [Authorize(Roles = "ServiceManager")]
+
+@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
+@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Responses
+@using ClientOpsPortal.Web.Features.ServiceManagement.Services
+@using ClientOpsPortal.Web.Features.ServiceManagement.Validators
+@using ClientOpsPortal.Web.Features.ServiceManagement.Components.Shared
+@using Microsoft.AspNetCore.Authorization
+@inject IServiceManagementService ServiceManagementService
+@inject DialogService DialogService
+
+@if (isLoading)
+{
+    <RadzenCard>
+        <div style="text-align: center; padding: 50px;">
+            <RadzenSpinner />
+            <p style="margin-top: 16px; color: #666;">Загрузка услуг...</p>
+        </div>
+    </RadzenCard>
+}
+else if (errorMessage != null)
+{
+    <RadzenCard>
+        <div style="text-align: center; padding: 50px;">
+            <RadzenIcon Icon="error_outline" Style="color: #dc3545; font-size: 48px;" />
+            <p style="color: #dc3545; margin-top: 16px;">@errorMessage</p>
+            <RadzenButton Text="Повторить" 
+                          ButtonStyle="ButtonStyle.Primary" 
+                          Click="LoadData" 
+                          Style="margin-top: 16px;" />
+        </div>
+    </RadzenCard>
+}
+else
+{
+    <RadzenCard>
+        <div style="margin-bottom: 24px; padding-top: 34px;">
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #1a1a1a; font-weight: 600;">Справочник услуг</h3>
+                <p style="margin: 8px 0 0 0; color: #666; font-size: 14px;">Управление каталогом услуг и тарифных планов</p>
+            </div>
+
+            <ServiceSearchToolbar SearchTerm="@searchTerm"
+                                  SearchTermChanged="OnSearchTermChanged"
+                                  ShowOnlyActive="@showOnlyActive"
+                                  ShowOnlyActiveChanged="OnShowOnlyActiveChanged"
+                                  OnCreateClick="OpenCreateDialog" />
+
+            <ServiceGrid Services="filteredServices"
+                         EmptyMessage="@GetEmptyMessage()"
+                         ShowResetButton="@(!string.IsNullOrWhiteSpace(searchTerm) || showOnlyActive)"
+                         OnReset="ResetFilters"
+                         OnCardClick="OpenEditDialog" />
+        </div>
+    </RadzenCard>
+}
+
+@code {
+    private List<ServiceListItem> services = new();
+    private List<ServiceListItem> filteredServices = new();
+    private bool isLoading = true;
+    private string? errorMessage = null;
+    private string searchTerm = string.Empty;
+    private bool showOnlyActive = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        try
+        {
+            services = await ServiceManagementService.GetAllServicesAsync();
+            FilterServices();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.Error.WriteLine($"Ошибка загрузки услуг: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ResetFilters()
+    {
+        searchTerm = string.Empty;
+        showOnlyActive = false;
+        FilterServices();
+    }
+
+    private string GetEmptyMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            return $"Услуги по запросу \"{searchTerm}\" не найдены";
+        
+        if (showOnlyActive)
+            return "Нет активных услуг";
+        
+        return "Услуги не найдены";
+    }
+
+    private void FilterServices()
+    {
+        var query = services.AsEnumerable();
+        
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(s => s.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                                     s.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        if (showOnlyActive)
+        {
+            query = query.Where(s => IsActive(s));
+        }
+        
+        filteredServices = query.ToList();
+        StateHasChanged();
+    }
+
+    private bool IsActive(ServiceListItem service)
+    {
+        return service.EndDate == null || service.EndDate > DateTimeOffset.UtcNow;
+    }
+
+    // Обработчики изменений
+    private void OnSearchTermChanged(string value)
+    {
+        searchTerm = value;
+        FilterServices();
+    }
+
+    private void OnShowOnlyActiveChanged(bool value)
+    {
+        showOnlyActive = value;
+        FilterServices();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        try
+        {
+            var result = await DialogService.OpenAsync<ServiceEditDialog>(
+                "Добавление услуги",
+                new Dictionary<string, object?>
+                {
+                    { "IsEditMode", false },
+                    { "ServiceId", Guid.Empty },
+                    { "Name", string.Empty },
+                    { "Description", string.Empty },
+                    { "BeginDate", DateTimeOffset.UtcNow },
+                    { "EndDate", (DateTimeOffset?)null },
+                    { "TariffPlans", new List<TariffPlanRequest>() }
+                },
+                new DialogOptions 
+                { 
+                    Width = "750px", 
+                    CloseDialogOnOverlayClick = false, 
+                    Resizable = true, 
+                    Draggable = true 
+                });
+
+            if (result is CreateServiceRequest createResult)
+            {
+                await HandleServiceSave(createResult);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка при открытии диалога создания: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditDialog(ServiceListItem service)
+    {
+        try
+        {
+            var fullService = await ServiceManagementService.GetFullServiceByIdAsync(service.Id);
+            
+            if (fullService == null)
+            {
+                errorMessage = $"Не удалось загрузить данные услуги {service.Name}";
+                StateHasChanged();
+                return;
+            }
+
+            var tariffPlans = fullService.TariffPlans?.Select(tp => new TariffPlanRequest
+            {
+                Id = tp.Id,
+                Name = tp.Name,
+                Description = tp.Description,
+                Price = tp.Price,
+                ServiceId = service.Id,
+                BeginDate = tp.BeginDate.ToUniversalTime(),
+                EndDate = tp.EndDate?.ToUniversalTime()
+            }).ToList() ?? new List<TariffPlanRequest>();
+
+            var result = await DialogService.OpenAsync<ServiceEditDialog>(
+                "Редактирование услуги",
+                new Dictionary<string, object?>
+                {
+                    { "IsEditMode", true },
+                    { "ServiceId", service.Id },
+                    { "Name", fullService.Name ?? service.Name },
+                    { "Description", fullService.Description ?? service.Description },
+                    { "BeginDate", (fullService.BeginDate != default ? fullService.BeginDate : service.BeginDate).ToUniversalTime() },
+                    { "EndDate", (fullService.EndDate ?? service.EndDate)?.ToUniversalTime() },
+                    { "TariffPlans", tariffPlans }
+                },
+                new DialogOptions 
+                { 
+                    Width = "750px", 
+                    CloseDialogOnOverlayClick = false, 
+                    Resizable = true, 
+                    Draggable = true 
+                });
+
+            if (result is UpdateServiceRequest updateResult)
+            {
+                await HandleServiceSave(updateResult);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка при открытии диалога редактирования: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleServiceSave(object data)
+    {
+        try
+        {
+            bool success = false;
+
+            if (data is UpdateServiceRequest updateData)
+            {
+                var request = new UpdateServiceRequest
+                {
+                    IsEditMode = true,
+                    ServiceId = updateData.ServiceId,
+                    Name = updateData.Name?.Trim() ?? string.Empty,
+                    Description = updateData.Description?.Trim() ?? string.Empty,
+                    BeginDate = updateData.BeginDate.ToUniversalTime(),
+                    EndDate = updateData.EndDate?.ToUniversalTime(),
+                    TariffPlans = updateData.TariffPlans?.Select(tp => new TariffPlanRequest
+                    {
+                        Id = tp.Id,
+                        Name = tp.Name?.Trim() ?? string.Empty,
+                        Description = tp.Description?.Trim() ?? string.Empty,
+                        Price = tp.Price,
+                        ServiceId = updateData.ServiceId,
+                        BeginDate = tp.BeginDate.ToUniversalTime(),
+                        EndDate = tp.EndDate?.ToUniversalTime()
+                    }).ToList() ?? new List<TariffPlanRequest>()
+                };
+
+                success = await ServiceManagementService.UpdateServiceAsync(updateData.ServiceId, request);
+            }
+            else if (data is CreateServiceRequest createData)
+            {
+                var request = new CreateServiceRequest
+                {
+                    Name = createData.Name?.Trim() ?? string.Empty,
+                    Description = createData.Description?.Trim() ?? string.Empty,
+                    BeginDate = createData.BeginDate.ToUniversalTime(),
+                    EndDate = createData.EndDate?.ToUniversalTime(),
+                    TariffPlans = createData.TariffPlans?.Select(tp => new TariffPlanRequest
+                    {
+                        Id = Guid.Empty,
+                        Name = tp.Name?.Trim() ?? string.Empty,
+                        Description = tp.Description?.Trim() ?? string.Empty,
+                        Price = tp.Price,
+                        ServiceId = Guid.Empty,
+                        BeginDate = tp.BeginDate.ToUniversalTime(),
+                        EndDate = tp.EndDate?.ToUniversalTime()
+                    }).ToList() ?? new List<TariffPlanRequest>()
+                };
+
+                success = await ServiceManagementService.CreateServiceAsync(request);
+            }
+
+            if (success)
+            {
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = "Не удалось сохранить услугу. Пожалуйста, проверьте введенные данные и попробуйте снова.";
+                StateHasChanged();
+                
+                await Task.Delay(5000);
+                if (errorMessage != null)
+                {
+                    errorMessage = null;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети: {ex.Message}";
+            Console.Error.WriteLine($"HTTP Error saving service: {ex.Message}");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка при сохранении услуги: {ex.Message}";
+            Console.Error.WriteLine($"Error saving service: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+}

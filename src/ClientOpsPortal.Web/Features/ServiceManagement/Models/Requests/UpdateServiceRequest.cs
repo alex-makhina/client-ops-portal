@@ -1,4 +1,4 @@
-﻿namespace ClientOpsPortal.Web.Features.ServiceManagement.Models
+﻿namespace ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
 {
     public class UpdateServiceRequest
     {
@@ -8,6 +8,6 @@
         public string Description { get; set; } = string.Empty;
         public DateTimeOffset BeginDate { get; set; }
         public DateTimeOffset? EndDate { get; set; }
-        public List<UpdateTariffPlanFromServiceRequest> TariffPlans { get; set; } = new();
+        public List<TariffPlanRequest> TariffPlans { get; set; } = new();
     }
 }

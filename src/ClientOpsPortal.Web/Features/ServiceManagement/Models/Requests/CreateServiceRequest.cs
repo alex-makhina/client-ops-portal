@@ -1,12 +1,12 @@
-﻿namespace ClientOpsPortal.Web.Features.ServiceManagement.Models
+﻿namespace ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
 {
-    public class CreateTariffPlanFromServiceRequest
+    public class CreateServiceRequest
     {
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-        public Guid ServiceId { get; set; }
         public DateTimeOffset BeginDate { get; set; }
         public DateTimeOffset? EndDate { get; set; }
+        public List<TariffPlanRequest> TariffPlans { get; set; } = new();
     }
+
 }
