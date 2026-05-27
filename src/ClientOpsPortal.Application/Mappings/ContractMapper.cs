@@ -28,6 +28,7 @@ namespace ClientOpsPortal.Application.Mappings
         {
             return new ContractShortDataDto
             {
+                Id = contract.Id,
                 ContractNumber = contract.ContractNumber,
                 AbonentId = contract.AbonentId,
                 BeginDate = contract.BeginDate

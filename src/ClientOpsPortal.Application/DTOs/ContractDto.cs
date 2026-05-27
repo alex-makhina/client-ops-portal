@@ -13,6 +13,7 @@ namespace ClientOpsPortal.Application.DTOs
 
     public class ContractShortDataDto
     {
+        public Guid Id {get; set;}
         public required string ContractNumber { get; set; }
         public Guid AbonentId { get; set; }
         public DateTimeOffset? BeginDate { get; set; }

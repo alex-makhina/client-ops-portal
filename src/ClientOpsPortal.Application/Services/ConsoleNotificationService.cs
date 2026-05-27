@@ -12,15 +12,10 @@ namespace ClientOpsPortal.Application.Services
             _logger = logger;
         }
 
-        public Task SendPasswordResetAsync(string email, string temporaryPassword, CancellationToken ct = default)
+        public Task SendPasswordSetLinkAsync(string email, string login, string resetLink, CancellationToken ct = default)
         {
-            _logger.LogInformation("Password reset for {Email}. Temporary password: {Password}", email, temporaryPassword);
-            return Task.CompletedTask;
-        }
-
-        public Task SendWelcomeWithPasswordAsync(string email, string login, string password, CancellationToken ct = default)
-        {
-            _logger.LogInformation("User {Email} created. Login: {Login}, Password: {Password}", email, login, password);
+            _logger.LogInformation("[Notification] Password set link for {Email}:\n  Login:     {Login}\n  ResetLink: {ResetLink}",
+                email, login, resetLink);
             return Task.CompletedTask;
         }
     }

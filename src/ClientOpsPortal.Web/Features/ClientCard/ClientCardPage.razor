@@ -1,0 +1,488 @@
+@page "/manager/client-card/{AbonentId:guid}"
+@attribute [Authorize(Roles = "Manager")]
+
+@using ClientOpsPortal.Web.Features.ClientCard.Models
+@using ClientOpsPortal.Web.Features.ClientCard.Services
+
+@inject IClientCardService ClientCardService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenCard>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; margin-top: 20px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <RadzenButton Text="← Назад" ButtonStyle="ButtonStyle.Secondary" Click="@GoBack" />
+            <h3 class="mb-0" style="margin: 0;">Карточка клиента</h3>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div style="text-align: center; padding: 40px; color: #64748b;">Загрузка...</div>
+    }
+    else if (abonent == null)
+    {
+        <RadzenAlert Severity="AlertStyle.Danger">Абонент не найден</RadzenAlert>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Abonent Information -->
+            <div class="col-md-6">
+                <RadzenCard Style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4 class="mb-0">📋 Информация об абоненте</h4>
+                        <RadzenButton Text="✏️ Редактировать" ButtonStyle="ButtonStyle.Secondary"
+                                      Click="@OpenEditDialog" />
+                    </div>
+
+                    <RadzenAlert @bind-Visible="@showEditSuccess" Severity="AlertStyle.Success" Style="margin-bottom: 12px;">
+                        Данные абонента обновлены
+                    </RadzenAlert>
+
+                    <div style="display: grid; gap: 8px;">
+                        <div><strong>Лицевой счет:</strong> @abonent.AccountNumber</div>
+                        <div><strong>ФИО:</strong> @abonent.FullName</div>
+                        <div><strong>Идентификационный номер:</strong> @abonent.IdentificationNumber</div>
+                    </div>
+                </RadzenCard>
+            </div>
+
+            <!-- Contracts with Subscriptions -->
+            <div class="col-md-6">
+                <RadzenCard Style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4 class="mb-0">📄 Договоры</h4>
+                        <RadzenButton Text="+ Новый договор" ButtonStyle="ButtonStyle.Primary"
+                                      Click="@OpenCreateContractDialog" />
+                    </div>
+
+                    @if (contracts.Count == 0)
+                    {
+                        <RadzenAlert Severity="AlertStyle.Warning">Нет договоров</RadzenAlert>
+                    }
+                    else
+                    {
+                        @foreach (var contract in contracts)
+                        {
+                            <div style="margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                                <!-- Contract Header (clickable to expand/collapse) -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; cursor: pointer;"
+                                     @onclick="() => ToggleContract(contract.Id)">
+                                    <div style="flex: 1;">
+                                        <strong>№ @contract.ContractNumber</strong>
+                                        <br />
+                                        <small style="color: #64748b;">
+                                            @if (contract.BeginDate.HasValue)
+                                            {
+                                                <span>с @contract.BeginDate.Value.LocalDateTime.ToString("dd.MM.yyyy")</span>
+                                            }
+                                            @if (contract.EndDate.HasValue)
+                                            {
+                                                <span>, по @contract.EndDate.Value.LocalDateTime.ToString("dd.MM.yyyy")</span>
+                                            }
+                                        </small>
+                                        <br />
+                                        @if (contract.IsActive)
+                                        {
+                                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; background: #dcfce7; color: #15803d;">Активен</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; background: #fee2e2; color: #b91c1c;">Завершен</span>
+                                        }
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        @if (contract.IsActive)
+                                        {
+                                            <RadzenButton Text="🔌 Подключить услугу" ButtonStyle="ButtonStyle.Primary"
+                                                          ButtonSize="ButtonSize.Small"
+                                                          Click="@(() => OpenConnectServiceDialog(contract.Id))"
+                                                          @onclick:stopPropagation />
+                                        }
+                                        <span style="font-size: 18px; color: #64748b; transition: transform 0.2s; @(expandedContractId == contract.Id ? "transform: rotate(180deg);" : "")">
+                                            ▼
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Subscriptions for this contract (expandable) -->
+                                @if (expandedContractId == contract.Id)
+                                {
+                                    <div style="padding: 12px; background: white; border-top: 1px solid #e2e8f0;">
+                                        @{
+                                            var subs = GetSubscriptionsForContract(contract.Id);
+                                        }
+                                        @if (subs.Count == 0)
+                                        {
+                                            <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 14px;">
+                                                Нет подключенных услуг
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var sub in subs)
+                                            {
+                                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; margin-bottom: 6px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                                    <div>
+                                                        <div><strong>@sub.ServiceName</strong></div>
+                                                        <div style="font-size: 13px; color: #64748b;">
+                                                            Тариф: @sub.TariffPlanName
+                                                            <br />
+                                                            с @sub.BeginDate.LocalDateTime.ToString("dd.MM.yyyy")
+                                                            @if (sub.EndDate.HasValue)
+                                                            {
+                                                                <span>по @sub.EndDate.Value.LocalDateTime.ToString("dd.MM.yyyy")</span>
+                                                            }
+                                                        </div>
+                                                        @if (sub.IsActive)
+                                                        {
+                                                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; background: #dcfce7; color: #15803d;">Активна</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; background: #fee2e2; color: #b91c1c;">Отключена</span>
+                                                        }
+                                                    </div>
+                                                    @if (sub.IsActive)
+                                                    {
+                                                        <RadzenButton Text="Отключить" ButtonStyle="ButtonStyle.Danger"
+                                                                      ButtonSize="ButtonSize.Small"
+                                                                      Click="@(() => ConfirmCancelSubscription(sub))" />
+                                                    }
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </RadzenCard>
+            </div>
+        </div>
+    }
+</RadzenCard>
+
+@code {
+    [Parameter]
+    public Guid AbonentId { get; set; }
+
+    private AbonentDetail? abonent;
+    private List<ContractItem> contracts = new();
+    private Dictionary<Guid, List<SubscriptionItem>> subscriptionsByContract = new();
+    private Guid? expandedContractId;
+    private bool isLoading = true;
+    private bool showEditSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            abonent = await ClientCardService.GetAbonentAsync(AbonentId);
+            if (abonent != null)
+            {
+                var contractList = await ClientCardService.GetContractsAsync(AbonentId);
+                contracts = contractList.ToList();
+            }
+        }
+        catch
+        {
+            abonent = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private List<SubscriptionItem> GetSubscriptionsForContract(Guid contractId)
+    {
+        return subscriptionsByContract.TryGetValue(contractId, out var subs) ? subs : new();
+    }
+
+    private async Task ToggleContract(Guid contractId)
+    {
+        if (expandedContractId == contractId)
+        {
+            expandedContractId = null;
+            return;
+        }
+
+        expandedContractId = contractId;
+
+        // Load subscriptions if not already loaded
+        if (!subscriptionsByContract.ContainsKey(contractId))
+        {
+            try
+            {
+                var subs = await ClientCardService.GetSubscriptionsByContractAsync(contractId);
+                subscriptionsByContract[contractId] = subs.ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error loading subscriptions: {ex.Message}");
+                subscriptionsByContract[contractId] = new();
+            }
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/manager/search-abonent");
+    }
+
+    private async Task OpenEditDialog()
+    {
+        if (abonent == null) return;
+
+        var result = await DialogService.OpenAsync<EditAbonentDialog>(
+            "✏️ Редактирование абонента",
+            new Dictionary<string, object?>
+            {
+                { "LastName", abonent.LastName },
+                { "FirstName", abonent.FirstName },
+                { "MiddleName", abonent.MiddleName },
+                { "IdentificationNumber", abonent.IdentificationNumber },
+                { "AccountNumber", abonent.AccountNumber }
+            },
+            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+        );
+
+        if (result is EditAbonentDialogResult dialogResult)
+        {
+            await HandleUpdateAbonent(dialogResult);
+        }
+    }
+
+    private async Task HandleUpdateAbonent(EditAbonentDialogResult data)
+    {
+        try
+        {
+            var model = new UpdateAbonentModel
+            {
+                LastName = data.LastName,
+                FirstName = data.FirstName,
+                MiddleName = data.MiddleName,
+                IdentificationNumber = data.IdentificationNumber,
+                AccountNumber = data.AccountNumber
+            };
+
+            var success = await ClientCardService.UpdateAbonentAsync(AbonentId, model);
+            if (success)
+            {
+                showEditSuccess = true;
+                await LoadDataAsync();
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Ошибка",
+                    Detail = "Не удалось обновить данные абонента"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Ошибка",
+                Detail = ex.Message
+            });
+        }
+    }
+
+    private async Task OpenCreateContractDialog()
+    {
+        var result = await DialogService.OpenAsync<CreateContractDialog>(
+            "📄 Новый договор",
+            new Dictionary<string, object?>
+            {
+                { "ContractNumber", string.Empty },
+                { "BeginDate", DateTimeOffset.UtcNow }
+            },
+            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+        );
+
+        if (result is CreateContractDialogResult dialogResult)
+        {
+            await HandleCreateContract(dialogResult);
+        }
+    }
+
+    private async Task HandleCreateContract(CreateContractDialogResult data)
+    {
+        try
+        {
+            var model = new CreateContractModel
+            {
+                ContractNumber = data.ContractNumber,
+                AbonentId = AbonentId,
+                BeginDate = data.BeginDate
+            };
+
+            var success = await ClientCardService.CreateContractAsync(model);
+            if (success)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Успешно",
+                    Detail = "Договор создан"
+                });
+                await LoadDataAsync();
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Ошибка",
+                    Detail = "Не удалось создать договор"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Ошибка",
+                Detail = ex.Message
+            });
+        }
+    }
+
+    private async Task OpenConnectServiceDialog(Guid contractId)
+    {
+        var result = await DialogService.OpenAsync<ConnectServiceDialog>(
+            "🔌 Подключение услуги",
+            new Dictionary<string, object?>
+            {
+                { "ContractId", contractId }
+            },
+            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+        );
+
+        if (result is ConnectServiceDialogResult dialogResult)
+        {
+            await HandleConnectService(contractId, dialogResult);
+        }
+    }
+
+    private async Task HandleConnectService(Guid contractId, ConnectServiceDialogResult data)
+    {
+        try
+        {
+            var model = new ConnectServiceModel
+            {
+                ContractId = contractId,
+                ServiceId = data.ServiceId,
+                TariffPlanId = data.TariffPlanId,
+                BeginDate = data.BeginDate
+            };
+
+            var success = await ClientCardService.ConnectServiceAsync(model);
+            if (success)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Успешно",
+                    Detail = "Услуга подключена"
+                });
+
+                // Reload subscriptions for this contract
+                if (expandedContractId == contractId)
+                {
+                    var subs = await ClientCardService.GetSubscriptionsByContractAsync(contractId);
+                    subscriptionsByContract[contractId] = subs.ToList();
+                }
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Ошибка",
+                    Detail = "Не удалось подключить услугу"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Ошибка",
+                Detail = ex.Message
+            });
+        }
+    }
+
+    private async Task ConfirmCancelSubscription(SubscriptionItem subscription)
+    {
+        var confirm = await DialogService.Confirm(
+            $"Вы уверены, что хотите отключить услугу \"{subscription.ServiceName}\"?",
+            "Подтверждение отключения",
+            new ConfirmOptions { OkButtonText = "Да, отключить", CancelButtonText = "Отмена" }
+        );
+
+        if (confirm == true)
+        {
+            await HandleCancelSubscription(subscription);
+        }
+    }
+
+    private async Task HandleCancelSubscription(SubscriptionItem subscription)
+    {
+        try
+        {
+            var success = await ClientCardService.CancelSubscriptionAsync(subscription.Id);
+            if (success)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Успешно",
+                    Detail = $"Услуга \"{subscription.ServiceName}\" отключена"
+                });
+
+                // Reload subscriptions for this contract
+                if (expandedContractId == subscription.ContractId)
+                {
+                    var subs = await ClientCardService.GetSubscriptionsByContractAsync(subscription.ContractId);
+                    subscriptionsByContract[subscription.ContractId] = subs.ToList();
+                }
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Ошибка",
+                    Detail = "Не удалось отключить услугу"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Ошибка",
+                Detail = ex.Message
+            });
+        }
+    }
+}

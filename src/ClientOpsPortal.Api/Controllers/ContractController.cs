@@ -40,6 +40,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpGet("by-abonent/{abonentId}")]
+        [Authorize(Roles = "Manager, Abonent")]
         public async Task<IActionResult> GetByAbonent(Guid abonentId, [FromQuery] bool withIncludes = true, CancellationToken ct = default)
         {
             if (User.IsInRole("Abonent"))

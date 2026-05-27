@@ -47,8 +47,8 @@ namespace ClientOpsPortal.Application.Mappings
                 ContractId = createDto.ContractId,
                 ServiceId = createDto.ServiceId,
                 TariffPlanId = createDto.TariffPlanId,
-                BeginDate = createDto.BeginDate,
-                EndDate = createDto.EndDate
+                BeginDate = createDto.BeginDate.ToUniversalTime(),
+                EndDate = createDto.EndDate?.ToUniversalTime()
             };
         }
 

@@ -3,12 +3,15 @@ using ClientOpsPortal.Web.Shared.Infrastructure;
 using ClientOpsPortal.Web.Shared.Providers;
 using ClientOpsPortal.Web.Features.Auth.Services;
 using ClientOpsPortal.Web.Features.UserManagement.Services;
+using ClientOpsPortal.Web.Features.AbonentRegistration.Services;
+using ClientOpsPortal.Web.Features.AbonentSearch.Services;
+using ClientOpsPortal.Web.Features.ClientCard.Services;
 using ClientOpsPortal.Web.Features.ServiceManagement.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Radzen;
- 
+  
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -30,6 +33,9 @@ builder.Services.AddHttpClient("Api", client =>
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IAbonentRegistrationService, AbonentRegistrationService>();
+builder.Services.AddScoped<IAbonentSearchService, AbonentSearchService>();
+builder.Services.AddScoped<IClientCardService, ClientCardService>();
 builder.Services.AddScoped<IServiceManagementService, ServiceManagementService>();
 
 await builder.Build().RunAsync();

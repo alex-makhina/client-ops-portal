@@ -38,6 +38,19 @@ namespace ClientOpsPortal.Web.Features.Auth.Services
             return authResponse;
         }
 
+        public async Task<HttpResponseMessage> SetPassword(Guid userId, string token, string newPass)
+        {
+            var request = new
+            {
+                userId = userId,
+                token = token,
+                newPassword = newPass
+            };
+            var response = await _httpClient.PostAsJsonAsync("api/v1/Auth/set-password", request);
+
+            return response;            
+        }
+
         public async Task LogoutAsync()
         {
             await _authStateProvider.NotifyUserLogout();

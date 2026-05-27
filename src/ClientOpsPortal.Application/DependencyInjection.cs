@@ -22,7 +22,7 @@ namespace ClientOpsPortal.Application
 
             services.AddScoped<IIdentityService, IdentityService>();
             services.AddScoped<IUserManagementService, UserManagementService>();
-            services.AddScoped<INotificationService, EmailNotificationService>();
+            services.AddScoped<INotificationService, ConsoleNotificationService>();
 
             return services;
         }

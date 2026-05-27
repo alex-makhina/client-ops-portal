@@ -51,7 +51,9 @@ namespace ClientOpsPortal.Application.Services
             employee.UserId = user.Id;
             await _employeeRepository.AddAsync(employee, ct);
 
-            await _notificationService.SendWelcomeWithPasswordAsync(createDto.Email, userName, password, ct);
+            var resetToken = await _identityService.GeneratePasswordResetTokenAsync(userName, ct);
+            var resetLink = $"http://localhost:5022/set-password?userId={user.ExternalId}&token={Uri.EscapeDataString(resetToken)}";
+            await _notificationService.SendPasswordSetLinkAsync(createDto.Email, userName, resetLink, ct);
 
             return employee.ToEmployeeDto();
         }
