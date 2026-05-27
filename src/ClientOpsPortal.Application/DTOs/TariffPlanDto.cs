@@ -47,10 +47,11 @@ namespace ClientOpsPortal.Application.DTOs
         [StringLength(100, MinimumLength = 3, ErrorMessage = "Название тарифного плана должно содержать от 3 до 100 символов")]
         public string? Name { get; set; }
 
-        [Required(ErrorMessage = "Цена обязательна")]
-        [Range(0, 999, ErrorMessage = "Цена должна быть от 0 до 999")]
+        [Required(ErrorMessage = "Описание тарифного плана обязательно")]
+        [StringLength(500, MinimumLength = 10, ErrorMessage = "Описание тарифного плана должно содержать от 10 до 500 символов")]
         public string? Description { get; set; }
 
+        [Required(ErrorMessage = "Цена обязательна")]
         [Range(0, 999, ErrorMessage = "Цена должна быть от 0 до 999")]
         public decimal? Price { get; set; }
 
@@ -67,10 +68,11 @@ namespace ClientOpsPortal.Application.DTOs
         [StringLength(100, MinimumLength = 3, ErrorMessage = "Название тарифного плана должно содержать от 3 до 100 символов")]
         public required string Name { get; set; }
 
-        [Required(ErrorMessage = "Цена обязательна")]
-        [Range(0, 999, ErrorMessage = "Цена должна быть от 0 до 999")]
+        [Required(ErrorMessage = "Описание тарифного плана обязательно")]
+        [StringLength(500, MinimumLength = 10, ErrorMessage = "Описание тарифного плана должно содержать от 10 до 500 символов")]
         public required string Description { get; set; }
 
+        [Required(ErrorMessage = "Цена обязательна")]
         [Range(0, 999, ErrorMessage = "Цена должна быть от 0 до 999")]
         public decimal Price { get; set; }
 

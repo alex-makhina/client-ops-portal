@@ -65,6 +65,8 @@ namespace ClientOpsPortal.Application.Services
             if (updateDto.EndDate.HasValue)
                 service.EndDate = updateDto.EndDate;
 
+            service.BeginDate = updateDto.BeginDate;
+
             await _serviceRepository.UpdateAsync(service, ct);
 
             if (updateDto.TariffPlans != null)

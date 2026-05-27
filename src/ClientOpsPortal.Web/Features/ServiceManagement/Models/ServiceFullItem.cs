@@ -1,0 +1,12 @@
+﻿namespace ClientOpsPortal.Web.Features.ServiceManagement.Models
+{
+    public class ServiceFullItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTimeOffset BeginDate { get; set; }
+        public DateTimeOffset? EndDate { get; set; }
+        public List<TariffPlanItem> TariffPlans { get; set; } = new();
+    }
+}

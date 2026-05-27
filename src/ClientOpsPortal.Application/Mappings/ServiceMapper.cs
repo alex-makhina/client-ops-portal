@@ -59,8 +59,8 @@ namespace ClientOpsPortal.Application.Mappings
                 Id = serviceId,
                 Name = createDto.Name,
                 Description = createDto.Description,
-                BeginDate = createDto.BeginDate,
-                EndDate = createDto.EndDate,
+                BeginDate = createDto.BeginDate.ToUniversalTime(),
+                EndDate = createDto.EndDate?.ToUniversalTime(),
                 TariffPlans = new List<TariffPlan>()
             };
 
@@ -75,8 +75,8 @@ namespace ClientOpsPortal.Application.Mappings
                         Description = tariffDto.Description,
                         Price = tariffDto.Price,
                         ServiceId = serviceId, 
-                        BeginDate = tariffDto.BeginDate,
-                        EndDate = tariffDto.EndDate
+                        BeginDate = tariffDto.BeginDate.ToUniversalTime(),
+                        EndDate = tariffDto.EndDate?.ToUniversalTime()
                     });
                 }
             }
