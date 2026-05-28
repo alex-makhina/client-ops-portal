@@ -52,7 +52,6 @@ namespace ClientOpsPortal.Application.Mappings
             entity.FirstName = updateDto.FirstName;
             entity.LastName = updateDto.LastName;
             entity.MiddleName = updateDto.MiddleName;
-            entity.AccountNumber = updateDto.AccountNumber;
         }
     }
 }

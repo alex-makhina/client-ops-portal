@@ -1,8 +1,6 @@
-@inject DialogService DialogService
+﻿@inject DialogService DialogService
 
 <RadzenCard Style="min-width: 500px;">
-    <h4 class="mb-0" style="margin-bottom: 20px;">✏️ Редактирование абонента</h4>
-
     <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
         @errorMessage
     </RadzenAlert>
@@ -24,19 +22,25 @@
             <label style="display: block; margin-bottom: 4px; font-weight: 500;">Идентификационный номер *</label>
             <RadzenTextBox @bind-Value="@IdentificationNumber" Placeholder="ИНН" Style="width: 100%;" />
         </div>
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Лицевой счет *</label>
-            <RadzenTextBox @bind-Value="@AccountNumber" Placeholder="Лицевой счет" Style="width: 100%;" />
-        </div>
+        @if (!IsEditMode)
+        {
+            <div>
+                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Email *</label>
+                <RadzenTextBox @bind-Value="@Email" Placeholder="Email" Style="width: 100%;" />
+                <small style="color: #666;">Необходим для отправки логина и пароля</small>
+            </div>
+        }
     </div>
 
     <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
         <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="@Close" />
-        <RadzenButton Text="Сохранить" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
+        <RadzenButton Text="@GetSaveButtonText()" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
     </div>
 </RadzenCard>
 
 @code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = true;
     [Parameter]
     public string LastName { get; set; } = string.Empty;
     [Parameter]
@@ -46,7 +50,7 @@
     [Parameter]
     public string IdentificationNumber { get; set; } = string.Empty;
     [Parameter]
-    public string AccountNumber { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
 
     private bool showError;
     private string errorMessage = string.Empty;
@@ -62,23 +66,39 @@
 
         if (string.IsNullOrWhiteSpace(LastName) ||
             string.IsNullOrWhiteSpace(FirstName) ||
-            string.IsNullOrWhiteSpace(IdentificationNumber) ||
-            string.IsNullOrWhiteSpace(AccountNumber))
+            string.IsNullOrWhiteSpace(IdentificationNumber))
         {
             showError = true;
             errorMessage = "Заполните обязательные поля";
             return;
         }
 
-        var result = new EditAbonentDialogResult
+        if (!IsEditMode && string.IsNullOrWhiteSpace(Email))
         {
+            showError = true;
+            errorMessage = "Введите Email для регистрации абонента";
+            return;
+        }
+
+        if (!IsEditMode && !Email.Contains("@"))
+        {
+            showError = true;
+            errorMessage = "Введите корректный Email";
+            return;
+        }
+
+        var result = new SharedDialog.EditAbonentDialog.Models.EditAbonentDialogResult
+        {
+            IsEditMode = IsEditMode,
             LastName = LastName,
             FirstName = FirstName,
             MiddleName = MiddleName,
             IdentificationNumber = IdentificationNumber,
-            AccountNumber = AccountNumber
+            Email = Email
         };
 
         DialogService.Close(result);
     }
+
+    private string GetSaveButtonText() => IsEditMode ? "Сохранить" : "Зарегистрировать";
 }

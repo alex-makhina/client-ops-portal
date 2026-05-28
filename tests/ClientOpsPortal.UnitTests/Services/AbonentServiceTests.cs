@@ -312,7 +312,6 @@ public class AbonentServiceTests
         var existingAbonent = CreateAbonentEntity(abonentId);
         var updateDto = CreateUpdateAbonentDto();
         var otherAbonent = CreateAbonentEntity(Guid.NewGuid());
-        otherAbonent.AccountNumber = updateDto.AccountNumber;
 
         _abonentRepositoryMock
             .Setup(r => r.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))
@@ -329,8 +328,6 @@ public class AbonentServiceTests
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
             () => _sut.UpdateAsync(abonentId, updateDto));
-
-        exception.Message.ShouldContain(updateDto.AccountNumber);
 
         _abonentRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),

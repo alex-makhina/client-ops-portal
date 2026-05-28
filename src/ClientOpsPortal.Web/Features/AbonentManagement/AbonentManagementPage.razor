@@ -1,0 +1,186 @@
+@page "/manager/abonents"
+@attribute [Authorize(Roles = "Manager")]
+
+@using ClientOpsPortal.Web.Features.AbonentManagement.Models
+@using ClientOpsPortal.Web.Features.AbonentManagement.Services
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models
+@using Radzen
+@using Radzen.Blazor
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog
+
+@inject IAbonentManagementService AbonentSearchService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenCard Style="max-width: 800px; margin: 20px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+            <h3 class="mb-0">👥 Абоненты</h3>
+        </div>
+        <RadzenButton Text="Регистрация абонента"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Icon="person_add"
+                      Click="@OpenRegisterDialog" />
+    </div>
+
+    <div class="p-3">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <RadzenTextBox @bind-Value="@searchTerm" Placeholder="Поиск по ФИО..." Style="flex: 1;" />
+            <RadzenButton Text="Найти" ButtonStyle="ButtonStyle.Primary" Click="@HandleSearch" Disabled="@isLoading" />
+        </div>
+
+        @if (showError)
+        {
+            <RadzenAlert Severity="AlertStyle.Danger" Style="margin-top: 16px;">
+                @errorMessage
+            </RadzenAlert>
+        }
+
+        @if (searchPerformed && !showError)
+        {
+            <div style="margin-top: 20px;">
+                @if (results.Count == 0)
+                {
+                    <RadzenAlert Severity="AlertStyle.Warning">
+                        Абоненты не найдены
+                    </RadzenAlert>
+                }
+                else
+                {
+                    <div Style="margin-top: 12px;">
+                        @foreach (var result in results)
+                        {
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 8px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <strong>@result.FullName</strong>
+                                    <br />
+                                    <small style="color: #64748b;">Лицевой счет: @result.AccountNumber</small>
+                                </div>
+                                <RadzenButton Text="Открыть карточку" ButtonStyle="ButtonStyle.Primary"
+                                              Click="@(() => NavigateToClientCard(result.Id))" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</RadzenCard>
+
+@code {
+    private string searchTerm = string.Empty;
+    private bool isLoading;
+    private bool showError;
+    private string errorMessage = string.Empty;
+    private bool searchPerformed;
+    private List<AbonentShortResult> results = new();
+
+    private async Task HandleSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            showError = true;
+            errorMessage = "Введите поисковый запрос";
+            return;
+        }
+
+        isLoading = true;
+        showError = false;
+        searchPerformed = false;
+
+        try
+        {
+            var searchResults = await AbonentSearchService.SearchByNameAsync(searchTerm);
+            results = searchResults.ToList();
+            searchPerformed = true;
+        }
+        catch (Exception ex)
+        {
+            showError = true;
+            errorMessage = $"Ошибка при поиске: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OpenRegisterDialog()
+    {
+        var result = await DialogService.OpenAsync<EditAbonentDialog>(
+            "Регистрация абонента",
+            new Dictionary<string, object?>
+            {
+                { "IsEditMode", false },
+                { "LastName", string.Empty },
+                { "FirstName", string.Empty },
+                { "MiddleName", string.Empty },
+                { "IdentificationNumber", string.Empty },
+                { "Email", string.Empty }
+            },
+            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false, Resizable = true, Draggable = true }
+        );
+
+        if (result is EditAbonentDialogResult dialogResult && !dialogResult.IsEditMode)
+        {
+            await HandleRegisterAbonent(dialogResult);
+        }
+    }
+
+    private async Task HandleRegisterAbonent(EditAbonentDialogResult data)
+    {
+        try
+        {
+            var request = new AbonentRequest
+            {
+                LastName = data.LastName,
+                FirstName = data.FirstName,
+                MiddleName = data.MiddleName,
+                IdentificationNumber = data.IdentificationNumber,
+                Email = data.Email
+            };
+
+            var abonentId = await AbonentSearchService.RegisterAbonentAsync(request);
+
+            if (abonentId.HasValue)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Успех",
+                    Detail = "Абонент успешно зарегистрирован. Данные для входа отправлены на email.",
+                    Duration = 5000
+                });
+
+                searchTerm = $"{data.LastName} {data.FirstName}";
+                await HandleSearch();
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Ошибка",
+                    Detail = "Не удалось зарегистрировать абонента. Проверьте введенные данные.",
+                    Duration = 5000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Ошибка",
+                Detail = ex.Message,
+                Duration = 5000
+            });
+        }
+    }
+
+    private void NavigateToClientCard(Guid abonentId)
+    {
+        Navigation.NavigateTo($"/manager/client-card/{abonentId}");
+    }
+}

@@ -1,4 +1,5 @@
 using ClientOpsPortal.Web.Features.ClientCard.Models;
+using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models;
 using System.Net.Http.Json;
 
 namespace ClientOpsPortal.Web.Features.ClientCard.Services
@@ -21,7 +22,7 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
             return await response.Content.ReadFromJsonAsync<AbonentDetail>();
         }
 
-        public async Task<bool> UpdateAbonentAsync(Guid abonentId, UpdateAbonentModel model)
+        public async Task<bool> UpdateAbonentAsync(Guid abonentId, AbonentRequest model)
         {
             var response = await _httpClient.PutAsJsonAsync($"api/v1/Abonents/{abonentId}", model);
             return response.IsSuccessStatusCode;
