@@ -21,9 +21,6 @@ namespace ClientOpsPortal.Api.Controllers
             _stepService = stepService;
         }
 
-        /// <summary>
-        /// Получить все шаги истории
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool withIncludes = false, CancellationToken ct = default)
         {
@@ -31,9 +28,6 @@ namespace ClientOpsPortal.Api.Controllers
             return Ok(services);
         }
 
-        /// <summary>
-        /// Получить шаг истории по ID
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
@@ -43,9 +37,6 @@ namespace ClientOpsPortal.Api.Controllers
             return Ok(step);
         }
 
-        /// <summary>
-        /// Получить все шаги для конкретной истории
-        /// </summary>
         [HttpGet("by-history/{historyId}")]
         public async Task<IActionResult> GetByHistory(Guid historyId, CancellationToken ct = default)
         {
@@ -53,9 +44,6 @@ namespace ClientOpsPortal.Api.Controllers
             return Ok(steps);
         }
 
-        /// <summary>
-        /// Создать новый шаг истории
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Create(CreateSubscriptionHistoryStepDto createDto, CancellationToken ct = default)
         {
@@ -70,9 +58,6 @@ namespace ClientOpsPortal.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Обновить шаг истории
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, UpdateSubscriptionHistoryStepDto updateDto, CancellationToken ct = default)
         {
@@ -89,9 +74,6 @@ namespace ClientOpsPortal.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Удалить шаг истории
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
         {

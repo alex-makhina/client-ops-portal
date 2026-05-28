@@ -14,7 +14,7 @@ namespace ClientOpsPortal.Web.Features.UserManagement.Services
 
         public async Task<List<UserListItem>> GetAllUsersAsync()
         {
-            var response = await _httpClient.GetAsync("api/v1/employees/admin/list");
+            var response = await _httpClient.GetAsync("api/v1/employees/list");
             if (!response.IsSuccessStatusCode)
                 return new List<UserListItem>();
 
@@ -23,31 +23,31 @@ namespace ClientOpsPortal.Web.Features.UserManagement.Services
 
         public async Task<bool> CreateUserAsync(CreateUserRequest request)
         {
-            var response = await _httpClient.PostAsJsonAsync("api/v1/employees/admin/create", request);
+            var response = await _httpClient.PostAsJsonAsync("api/v1/employees/create", request);
             return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> UpdateUserAsync(Guid employeeId, UpdateUserRequest request)
         {
-            var response = await _httpClient.PutAsJsonAsync($"api/v1/employees/admin/{employeeId}", request);
+            var response = await _httpClient.PutAsJsonAsync($"api/v1/employees/{employeeId}/update", request);
             return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> ToggleUserStatusAsync(Guid employeeId)
         {
-            var response = await _httpClient.PatchAsync($"api/v1/employees/admin/{employeeId}/status", null);
+            var response = await _httpClient.PatchAsync($"api/v1/employees/{employeeId}/status", null);
             return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> DeleteUserAsync(Guid employeeId)
         {
-            var response = await _httpClient.DeleteAsync($"api/v1/employees/admin/{employeeId}");
+            var response = await _httpClient.DeleteAsync($"api/v1/employees/{employeeId}");
             return response.IsSuccessStatusCode;
         }
 
         public async Task<List<string>> GetAvailableRolesAsync()
         {
-            var response = await _httpClient.GetAsync("api/v1/employees/admin/roles");
+            var response = await _httpClient.GetAsync("api/v1/employees/roles");
             if (!response.IsSuccessStatusCode)
                 return new List<string>();
 

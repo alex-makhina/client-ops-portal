@@ -21,7 +21,6 @@ namespace ClientOpsPortal.Application
             services.AddScoped<IReportsService, ReportsService>();
 
             services.AddScoped<IIdentityService, IdentityService>();
-            services.AddScoped<IUserManagementService, UserManagementService>();
             services.AddScoped<INotificationService, ConsoleNotificationService>();
 
             return services;

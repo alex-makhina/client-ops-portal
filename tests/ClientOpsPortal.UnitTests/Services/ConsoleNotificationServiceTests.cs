@@ -17,167 +17,18 @@ public class ConsoleNotificationServiceTests
         _sut = new ConsoleNotificationService(_loggerMock.Object);
     }
 
-    #region SendPasswordResetAsync Tests
+    #region SendPasswordSetLinkAsync Tests
 
     [Fact]
-    public async Task SendPasswordResetAsync_LogsInformationWithEmailAndPassword()
-    {
-        // Arrange
-        var email = "user@example.com";
-        var temporaryPassword = "TempPass123!";
-
-        // Act
-        await _sut.SendPasswordResetAsync(email, temporaryPassword);
-
-        // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(email) &&
-                    v.ToString().Contains(temporaryPassword)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task SendPasswordResetAsync_LogsWithCorrectMessageTemplate()
-    {
-        // Arrange
-        var email = "user@example.com";
-        var temporaryPassword = "TempPass123!";
-        var expectedMessagePart = "Password reset for";
-
-        // Act
-        await _sut.SendPasswordResetAsync(email, temporaryPassword);
-
-        // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(expectedMessagePart)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task SendPasswordResetAsync_WithEmptyEmail_LogsEmptyEmail()
-    {
-        // Arrange
-        var email = "";
-        var temporaryPassword = "TempPass123!";
-
-        // Act
-        await _sut.SendPasswordResetAsync(email, temporaryPassword);
-
-        // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(email)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task SendPasswordResetAsync_WithNullEmail_LogsNullEmail()
-    {
-        // Arrange
-        string? email = null;
-        var temporaryPassword = "TempPass123!";
-
-        // Act
-        await _sut.SendPasswordResetAsync(email!, temporaryPassword);
-
-        // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(email ?? "null")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task SendPasswordResetAsync_WithEmptyPassword_LogsEmptyPassword()
-    {
-        // Arrange
-        var email = "user@example.com";
-        var temporaryPassword = "";
-
-        // Act
-        await _sut.SendPasswordResetAsync(email, temporaryPassword);
-
-        // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(temporaryPassword)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task SendPasswordResetAsync_WithNullPassword_LogsNullPassword()
-    {
-        // Arrange
-        var email = "user@example.com";
-        string? temporaryPassword = null;
-
-        // Act
-        await _sut.SendPasswordResetAsync(email, temporaryPassword!);
-
-        // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(temporaryPassword ?? "null")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task SendPasswordResetAsync_ReturnsCompletedTask()
-    {
-        // Arrange
-        var email = "user@example.com";
-        var temporaryPassword = "TempPass123!";
-
-        // Act & Assert
-        await _sut.SendPasswordResetAsync(email, temporaryPassword);
-    }
-
-    #endregion
-
-    #region SendWelcomeWithPasswordAsync Tests
-
-    [Fact]
-    public async Task SendWelcomeWithPasswordAsync_LogsInformationWithEmailLoginAndPassword()
+    public async Task SendPasswordSetLinkAsync_LogsInformationWithEmailLoginAndResetLink()
     {
         // Arrange
         var email = "user@example.com";
         var login = "testuser";
-        var password = "WelcomePass123!";
+        var resetLink = "http://example.com/reset?token=abc123";
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email, login, password);
+        await _sut.SendPasswordSetLinkAsync(email, login, resetLink);
 
         // Assert
         _loggerMock.Verify(
@@ -187,23 +38,23 @@ public class ConsoleNotificationServiceTests
                 It.Is<It.IsAnyType>((v, t) =>
                     v.ToString().Contains(email) &&
                     v.ToString().Contains(login) &&
-                    v.ToString().Contains(password)),
+                    v.ToString().Contains(resetLink)),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_LogsWithCorrectMessageTemplate()
+    public async Task SendPasswordSetLinkAsync_LogsWithCorrectMessageTemplate()
     {
         // Arrange
         var email = "user@example.com";
         var login = "testuser";
-        var password = "WelcomePass123!";
-        var expectedMessagePart = "created. Login:";
+        var resetLink = "http://example.com/reset?token=abc123";
+        var expectedMessagePart = "Password set link for";
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email, login, password);
+        await _sut.SendPasswordSetLinkAsync(email, login, resetLink);
 
         // Assert
         _loggerMock.Verify(
@@ -218,15 +69,15 @@ public class ConsoleNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_WithEmptyEmail_LogsEmptyEmail()
+    public async Task SendPasswordSetLinkAsync_WithEmptyEmail_LogsEmptyEmail()
     {
         // Arrange
         var email = "";
         var login = "testuser";
-        var password = "WelcomePass123!";
+        var resetLink = "http://example.com/reset?token=abc123";
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email, login, password);
+        await _sut.SendPasswordSetLinkAsync(email, login, resetLink);
 
         // Assert
         _loggerMock.Verify(
@@ -241,15 +92,15 @@ public class ConsoleNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_WithNullEmail_LogsNullEmail()
+    public async Task SendPasswordSetLinkAsync_WithNullEmail_LogsNullEmail()
     {
         // Arrange
         string? email = null;
         var login = "testuser";
-        var password = "WelcomePass123!";
+        var resetLink = "http://example.com/reset?token=abc123";
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email!, login, password);
+        await _sut.SendPasswordSetLinkAsync(email!, login, resetLink);
 
         // Assert
         _loggerMock.Verify(
@@ -264,15 +115,15 @@ public class ConsoleNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_WithEmptyLogin_LogsEmptyLogin()
+    public async Task SendPasswordSetLinkAsync_WithEmptyLogin_LogsEmptyLogin()
     {
         // Arrange
         var email = "user@example.com";
         var login = "";
-        var password = "WelcomePass123!";
+        var resetLink = "http://example.com/reset?token=abc123";
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email, login, password);
+        await _sut.SendPasswordSetLinkAsync(email, login, resetLink);
 
         // Assert
         _loggerMock.Verify(
@@ -287,15 +138,15 @@ public class ConsoleNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_WithNullLogin_LogsNullLogin()
+    public async Task SendPasswordSetLinkAsync_WithNullLogin_LogsNullLogin()
     {
         // Arrange
         var email = "user@example.com";
         string? login = null;
-        var password = "WelcomePass123!";
+        var resetLink = "http://example.com/reset?token=abc123";
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email, login!, password);
+        await _sut.SendPasswordSetLinkAsync(email, login!, resetLink);
 
         // Assert
         _loggerMock.Verify(
@@ -310,15 +161,15 @@ public class ConsoleNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_WithEmptyPassword_LogsEmptyPassword()
+    public async Task SendPasswordSetLinkAsync_WithEmptyResetLink_LogsEmptyResetLink()
     {
         // Arrange
         var email = "user@example.com";
         var login = "testuser";
-        var password = "";
+        var resetLink = "";
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email, login, password);
+        await _sut.SendPasswordSetLinkAsync(email, login, resetLink);
 
         // Assert
         _loggerMock.Verify(
@@ -326,22 +177,22 @@ public class ConsoleNotificationServiceTests
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(password)),
+                    v.ToString().Contains(resetLink)),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_WithNullPassword_LogsNullPassword()
+    public async Task SendPasswordSetLinkAsync_WithNullResetLink_LogsNullResetLink()
     {
         // Arrange
         var email = "user@example.com";
         var login = "testuser";
-        string? password = null;
+        string? resetLink = null;
 
         // Act
-        await _sut.SendWelcomeWithPasswordAsync(email, login, password!);
+        await _sut.SendPasswordSetLinkAsync(email, login, resetLink!);
 
         // Assert
         _loggerMock.Verify(
@@ -349,22 +200,22 @@ public class ConsoleNotificationServiceTests
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) =>
-                    v.ToString().Contains(password ?? "null")),
+                    v.ToString().Contains(resetLink ?? "null")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task SendWelcomeWithPasswordAsync_ReturnsCompletedTask()
+    public async Task SendPasswordSetLinkAsync_ReturnsCompletedTask()
     {
         // Arrange
         var email = "user@example.com";
         var login = "testuser";
-        var password = "WelcomePass123!";
+        var resetLink = "http://example.com/reset?token=abc123";
 
         // Act & Assert
-        await _sut.SendWelcomeWithPasswordAsync(email, login, password);
+        await _sut.SendPasswordSetLinkAsync(email, login, resetLink);
     }
 
     #endregion
@@ -372,48 +223,20 @@ public class ConsoleNotificationServiceTests
     #region Multiple Calls Tests
 
     [Fact]
-    public async Task SendPasswordResetAsync_MultipleCalls_LogsEachCall()
+    public async Task SendPasswordSetLinkAsync_MultipleCalls_LogsEachCall()
     {
         // Arrange
         var calls = new[]
         {
-            ("user1@example.com", "Pass1"),
-            ("user2@example.com", "Pass2"),
-            ("user3@example.com", "Pass3")
+            ("user1@example.com", "login1", "http://example.com/reset?token=abc"),
+            ("user2@example.com", "login2", "http://example.com/reset?token=def"),
+            ("user3@example.com", "login3", "http://example.com/reset?token=ghi")
         };
 
         // Act
-        foreach (var (email, password) in calls)
+        foreach (var (email, login, resetLink) in calls)
         {
-            await _sut.SendPasswordResetAsync(email, password);
-        }
-
-        // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Exactly(calls.Length));
-    }
-
-    [Fact]
-    public async Task SendWelcomeWithPasswordAsync_MultipleCalls_LogsEachCall()
-    {
-        // Arrange
-        var calls = new[]
-        {
-            ("user1@example.com", "login1", "Pass1"),
-            ("user2@example.com", "login2", "Pass2"),
-            ("user3@example.com", "login3", "Pass3")
-        };
-
-        // Act
-        foreach (var (email, login, password) in calls)
-        {
-            await _sut.SendWelcomeWithPasswordAsync(email, login, password);
+            await _sut.SendPasswordSetLinkAsync(email, login, resetLink);
         }
 
         // Assert
