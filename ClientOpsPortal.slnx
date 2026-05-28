@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <File Path="docker-compose.yml" />
+    <Project Path="src/ClientOpsPortal.PersonalAccount/clientopsportal.personalaccount.esproj">
+      <Build />
+      <Deploy />
+    </Project>
     <Project Path="src/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
     <Project Path="src/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
     <Project Path="src/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />

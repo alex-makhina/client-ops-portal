@@ -29,10 +29,33 @@ namespace ClientOpsPortal.Api.Controllers
             return Ok(abonents);
         }
 
+        [HttpGet("by-user-id/{external_id_user}")]
+        [Authorize(Roles = "Manager,Abonent")]
+        public async Task<IActionResult> GetIdByIdUser(string external_id_user, CancellationToken ct = default)
+        {
+            var existingAbonent = await _abonentService.GetByIdUserAsync(external_id_user, ct);
+            if (existingAbonent == null)
+                return NotFound($"Абонент не найден");
+
+            if (User.IsInRole("Abonent") && !IsCurrentUserAbonentOwner(existingAbonent.UserId))
+                return Forbid();
+
+            return Ok(existingAbonent.Id);
+        }
+
         [HttpGet("{id}")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Abonent")]
         public async Task<IActionResult> GetById(Guid id, [FromQuery] bool withIncludes = true, CancellationToken ct = default)
         {
+            if (User.IsInRole("Abonent"))
+            {
+                var existingAbonent = await _abonentService.GetByIdAsync(id, false, ct);
+                if (existingAbonent == null)
+                    return NotFound($"Абонент с ID {id} не найден");
+                if (!IsCurrentUserAbonentOwner(existingAbonent.UserId))
+                    return Forbid();
+            }
+
             var abonent = await _abonentService.GetByIdAsync(id, withIncludes, ct);
             if (abonent == null)
                 return NotFound($"Абонент с ID {id} не найден");

@@ -9,5 +9,6 @@ namespace ClientOpsPortal.Application.Interfaces
         Task<AbonentDto?> GetByContractNumberAsync(string contractNumber, CancellationToken ct = default);
         Task<bool> IsAbonentIdentificationNumberUniqueAsync(string number, Guid? excludeId = null, CancellationToken ct = default);
         Task<bool> IsAccountNumberUniqueAsync(string number, Guid? excludeId = null, CancellationToken ct = default);
+        Task<AbonentDto?> GetByIdUserAsync(string id_user, CancellationToken ct = default);
     }
 }

@@ -23,7 +23,7 @@ namespace ClientOpsPortal.Application.DTOs
         public required string FullName { get; set; }
     }
 
-    public class CreateAbonentDto : BaseDto
+    public class CreateAbonentDto
     {
         [Required(ErrorMessage = "Идентификационный номер обязателен")]
         [StringLength(20, MinimumLength = 5, ErrorMessage = "Идентификационный номер должен содержать от 5 до 20 символов")]
