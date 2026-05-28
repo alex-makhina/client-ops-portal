@@ -1,0 +1,125 @@
+﻿@inject DialogService DialogService
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models
+
+<RadzenCard Style="min-width: 500px; max-height: 85vh; overflow-y: auto;">
+    <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
+        @errorMessage
+    </RadzenAlert>
+
+    <div style="display: grid; gap: 12px;">
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Фамилия *</label>
+            <RadzenTextBox @bind-Value="@LastName" Placeholder="Фамилия" Style="width: 100%;" />
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Имя *</label>
+            <RadzenTextBox @bind-Value="@FirstName" Placeholder="Имя" Style="width: 100%;" />
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Отчество</label>
+            <RadzenTextBox @bind-Value="@MiddleName" Placeholder="Отчество" Style="width: 100%;" />
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Идентификационный номер *</label>
+            <RadzenTextBox @bind-Value="@IdentificationNumber" Placeholder="ИНН" Style="width: 100%;" />
+        </div>
+        @if (!IsEditMode)
+        {
+            <div>
+                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Email *</label>
+                <RadzenTextBox @bind-Value="@Email" Placeholder="Email" Style="width: 100%;" />
+                <small style="color: #666;">Для отправки логина и пароля</small>
+            </div>
+        }
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="@Close" />
+        <RadzenButton Text="@GetSaveButtonText()" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
+    </div>
+</RadzenCard>
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = true;
+    [Parameter]
+    public string LastName { get; set; } = string.Empty;
+    [Parameter]
+    public string FirstName { get; set; } = string.Empty;
+    [Parameter]
+    public string? MiddleName { get; set; }
+    [Parameter]
+    public string IdentificationNumber { get; set; } = string.Empty;
+    [Parameter]
+    public string Email { get; set; } = string.Empty;
+
+    private bool showError;
+    private string errorMessage = string.Empty;
+
+    private void Close()
+    {
+        DialogService.Close(null);
+    }
+
+    private async Task Save()
+    {
+        showError = false;
+
+        var lastNameResult = AbonentValidationHelper.ValidateName(LastName, "Фамилия");
+        if (!lastNameResult.IsValid)
+        {
+            showError = true;
+            errorMessage = lastNameResult.ErrorMessage;
+            return;
+        }
+
+        var firstNameResult = AbonentValidationHelper.ValidateName(FirstName, "Имя");
+        if (!firstNameResult.IsValid)
+        {
+            showError = true;
+            errorMessage = firstNameResult.ErrorMessage;
+            return;
+        }
+
+        var middleNameResult = AbonentValidationHelper.ValidateMiddleName(MiddleName ?? string.Empty);
+        if (!middleNameResult.IsValid)
+        {
+            showError = true;
+            errorMessage = middleNameResult.ErrorMessage;
+            return;
+        }
+
+        var identificationResult = AbonentValidationHelper.ValidateIdentificationNumber(IdentificationNumber);
+        if (!identificationResult.IsValid)
+        {
+            showError = true;
+            errorMessage = identificationResult.ErrorMessage;
+            return;
+        }
+
+        if (!IsEditMode)
+        {
+            var emailResult = AbonentValidationHelper.ValidateEmail(Email);
+            if (!emailResult.IsValid)
+            {
+                showError = true;
+                errorMessage = emailResult.ErrorMessage;
+                return;
+            }
+        }
+
+        var result = new EditAbonentDialogResult
+        {
+            IsEditMode = IsEditMode,
+            LastName = AbonentValidationHelper.NormalizeName(LastName),
+            FirstName = AbonentValidationHelper.NormalizeName(FirstName),
+            MiddleName = AbonentValidationHelper.NormalizeName(MiddleName),
+            IdentificationNumber = AbonentValidationHelper.NormalizeIdentificationNumber(IdentificationNumber),
+            Email = Email?.Trim()
+        };
+
+        DialogService.Close(result);
+    }
+
+    private string GetSaveButtonText() => IsEditMode ? "Сохранить" : "Зарегистрировать";
+}

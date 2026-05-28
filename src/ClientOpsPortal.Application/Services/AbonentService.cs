@@ -92,12 +92,6 @@ namespace ClientOpsPortal.Application.Services
                     throw new InvalidOperationException($"Абонент с индентификационным номером '{updateDto.IdentificationNumber}' уже существует");
             }
 
-            if (!string.IsNullOrWhiteSpace(updateDto.AccountNumber) && abonent.AccountNumber != updateDto.AccountNumber)
-            {
-                if (!await IsAccountNumberUniqueAsync(updateDto.AccountNumber, id, ct))
-                    throw new InvalidOperationException($"Абонент со счетом '{updateDto.AccountNumber}' уже существует");
-            }
-
             updateDto.UpdateEntity(abonent);
             await _abonentRepository.UpdateAsync(abonent, ct);
             return abonent.ToAbonentDto();

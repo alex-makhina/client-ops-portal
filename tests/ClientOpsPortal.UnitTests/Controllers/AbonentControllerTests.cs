@@ -364,7 +364,7 @@ public class AbonentsControllerTests
         // Arrange
         var abonentId = Guid.NewGuid();
         var updateDto = CreateUpdateAbonentDto();
-        var updatedDto = CreateAbonentDto(abonentId, accountNumber: updateDto.AccountNumber);
+        var updatedDto = CreateAbonentDto(abonentId);
 
         SetupUserRole("Manager");
 
@@ -398,7 +398,7 @@ public class AbonentsControllerTests
         var userId = Guid.NewGuid();
         var updateDto = CreateUpdateAbonentDto();
         var existingAbonent = CreateAbonentDto(abonentId, userId: userId);
-        var updatedDto = CreateAbonentDto(abonentId, accountNumber: updateDto.AccountNumber);
+        var updatedDto = CreateAbonentDto(abonentId);
 
         SetupUserRole("Abonent", userId);
 
@@ -476,29 +476,6 @@ public class AbonentsControllerTests
         notFoundResult.Value.ShouldNotBeNull();
         notFoundResult.Value.ToString().ShouldContain(abonentId.ToString());
         notFoundResult.Value.ToString().ShouldContain("не найден");
-    }
-
-    [Fact]
-    public async Task Update_WhenDuplicateData_ReturnsBadRequestWithMessage()
-    {
-        // Arrange
-        var abonentId = Guid.NewGuid();
-        var updateDto = CreateUpdateAbonentDto();
-        var errorMessage = $"Абонент с лицевым счетом {updateDto.AccountNumber} уже существует";
-
-        SetupUserRole("Manager");
-
-        _abonentServiceMock
-            .Setup(s => s.UpdateAsync(abonentId, updateDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException(errorMessage));
-
-        // Act
-        var result = await _sut.Update(abonentId, updateDto);
-
-        // Assert
-        var badRequestResult = result.ShouldBeOfType<BadRequestObjectResult>();
-        badRequestResult.Value.ShouldNotBeNull();
-        badRequestResult.Value.ToString().ShouldContain(errorMessage);
     }
 
     #endregion
@@ -594,7 +571,6 @@ public class AbonentsControllerTests
             .RuleFor(dto => dto.FirstName, f => f.Name.FirstName())
             .RuleFor(dto => dto.LastName, f => f.Name.LastName())
             .RuleFor(dto => dto.MiddleName, f => f.Name.FirstName())
-            .RuleFor(dto => dto.AccountNumber, f => f.Random.Replace("???-##########"))
             .Generate();
     }
 

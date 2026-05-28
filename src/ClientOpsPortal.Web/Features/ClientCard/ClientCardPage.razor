@@ -3,6 +3,8 @@
 
 @using ClientOpsPortal.Web.Features.ClientCard.Models
 @using ClientOpsPortal.Web.Features.ClientCard.Services
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog
 
 @inject IClientCardService ClientCardService
 @inject NavigationManager Navigation
@@ -165,7 +167,7 @@
     }
 </RadzenCard>
 
-@code {
+    @code {
     [Parameter]
     public Guid AbonentId { get; set; }
 
@@ -236,7 +238,7 @@
 
     private void GoBack()
     {
-        Navigation.NavigateTo("/manager/search-abonent");
+        Navigation.NavigateTo("/manager/abonents");
     }
 
     private async Task OpenEditDialog()
@@ -247,13 +249,13 @@
             "✏️ Редактирование абонента",
             new Dictionary<string, object?>
             {
+                { "IsEditMode", true },
                 { "LastName", abonent.LastName },
                 { "FirstName", abonent.FirstName },
-                { "MiddleName", abonent.MiddleName },
-                { "IdentificationNumber", abonent.IdentificationNumber },
-                { "AccountNumber", abonent.AccountNumber }
+                { "MiddleName", abonent.MiddleName ?? string.Empty},
+                { "IdentificationNumber", abonent.IdentificationNumber }
             },
-            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false, Resizable = true, Draggable = true }
         );
 
         if (result is EditAbonentDialogResult dialogResult)
@@ -266,13 +268,12 @@
     {
         try
         {
-            var model = new UpdateAbonentModel
+            var model = new AbonentRequest
             {
                 LastName = data.LastName,
                 FirstName = data.FirstName,
                 MiddleName = data.MiddleName,
-                IdentificationNumber = data.IdentificationNumber,
-                AccountNumber = data.AccountNumber
+                IdentificationNumber = data.IdentificationNumber
             };
 
             var success = await ClientCardService.UpdateAbonentAsync(AbonentId, model);
