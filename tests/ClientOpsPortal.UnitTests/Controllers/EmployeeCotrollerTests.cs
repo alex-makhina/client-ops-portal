@@ -475,6 +475,62 @@ public class EmployeesControllerTests
 
     #endregion
 
+    #region CreateAdminUser Tests
+
+    [Fact]
+    public async Task CreateAdminUser_WhenValidDto_ReturnsCreatedAtActionWithEmployee()
+    {
+        // Arrange
+        var createDto = CreateCreateEmployeeDto();
+        var createdDto = CreateEmployeeDto(id: Guid.NewGuid(), staffNumber: createDto.StaffNumber);
+
+        SetupUserRole("Admin");
+
+        _employeeServiceMock
+            .Setup(s => s.CreateAdminUserAsync(createDto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(createdDto);
+
+        // Act
+        var result = await _sut.CreateAdminUser(createDto);
+
+        // Assert
+        var createdResult = result.ShouldBeOfType<CreatedAtActionResult>();
+        createdResult.ActionName.ShouldBe(nameof(EmployeesController.GetUserList));
+        createdResult.Value.ShouldBeOfType<EmployeeDto>().ShouldBe(createdDto);
+
+        _employeeServiceMock.Verify(
+            s => s.CreateAdminUserAsync(createDto, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAdminUser_WhenDuplicateStaffNumber_ReturnsBadRequestWithMessage()
+    {
+        // Arrange
+        var createDto = CreateCreateEmployeeDto();
+        var errorMessage = $"Сотрудник с табельным номером {createDto.StaffNumber} уже существует";
+
+        SetupUserRole("Admin");
+
+        _employeeServiceMock
+            .Setup(s => s.CreateAdminUserAsync(createDto, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(errorMessage));
+
+        // Act
+        var result = await _sut.CreateAdminUser(createDto);
+
+        // Assert
+        var badRequestResult = result.ShouldBeOfType<BadRequestObjectResult>();
+        badRequestResult.Value.ShouldNotBeNull();
+        badRequestResult.Value.ToString().ShouldContain(errorMessage);
+
+        _employeeServiceMock.Verify(
+            s => s.CreateAdminUserAsync(createDto, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
+
     #region Update Tests
 
     [Fact]
@@ -554,6 +610,62 @@ public class EmployeesControllerTests
 
     #endregion
 
+    #region UpdateAdminUser Tests
+
+    [Fact]
+    public async Task UpdateAdminUser_WhenEmployeeExists_ReturnsOkWithUpdatedEmployee()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+        var updateDto = CreateUpdateEmployeeDto();
+        var updatedDto = CreateEmployeeDto(employeeId, staffNumber: updateDto.StaffNumber);
+
+        SetupUserRole("Admin");
+
+        _employeeServiceMock
+            .Setup(s => s.UpdateAdminUserAsync(employeeId, updateDto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updatedDto);
+
+        // Act
+        var result = await _sut.UpdateAdminUser(employeeId, updateDto);
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var employee = okResult.Value.ShouldBeOfType<EmployeeDto>();
+
+        employee.Id.ShouldBe(employeeId);
+        employee.StaffNumber.ShouldBe(updateDto.StaffNumber);
+
+        _employeeServiceMock.Verify(
+            s => s.UpdateAdminUserAsync(employeeId, updateDto, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAdminUser_WhenEmployeeNotFound_ReturnsNotFoundWithMessage()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+        var updateDto = CreateUpdateEmployeeDto();
+
+        SetupUserRole("Admin");
+
+        _employeeServiceMock
+            .Setup(s => s.UpdateAdminUserAsync(employeeId, updateDto, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new EntityNotFoundException(typeof(Employee), employeeId));
+
+        // Act
+        var result = await _sut.UpdateAdminUser(employeeId, updateDto);
+
+        // Assert
+        var notFoundResult = result.ShouldBeOfType<NotFoundObjectResult>();
+        notFoundResult.Value.ShouldNotBeNull();
+        notFoundResult.Value.ToString().ShouldContain(employeeId.ToString());
+        notFoundResult.Value.ToString().ShouldContain("не найден");
+    }
+
+    #endregion
+
     #region Delete Tests
 
     [Fact]
@@ -599,6 +711,140 @@ public class EmployeesControllerTests
         notFoundResult.Value.ShouldNotBeNull();
         notFoundResult.Value.ToString().ShouldContain(employeeId.ToString());
         notFoundResult.Value.ToString().ShouldContain("не найден");
+    }
+
+    #endregion
+
+    #region GetUserList Tests
+
+    [Fact]
+    public async Task GetUserList_WhenUsersExist_ReturnsOkWithUsers()
+    {
+        // Arrange
+        var expectedUsers = new List<UserListItemDto>
+        {
+            new UserListItemDto
+            {
+                EmployeeId = Guid.NewGuid(),
+                StaffNumber = "EMP-001",
+                FullName = "Иванов Иван Иванович",
+                Post = "Менеджер",
+                Department = "IT",
+                Email = "ivanov@test.com",
+                Login = "ivanov",
+                Role = "Администратор",
+                IsActive = true
+            }
+        };
+
+        _employeeServiceMock
+            .Setup(s => s.GetAllUsersAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedUsers);
+
+        // Act
+        var result = await _sut.GetUserList();
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var users = okResult.Value.ShouldBeAssignableTo<IEnumerable<UserListItemDto>>();
+        users.Count().ShouldBe(1);
+
+        _employeeServiceMock.Verify(
+            s => s.GetAllUsersAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserList_WhenNoUsers_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        _employeeServiceMock
+            .Setup(s => s.GetAllUsersAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserListItemDto>());
+
+        // Act
+        var result = await _sut.GetUserList();
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var users = okResult.Value.ShouldBeAssignableTo<IEnumerable<UserListItemDto>>();
+        users.ShouldBeEmpty();
+    }
+
+    #endregion
+
+    #region ToggleUserStatus Tests
+
+    [Fact]
+    public async Task ToggleUserStatus_WhenEmployeeExists_ReturnsNoContent()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+
+        SetupUserRole("Admin");
+
+        _employeeServiceMock
+            .Setup(s => s.ToggleUserStatusAsync(employeeId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _sut.ToggleUserStatus(employeeId);
+
+        // Assert
+        result.ShouldBeOfType<NoContentResult>();
+
+        _employeeServiceMock.Verify(
+            s => s.ToggleUserStatusAsync(employeeId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ToggleUserStatus_WhenEmployeeNotFound_ReturnsNotFoundWithMessage()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+
+        SetupUserRole("Admin");
+
+        _employeeServiceMock
+            .Setup(s => s.ToggleUserStatusAsync(employeeId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new EntityNotFoundException(typeof(Employee), employeeId));
+
+        // Act
+        var result = await _sut.ToggleUserStatus(employeeId);
+
+        // Assert
+        var notFoundResult = result.ShouldBeOfType<NotFoundObjectResult>();
+        notFoundResult.Value.ShouldNotBeNull();
+        notFoundResult.Value.ToString().ShouldContain(employeeId.ToString());
+        notFoundResult.Value.ToString().ShouldContain("не найден");
+    }
+
+    #endregion
+
+    #region GetAvailableRoles Tests
+
+    [Fact]
+    public async Task GetAvailableRoles_ReturnsOkWithRoles()
+    {
+        // Arrange
+        var expectedRoles = new List<string> { "Администратор", "Специалист по услугам" };
+
+        _employeeServiceMock
+            .Setup(s => s.GetAvailableRolesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedRoles);
+
+        // Act
+        var result = await _sut.GetAvailableRoles();
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var roles = okResult.Value.ShouldBeAssignableTo<IEnumerable<string>>();
+        roles.Count().ShouldBe(2);
+
+        _employeeServiceMock.Verify(
+            s => s.GetAvailableRolesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion
@@ -698,7 +944,7 @@ public class EmployeesControllerTests
     {
         var faker = new Faker();
         return new AutoFaker<EmployeeShortDataDto>()
-            .RuleFor(dto => dto.StaffNumber, f => staffNumber== null ? $"EMP-{faker.Date.Past(1)}-{faker.Random.Number(1, 9999):D4}" : staffNumber)
+            .RuleFor(dto => dto.StaffNumber, f => staffNumber == null ? $"EMP-{faker.Date.Past(1)}-{faker.Random.Number(1, 9999):D4}" : staffNumber)
             .RuleFor(dto => dto.FullName, f => $"{faker.Name.LastName()} {faker.Name.FirstName()} {faker.Name.FirstName()}")
             .RuleFor(dto => dto.Post, f => faker.Name.JobTitle())
             .RuleFor(dto => dto.Department, f => faker.Commerce.Department())

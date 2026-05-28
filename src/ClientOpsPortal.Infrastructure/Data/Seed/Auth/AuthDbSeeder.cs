@@ -31,7 +31,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.Auth
 
             _logger.LogInformation("Seeding roles and users...");
 
-            var roles = new[] { "Admin", "Manager", "Abonent", "DataAnalyst", "ServiceManager", "Employee" };
+            var roles = new[] { "Admin", "Manager", "Abonent", "DataAnalyst", "ServiceManager" };
             foreach (var roleName in roles)
             {
                 if (!await _roleManager.RoleExistsAsync(roleName))
@@ -58,35 +58,6 @@ namespace ClientOpsPortal.Infrastructure.Data.Seed.Auth
             {
                 await _userManager.AddToRoleAsync(adminUser, "Admin");
                 _logger.LogInformation("Admin user created with ID: {AdminId}", adminUser.Id);
-            }
-
-            var managerUser = new ApplicationUser
-            {
-                Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                UserName = "111111",
-                Email = "manager@clientopsportal.com",
-                EmailConfirmed = true
-            };
-
-            var managerResult = await _userManager.CreateAsync(managerUser, "Manager@123456");
-            if (managerResult.Succeeded)
-            {
-                await _userManager.AddToRoleAsync(managerUser, "Manager");
-                _logger.LogInformation("Manager user created with ID: {ManagerId}", managerUser.Id);
-            }
-
-            var abonentUser = new ApplicationUser
-            {
-                Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
-                UserName = "1234567890", 
-                Email = "ivanov@example.com",
-                EmailConfirmed = true
-            };
-
-            var userResult = await _userManager.CreateAsync(abonentUser, "User@123456");
-            if (userResult.Succeeded)
-            {
-                await _userManager.AddToRoleAsync(abonentUser, "Abonent");
             }
 
             await context.SaveChangesAsync(cancellationToken);

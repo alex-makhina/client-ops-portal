@@ -136,6 +136,7 @@ public class AbonentServiceTests
         var createDto = CreateCreateAbonentDto();
         var userId = Guid.NewGuid();
         var generatedPassword = "Temp123!";
+        var resetToken = "reset-token-123";
         var createdUser = new User { Id = userId };
 
         _identityServiceMock
@@ -143,8 +144,12 @@ public class AbonentServiceTests
             .Returns(generatedPassword);
 
         _identityServiceMock
-            .Setup(s => s.CreateUserAsync(createDto.AccountNumber, createDto.Email, generatedPassword, "Abonent", It.IsAny<CancellationToken>()))
+            .Setup(s => s.CreateUserAsync(It.IsAny<string>(), createDto.Email, generatedPassword, "Abonent", It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdUser);
+
+        _identityServiceMock
+            .Setup(s => s.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resetToken);
 
         _abonentRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()))
@@ -162,11 +167,10 @@ public class AbonentServiceTests
 
         // Assert
         result.ShouldNotBeNull();
-        result.AccountNumber.ShouldBe(createDto.AccountNumber);
         result.UserId.ShouldBe(userId);
 
         _identityServiceMock.Verify(
-            s => s.CreateUserAsync(createDto.AccountNumber, createDto.Email, generatedPassword, "Abonent", It.IsAny<CancellationToken>()),
+            s => s.CreateUserAsync(It.IsAny<string>(), createDto.Email, generatedPassword, "Abonent", It.IsAny<CancellationToken>()),
             Times.Once);
 
         _abonentRepositoryMock.Verify(
@@ -174,7 +178,7 @@ public class AbonentServiceTests
             Times.Once);
 
         _notificationServiceMock.Verify(
-            s => s.SendWelcomeWithPasswordAsync(createDto.Email, createDto.AccountNumber, generatedPassword, It.IsAny<CancellationToken>()),
+            s => s.SendPasswordSetLinkAsync(createDto.Email, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -208,37 +212,6 @@ public class AbonentServiceTests
             Times.Never);
     }
 
-    [Fact]
-    public async Task CreateAsync_WhenAccountNumberNotUnique_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var createDto = CreateCreateAbonentDto();
-        var existingAbonent = CreateAbonentEntity(Guid.NewGuid());
-        existingAbonent.AccountNumber = createDto.AccountNumber;
-
-        // Первый вызов GetWhereAsync для IdentificationNumber возвращает пустой список
-        _abonentRepositoryMock
-            .SetupSequence(r => r.GetWhereAsync(
-                It.IsAny<Expression<Func<Abonent, bool>>>(),
-                false,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Abonent>()) // Для IdentificationNumber
-            .ReturnsAsync(new List<Abonent> { existingAbonent }); // Для AccountNumber
-
-        // Act & Assert
-        var exception = await Should.ThrowAsync<InvalidOperationException>(
-            () => _sut.CreateAsync(createDto));
-
-        exception.Message.ShouldContain(createDto.AccountNumber);
-
-        _identityServiceMock.Verify(
-            s => s.CreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-
-        _abonentRepositoryMock.Verify(
-            r => r.AddAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
 
     #endregion
 

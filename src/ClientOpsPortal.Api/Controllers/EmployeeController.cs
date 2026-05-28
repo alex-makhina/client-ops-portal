@@ -12,16 +12,13 @@ namespace ClientOpsPortal.Api.Controllers
     public class EmployeesController : BaseController
     {
         private readonly IEmployeeService _employeeService;
-        private readonly IUserManagementService _userManagementService;
 
         public EmployeesController(
             IEmployeeService employeeService,
-            IUserManagementService userManagementService,
             ICurrentUserService currentUserService)
             : base(currentUserService)
         {
             _employeeService = employeeService;
-            _userManagementService = userManagementService;
         }
 
         [HttpGet]
@@ -94,6 +91,21 @@ namespace ClientOpsPortal.Api.Controllers
             }
         }
 
+        [HttpPost("create")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreateAdminUser([FromBody] CreateEmployeeDto createDto, CancellationToken ct = default)
+        {
+            try
+            {
+                var employee = await _employeeService.CreateAdminUserAsync(createDto, ct);
+                return CreatedAtAction(nameof(GetUserList), null, employee);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, UpdateEmployeeDto updateDto, CancellationToken ct = default)
@@ -128,36 +140,21 @@ namespace ClientOpsPortal.Api.Controllers
             }
         }
 
-        [HttpGet("admin/list")]
+        [HttpGet("list")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAdminUserList(CancellationToken ct = default)
+        public async Task<IActionResult> GetUserList(CancellationToken ct = default)
         {
-            var users = await _userManagementService.GetAllUsersAsync(ct);
+            var users = await _employeeService.GetAllUsersAsync(ct);
             return Ok(users);
         }
 
-        [HttpPost("admin/create")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateAdminUser([FromBody] CreateEmployeeDto createDto, CancellationToken ct = default)
-        {
-            try
-            {
-                var employee = await _userManagementService.CreateUserAsync(createDto, ct);
-                return CreatedAtAction(nameof(GetAdminUserList), null, employee);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpPut("admin/{id}")]
+        [HttpPut("{id}/update")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateAdminUser(Guid id, [FromBody] UpdateEmployeeDto updateDto, CancellationToken ct = default)
         {
             try
             {
-                var employee = await _userManagementService.UpdateUserAsync(id, updateDto, ct);
+                var employee = await _employeeService.UpdateAdminUserAsync(id, updateDto, ct);
                 return Ok(employee);
             }
             catch (EntityNotFoundException)
@@ -170,13 +167,13 @@ namespace ClientOpsPortal.Api.Controllers
             }
         }
 
-        [HttpPatch("admin/{id}/status")]
+        [HttpPatch("{id}/status")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleUserStatus(Guid id, CancellationToken ct = default)
         {
             try
             {
-                await _userManagementService.ToggleUserStatusAsync(id, ct);
+                await _employeeService.ToggleUserStatusAsync(id, ct);
                 return NoContent();
             }
             catch (EntityNotFoundException)
@@ -185,26 +182,11 @@ namespace ClientOpsPortal.Api.Controllers
             }
         }
 
-        [HttpDelete("admin/{id}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteAdminUser(Guid id, CancellationToken ct = default)
-        {
-            try
-            {
-                await _userManagementService.DeleteUserAsync(id, ct);
-                return NoContent();
-            }
-            catch (EntityNotFoundException)
-            {
-                return NotFound($"Сотрудник с ID {id} не найден");
-            }
-        }
-
-        [HttpGet("admin/roles")]
+        [HttpGet("roles")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAvailableRoles(CancellationToken ct = default)
         {
-            var roles = await _userManagementService.GetAvailableRolesAsync(ct);
+            var roles = await _employeeService.GetAvailableRolesAsync(ct);
             return Ok(roles);
         }
     }

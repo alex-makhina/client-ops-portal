@@ -16,6 +16,7 @@ namespace ClientOpsPortal.UnitTests.Services;
 public class EmployeeServiceTests
 {
     private readonly Mock<IGenericRepository<Employee>> _employeeRepositoryMock;
+    private readonly Mock<IGenericRepository<User>> _userRepositoryMock;
     private readonly Mock<IIdentityService> _identityServiceMock;
     private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly EmployeeService _sut;
@@ -23,10 +24,12 @@ public class EmployeeServiceTests
     public EmployeeServiceTests()
     {
         _employeeRepositoryMock = new Mock<IGenericRepository<Employee>>();
+        _userRepositoryMock = new Mock<IGenericRepository<User>>();
         _identityServiceMock = new Mock<IIdentityService>();
         _notificationServiceMock = new Mock<INotificationService>();
         _sut = new EmployeeService(
             _employeeRepositoryMock.Object,
+            _userRepositoryMock.Object,
             _identityServiceMock.Object,
             _notificationServiceMock.Object);
     }
@@ -134,6 +137,7 @@ public class EmployeeServiceTests
         var createDto = CreateCreateEmployeeDto();
         var userId = Guid.NewGuid();
         var generatedPassword = "Temp123!";
+        var resetToken = "reset-token-123";
         var createdUser = new User { Id = userId };
 
         _employeeRepositoryMock
@@ -150,6 +154,10 @@ public class EmployeeServiceTests
         _identityServiceMock
             .Setup(s => s.CreateUserAsync(createDto.StaffNumber, createDto.Email, generatedPassword, "Employee", It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdUser);
+
+        _identityServiceMock
+            .Setup(s => s.GeneratePasswordResetTokenAsync(createDto.StaffNumber, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resetToken);
 
         _employeeRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()))
@@ -172,7 +180,7 @@ public class EmployeeServiceTests
             Times.Once);
 
         _notificationServiceMock.Verify(
-            s => s.SendWelcomeWithPasswordAsync(createDto.Email, createDto.StaffNumber, generatedPassword, It.IsAny<CancellationToken>()),
+            s => s.SendPasswordSetLinkAsync(createDto.Email, createDto.StaffNumber, It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

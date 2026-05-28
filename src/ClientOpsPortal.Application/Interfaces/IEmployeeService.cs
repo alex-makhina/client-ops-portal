@@ -9,5 +9,12 @@ namespace ClientOpsPortal.Application.Interfaces
         Task<IReadOnlyCollection<EmployeeShortDataDto>> SearchByFullNameAsync(string searchTerm, CancellationToken ct = default);
         Task<IReadOnlyCollection<EmployeeShortDataDto>> GetEmployeesByPostAsync(string post, CancellationToken ct = default);
         Task<IReadOnlyCollection<EmployeeShortDataDto>> GetEmployeesByDepartmentAsync(string department, CancellationToken ct = default);
+
+        // Admin user management methods
+        Task<IReadOnlyCollection<UserListItemDto>> GetAllUsersAsync(CancellationToken ct = default);
+        Task<EmployeeDto> CreateAdminUserAsync(CreateEmployeeDto createDto, CancellationToken ct = default);
+        Task<EmployeeDto> UpdateAdminUserAsync(Guid employeeId, UpdateEmployeeDto updateDto, CancellationToken ct = default);
+        Task ToggleUserStatusAsync(Guid employeeId, CancellationToken ct = default);
+        Task<IReadOnlyCollection<string>> GetAvailableRolesAsync(CancellationToken ct = default);
     }
 }
