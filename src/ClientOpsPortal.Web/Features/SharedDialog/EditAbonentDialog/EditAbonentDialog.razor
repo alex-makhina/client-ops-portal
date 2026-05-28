@@ -1,6 +1,7 @@
 ﻿@inject DialogService DialogService
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models
 
-<RadzenCard Style="min-width: 500px;">
+<RadzenCard Style="min-width: 500px; max-height: 85vh; overflow-y: auto;">
     <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
         @errorMessage
     </RadzenAlert>
@@ -27,7 +28,7 @@
             <div>
                 <label style="display: block; margin-bottom: 4px; font-weight: 500;">Email *</label>
                 <RadzenTextBox @bind-Value="@Email" Placeholder="Email" Style="width: 100%;" />
-                <small style="color: #666;">Необходим для отправки логина и пароля</small>
+                <small style="color: #666;">Для отправки логина и пароля</small>
             </div>
         }
     </div>
@@ -64,37 +65,57 @@
     {
         showError = false;
 
-        if (string.IsNullOrWhiteSpace(LastName) ||
-            string.IsNullOrWhiteSpace(FirstName) ||
-            string.IsNullOrWhiteSpace(IdentificationNumber))
+        var lastNameResult = AbonentValidationHelper.ValidateName(LastName, "Фамилия");
+        if (!lastNameResult.IsValid)
         {
             showError = true;
-            errorMessage = "Заполните обязательные поля";
+            errorMessage = lastNameResult.ErrorMessage;
             return;
         }
 
-        if (!IsEditMode && string.IsNullOrWhiteSpace(Email))
+        var firstNameResult = AbonentValidationHelper.ValidateName(FirstName, "Имя");
+        if (!firstNameResult.IsValid)
         {
             showError = true;
-            errorMessage = "Введите Email для регистрации абонента";
+            errorMessage = firstNameResult.ErrorMessage;
             return;
         }
 
-        if (!IsEditMode && !Email.Contains("@"))
+        var middleNameResult = AbonentValidationHelper.ValidateMiddleName(MiddleName ?? string.Empty);
+        if (!middleNameResult.IsValid)
         {
             showError = true;
-            errorMessage = "Введите корректный Email";
+            errorMessage = middleNameResult.ErrorMessage;
             return;
         }
 
-        var result = new SharedDialog.EditAbonentDialog.Models.EditAbonentDialogResult
+        var identificationResult = AbonentValidationHelper.ValidateIdentificationNumber(IdentificationNumber);
+        if (!identificationResult.IsValid)
+        {
+            showError = true;
+            errorMessage = identificationResult.ErrorMessage;
+            return;
+        }
+
+        if (!IsEditMode)
+        {
+            var emailResult = AbonentValidationHelper.ValidateEmail(Email);
+            if (!emailResult.IsValid)
+            {
+                showError = true;
+                errorMessage = emailResult.ErrorMessage;
+                return;
+            }
+        }
+
+        var result = new EditAbonentDialogResult
         {
             IsEditMode = IsEditMode,
-            LastName = LastName,
-            FirstName = FirstName,
-            MiddleName = MiddleName,
-            IdentificationNumber = IdentificationNumber,
-            Email = Email
+            LastName = AbonentValidationHelper.NormalizeName(LastName),
+            FirstName = AbonentValidationHelper.NormalizeName(FirstName),
+            MiddleName = AbonentValidationHelper.NormalizeName(MiddleName),
+            IdentificationNumber = AbonentValidationHelper.NormalizeIdentificationNumber(IdentificationNumber),
+            Email = Email?.Trim()
         };
 
         DialogService.Close(result);
