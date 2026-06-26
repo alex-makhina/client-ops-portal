@@ -3,17 +3,56 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
-<RadzenCard Style="max-width: 400px; margin: 100px auto;">
-    <h3 class="mb-0">Вход в систему</h3>
-    <div class="p-3">
-        <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 16px;">
-            @errorMessage
-        </RadzenAlert>
-        <RadzenTextBox @bind-Value="@login" Placeholder="Логин" Style="margin-bottom: 12px; width: 100%;" />
-        <RadzenPassword @bind-Value="@password" Placeholder="Пароль" Style="margin-bottom: 20px; width: 100%;" />
-        <RadzenButton Text="Войти" ButtonStyle="ButtonStyle.Primary" Click="@HandleLogin" Disabled="@isLoading" Style="width: 100%;" />
+<div class="login-page">
+    <div class="login-card card">
+        <div class="login-header">
+            <h2 class="login-title">Вход в систему</h2>
+            <p class="login-subtitle">ClientOps Portal</p>
+        </div>
+
+        @if (showError)
+        {
+            <div class="alert alert-danger">
+                <span>⚠️</span>
+                @errorMessage
+            </div>
+        }
+
+        <div class="login-form">
+            <div class="form-group">
+                <label class="form-label">Логин</label>
+                <input type="text"
+                       class="form-control @(showError ? "error" : "")"
+                       placeholder="Введите логин"
+                       @bind="login"
+                       @bind:event="oninput" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <input type="password"
+                       class="form-control @(showError ? "error" : "")"
+                       placeholder="Введите пароль"
+                       @bind="password"
+                       @bind:event="oninput" />
+            </div>
+
+            <button class="btn btn-primary w-100"
+                    @onclick="HandleLogin"
+                    disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="loading-spinner-small"></span>
+                    <span>Вход...</span>
+                }
+                else
+                {
+                    <span>Войти</span>
+                }
+            </button>
+        </div>
     </div>
-</RadzenCard>
+</div>
 
 @code {
     private string login = string.Empty;

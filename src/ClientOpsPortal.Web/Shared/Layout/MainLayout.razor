@@ -3,30 +3,37 @@
 @inject NavigationManager Navigation
 @inject IAuthService AuthService
 
+<NotificationContainer />
 <RadzenComponents />
 
 <AuthorizeView>
     <Authorized>
-        <RadzenHeader Style="background: var(--rz-primary); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; height: 48px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <strong>ClientOps Portal</strong>
+        <div class="app-layout">
+            <header class="app-header">
+                <div class="app-header-inner">
+                    <div class="app-brand">
+                        <span class="brand-text">ClientOps Portal</span>
+                    </div>
+                    <div class="app-header-actions">
+                        <span class="user-name">@context.User.Identity?.Name</span>
+                        <button class="btn btn-secondary btn-sm" @onclick="Logout">Выйти</button>
+                    </div>
+                </div>
+            </header>
+            <div class="app-body">
+                <aside class="app-sidebar">
+                    <NavMenu />
+                </aside>
+                <main class="app-content">
+                    @Body
+                </main>
             </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span>@context.User.Identity?.Name</span>
-                <RadzenButton Text="Выйти" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@Logout" />
-            </div>
-        </RadzenHeader>
-        <RadzenSidebar Style="padding-top: 48px; width: 250px;">
-            <NavMenu />
-        </RadzenSidebar>
-        <RadzenBody Style="padding: 20px;">
-            @Body
-        </RadzenBody>
+        </div>
     </Authorized>
     <NotAuthorized>
-        <RadzenBody Style="padding: 0;">
+        <div class="app-body-full">
             @Body
-        </RadzenBody>
+        </div>
     </NotAuthorized>
 </AuthorizeView>
 

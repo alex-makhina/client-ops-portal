@@ -1,13 +1,27 @@
-<RadzenPanelMenu>
-    <RadzenPanelMenuItem Icon="home" Text="Главная" Path="/" />
+<nav class="nav-menu">
+    <a href="/" class="nav-item">
+        <span class="nav-text">Главная</span>
+    </a>
+
     <AuthorizeView Roles="Admin">
-        <RadzenPanelMenuItem Icon="people" Text="Управление пользователями" Path="/admin/users" />
+        <a href="/admin/users" class="nav-item">
+            <span class="nav-text">Пользователи</span>
+        </a>
     </AuthorizeView>
+
     <AuthorizeView Roles="Manager">
-        <RadzenPanelMenuItem Icon="search" Text="Работа с абонентами" Path="/manager/abonents" />
+        <a href="/manager/abonents" class="nav-item">
+            <span class="nav-text">Абоненты</span>
+        </a>
     </AuthorizeView>
+
     <AuthorizeView Roles="ServiceManager">
-        <RadzenPanelMenuItem Icon="backup_table" Text="Справочник услуг" Path="/servicemanager/services" />
+        <a href="/servicemanager/services" class="nav-item">
+            <span class="nav-text">Услуги</span>
+        </a>
     </AuthorizeView>
-    <RadzenPanelMenuItem Icon="info" Text="О системе" Path="/about" />
-</RadzenPanelMenu>
+
+    <a href="/about" class="nav-item">
+        <span class="nav-text">О системе</span>
+    </a>
+</nav>

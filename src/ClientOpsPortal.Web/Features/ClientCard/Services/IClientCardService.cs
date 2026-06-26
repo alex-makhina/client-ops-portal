@@ -12,5 +12,7 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
         Task<IReadOnlyCollection<SubscriptionItem>> GetSubscriptionsByContractAsync(Guid contractId);
         Task<bool> ConnectServiceAsync(ConnectServiceModel model);
         Task<bool> CancelSubscriptionAsync(Guid subscriptionId);
+        Task<IReadOnlyCollection<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(Guid subscriptionId); 
+        Task<IReadOnlyCollection<SubscriptionHistoryItem>> GetSubscriptionHistoryByAbonentAsync(Guid abonentId);
     }
 }

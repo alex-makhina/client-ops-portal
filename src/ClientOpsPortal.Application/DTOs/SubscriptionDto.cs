@@ -13,7 +13,9 @@ namespace ClientOpsPortal.Application.DTOs
 
     public class SubscriptionFullDataDto 
     {
+        public Guid Id { get; set; }
         public Guid ContractId { get; set; }
+        public string ContractNumber { get; set; }
         public Guid ServiceId { get; set; }
         public required string ServiceName { get; set; }
         public Guid TariffPlanId { get; set; }

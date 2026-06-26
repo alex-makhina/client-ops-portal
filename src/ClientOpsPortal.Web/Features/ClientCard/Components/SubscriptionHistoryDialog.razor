@@ -1,0 +1,171 @@
+﻿@using ClientOpsPortal.Web.Features.ClientCard.Services
+@using ClientOpsPortal.Web.Features.ClientCard.Models
+
+@inject IClientCardService ClientCardService
+
+<div class="modal-overlay" @onclick="Close">
+    <div class="modal-content modal-history" @onclick:stopPropagation>
+        <div class="modal-header">
+            <h3>История изменений услуги</h3>
+            <button class="modal-close" type="button" @onclick="Close">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="history-service-info">
+                <h4>@ServiceName</h4>
+                <p>Тариф: <strong>@TariffPlanName</strong></p>
+                <p>Активна с <strong>@BeginDate.ToString("dd.MM.yyyy")</strong></p>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="loading-container" style="padding: 20px;">
+                    <div class="loading-spinner" style="width: 30px; height: 30px;"></div>
+                    <p>Загрузка истории...</p>
+                </div>
+            }
+            else if (historyItems.Count == 0)
+            {
+                <div class="empty-state-small">
+                    <span class="empty-icon-small">📋</span>
+                    <p>Нет записей в истории</p>
+                </div>
+            }
+            else
+            {
+                <div class="history-list">
+                    @foreach (var item in historyItems)
+                    {
+                        <div class="history-item">
+                            <div class="history-item-header">
+                                <span class="history-date">@item.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</span>
+                                <span class="badge @GetStatusBadgeClass(item.Status)">
+                                    @GetStatusDisplayName(item.Status)
+                                </span>
+                            </div>
+                            <div class="history-item-body">
+                                <div class="history-action">
+                                    <strong>@GetActionDisplayName(item.ActionType)</strong>
+                                    @if (!string.IsNullOrEmpty(item.TariffPlanName))
+                                    {
+                                        <span>— Тариф "@item.TariffPlanName"</span>
+                                    }
+                                </div>
+                                @if (item.Steps != null && item.Steps.Count > 0)
+                                {
+                                    <div class="history-steps">
+                                        @foreach (var step in item.Steps)
+                                        {
+                                            <div class="history-step">
+                                                <span class="step-time">[@step.CreatedAt.LocalDateTime.ToString("HH:mm:ss")]</span>
+                                                <span class="step-status @GetStepStatusClass(step.Status)">
+                                                    @GetStatusDisplayName(step.Status)
+                                                </span>
+                                                @if (!string.IsNullOrEmpty(step.Message))
+                                                {
+                                                    <span class="step-message">— @step.Message</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" @onclick="Close">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid SubscriptionId { get; set; }
+    [Parameter] public string ServiceName { get; set; } = string.Empty;
+    [Parameter] public string TariffPlanName { get; set; } = string.Empty;
+    [Parameter] public DateTimeOffset BeginDate { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<SubscriptionHistoryItem> historyItems = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistoryAsync();
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var history = await ClientCardService.GetSubscriptionHistoryAsync(SubscriptionId);
+            historyItems = history.ToList();
+        }
+        catch (Exception ex)
+        {
+            historyItems = new();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private string GetStatusDisplayName(string status)
+    {
+        return status switch
+        {
+            "Pending" => "В ожидании отправки на активацию",
+            "InProgress" => "В обработке",
+            "Completed" => "Выполнен",
+            "Failed" => "Ошибка",
+            "Cancelled" => "Аннулирован",
+            _ => status
+        };
+    }
+
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Pending" => "badge-secondary",
+            "InProgress" => "badge-warning",
+            "Completed" => "badge-success",
+            "Failed" => "badge-danger",
+            "Cancelled" => "badge-secondary",
+            _ => "badge-secondary"
+        };
+    }
+
+    private string GetStepStatusClass(string status)
+    {
+        return status switch
+        {
+            "Pending" => "step-secondary",
+            "InProgress" => "step-warning",
+            "Completed" => "step-success",
+            "Failed" => "step-danger",
+            "Cancelled" => "step-secondary",
+            _ => "step-secondary"
+        };
+    }
+
+    private string GetActionDisplayName(string action)
+    {
+        return action switch
+        {
+            "Open" => "Подключение услуги",
+            "Close" => "Отключение услуги",
+            "TariffChange" => "Смена тарифного плана",
+            _ => action
+        };
+    }
+}

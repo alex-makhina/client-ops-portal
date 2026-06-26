@@ -1,0 +1,35 @@
+﻿
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.about-item {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    background: var(--bg-light);
+    border-radius: var(--border-radius-sm);
+}
+
+.about-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.about-value {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+    .about-grid {
+        grid-template-columns: 1fr;
+    }
+}

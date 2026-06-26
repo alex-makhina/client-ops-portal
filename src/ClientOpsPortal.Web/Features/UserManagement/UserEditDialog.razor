@@ -1,95 +1,185 @@
 @inject DialogService DialogService
 
-<RadzenCard Style="min-width: 500px;">
-    <h4 class="mb-0">@(IsEditMode ? "Редактирование пользователя" : "Создание пользователя")</h4>
-    <div class="p-3">
-        <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
-            @errorMessage
-        </RadzenAlert>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <RadzenTextBox @bind-Value="@StaffNumber" Placeholder="Табельный номер" />
-            <RadzenTextBox @bind-Value="@LastName" Placeholder="Фамилия" />
-            <RadzenTextBox @bind-Value="@FirstName" Placeholder="Имя" />
-            <RadzenTextBox @bind-Value="@MiddleName" Placeholder="Отчество" />
-            <RadzenTextBox @bind-Value="@Post" Placeholder="Должность" />
-            <RadzenTextBox @bind-Value="@Department" Placeholder="Отдел" />
-            <RadzenTextBox @bind-Value="@Email" Placeholder="Email" />
-            <RadzenTextBox @bind-Value="@Login" Placeholder="Логин" />
-            @if (!IsEditMode)
-            {
-                <RadzenPassword @bind-Value="@Password" Placeholder="Пароль" Style="grid-column: span 2;" />
-            }
-            <RadzenDropDown @bind-Value="@Role"
-                            Data="@AvailableRoles"
-                            Placeholder="Выберите роль"
-                            Style="grid-column: span 2;" />
+<div class="modal-overlay" @onclick="Close">
+    <div class="modal-content" @onclick:stopPropagation>
+        <div class="modal-header">
+            <h3>@(IsEditMode ? "Редактирование пользователя" : "Создание пользователя")</h3>
+            <button class="modal-close" type="button" @onclick="Close">×</button>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-            <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="@Close" />
-            <RadzenButton Text="@GetSaveButtonText()"
-                          ButtonStyle="ButtonStyle.Primary"
-                          Click="@Save" />
+
+        <div class="modal-body">
+            @if (showError)
+            {
+                <div class="alert alert-danger">
+                    <span>⚠️</span>
+                    @errorMessage
+                </div>
+            }
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Табельный номер <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(StaffNumber) ? "error" : "")"
+                           placeholder="Например: 00123"
+                           @bind="StaffNumber"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Фамилия <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(LastName) ? "error" : "")"
+                           placeholder="Иванов"
+                           @bind="LastName"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Имя <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(FirstName) ? "error" : "")"
+                           placeholder="Иван"
+                           @bind="FirstName"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Отчество</label>
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Иванович"
+                           @bind="MiddleName"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Должность <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(Post) ? "error" : "")"
+                           placeholder="Менеджер"
+                           @bind="Post"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Отдел</label>
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Отдел продаж"
+                           @bind="Department"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email <span class="required">*</span></label>
+                    <input type="email"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(Email) ? "error" : "")"
+                           placeholder="user@company.com"
+                           @bind="Email"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Логин <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(Login) ? "error" : "")"
+                           placeholder="ivanov_i"
+                           @bind="Login"
+                           @bind:event="oninput" />
+                </div>
+
+                @if (!IsEditMode)
+                {
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label">Пароль <span class="required">*</span></label>
+                        <input type="password"
+                               class="form-control @(showError && string.IsNullOrWhiteSpace(Password) ? "error" : "")"
+                               placeholder="Введите пароль (минимум 6 символов)"
+                               @bind="Password"
+                               @bind:event="oninput" />
+                        <span class="form-hint">Пароль должен содержать минимум 6 символов</span>
+                    </div>
+                }
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Роль <span class="required">*</span></label>
+                    <select class="form-control @(showError && string.IsNullOrWhiteSpace(Role) ? "error" : "")"
+                            @bind="Role">
+                        <option value="">Выберите роль...</option>
+                        @foreach (var role in AvailableRoles)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" @onclick="Close">Отмена</button>
+            <button class="btn btn-primary" type="button" @onclick="Save">
+                @(IsEditMode ? "Сохранить" : "Создать")
+            </button>
         </div>
     </div>
-</RadzenCard>
+</div>
 
 @code {
-    [Parameter]
-    public bool IsEditMode { get; set; }
-    [Parameter]
-    public Guid EmployeeId { get; set; }
-    [Parameter]
-    public string StaffNumber { get; set; } = string.Empty;
-    [Parameter]
-    public string FirstName { get; set; } = string.Empty;
-    [Parameter]
-    public string LastName { get; set; } = string.Empty;
-    [Parameter]
-    public string? MiddleName { get; set; }
-    [Parameter]
-    public string Post { get; set; } = string.Empty;
-    [Parameter]
-    public string? Department { get; set; }
-    [Parameter]
-    public string Email { get; set; } = string.Empty;
-    [Parameter]
-    public string Login { get; set; } = string.Empty;
-    [Parameter]
-    public string? Password { get; set; }
-    [Parameter]
-    public string Role { get; set; } = string.Empty;
-    [Parameter]
-    public List<string> AvailableRoles { get; set; } = new();
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public Guid EmployeeId { get; set; }
+    [Parameter] public string StaffNumber { get; set; } = string.Empty;
+    [Parameter] public string FirstName { get; set; } = string.Empty;
+    [Parameter] public string LastName { get; set; } = string.Empty;
+    [Parameter] public string? MiddleName { get; set; }
+    [Parameter] public string Post { get; set; } = string.Empty;
+    [Parameter] public string? Department { get; set; }
+    [Parameter] public string Email { get; set; } = string.Empty;
+    [Parameter] public string Login { get; set; } = string.Empty;
+    [Parameter] public string? Password { get; set; }
+    [Parameter] public string Role { get; set; } = string.Empty;
+    [Parameter] public List<string> AvailableRoles { get; set; } = new();
 
     private bool showError;
     private string errorMessage = string.Empty;
 
     private void Close()
     {
+        Console.WriteLine("Close called");
         DialogService.Close(null);
     }
 
     private async Task Save()
     {
+        Console.WriteLine("Save called");
         showError = false;
 
-        if (string.IsNullOrWhiteSpace(StaffNumber) ||
-            string.IsNullOrWhiteSpace(FirstName) ||
-            string.IsNullOrWhiteSpace(LastName) ||
-            string.IsNullOrWhiteSpace(Post) ||
-            string.IsNullOrWhiteSpace(Email) ||
-            string.IsNullOrWhiteSpace(Login) ||
-            string.IsNullOrWhiteSpace(Role))
-        {
-            showError = true;
-            errorMessage = "Заполните все обязательные поля";
-            return;
-        }
+        var errors = new List<string>();
 
+        if (string.IsNullOrWhiteSpace(StaffNumber))
+            errors.Add("Введите табельный номер");
+        if (string.IsNullOrWhiteSpace(LastName))
+            errors.Add("Введите фамилию");
+        if (string.IsNullOrWhiteSpace(FirstName))
+            errors.Add("Введите имя");
+        if (string.IsNullOrWhiteSpace(Post))
+            errors.Add("Введите должность");
+        if (string.IsNullOrWhiteSpace(Email))
+            errors.Add("Введите Email");
+        if (string.IsNullOrWhiteSpace(Login))
+            errors.Add("Введите логин");
+        if (string.IsNullOrWhiteSpace(Role))
+            errors.Add("Выберите роль");
         if (!IsEditMode && string.IsNullOrWhiteSpace(Password))
+            errors.Add("Введите пароль");
+        if (!IsEditMode && Password?.Length < 6)
+            errors.Add("Пароль должен содержать минимум 6 символов");
+
+        if (errors.Count > 0)
         {
             showError = true;
-            errorMessage = "Введите пароль для нового пользователя";
+            errorMessage = string.Join("; ", errors);
+            StateHasChanged();
             return;
         }
 
@@ -97,20 +187,18 @@
         {
             IsEditMode = IsEditMode,
             EmployeeId = EmployeeId,
-            StaffNumber = StaffNumber,
-            FirstName = FirstName,
-            LastName = LastName,
-            MiddleName = MiddleName,
-            Post = Post,
-            Department = Department,
-            Email = Email,
-            Login = Login,
+            StaffNumber = StaffNumber.Trim(),
+            FirstName = FirstName.Trim(),
+            LastName = LastName.Trim(),
+            MiddleName = MiddleName?.Trim(),
+            Post = Post.Trim(),
+            Department = Department?.Trim(),
+            Email = Email.Trim(),
+            Login = Login.Trim(),
             Password = Password,
             Role = Role
         };
 
         DialogService.Close(result);
     }
-
-    private string GetSaveButtonText() => IsEditMode ? "Сохранить" : "Создать";
 }

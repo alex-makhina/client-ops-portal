@@ -1,0 +1,26 @@
+﻿.welcome-info {
+    padding: 8px 0;
+}
+
+.welcome-user {
+    font-size: 16px;
+    margin: 0 0 12px 0;
+}
+
+.welcome-roles {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.welcome-roles-label {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.roles-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}

@@ -44,5 +44,29 @@ namespace ClientOpsPortal.Application.Mappings
         {
             entity.Status = updateDto.Status;
         }
+
+        public static SubscriptionHistoryFullDto ToSubscriptionHistoryFullDto(this SubscriptionHistory history)
+        {
+            return new SubscriptionHistoryFullDto
+            {
+                Id = history.Id,
+                SubscriptionId = history.SubscriptionId,
+                ActionType = history.ActionType,
+                Status = history.Status,
+                StartDate = history.StartDate,
+                CreatedAt = history.CreatedAt,
+                ServiceName = history.Subscription.Service?.Name,
+                TariffPlanName = history.TariffPlan?.Name,
+                ContractNumber = history.Subscription.Contract?.ContractNumber,
+                Steps = history.Steps?.Select(s => new SubscriptionHistoryStep
+                {
+                    Id = s.Id,
+                    SubscriptionHistoryId = s.SubscriptionHistoryId,
+                    Status = s.Status,
+                    Message = s.Message,
+                    CreatedAt = s.CreatedAt
+                }).ToList() ?? new List<SubscriptionHistoryStep>()
+            };
+        }
     }
 }

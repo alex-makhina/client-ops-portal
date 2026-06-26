@@ -1,60 +1,119 @@
-﻿@inject DialogService DialogService
+﻿@namespace ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog
 @using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models
+@inject DialogService DialogService
 
-<RadzenCard Style="min-width: 500px; max-height: 85vh; overflow-y: auto;">
-    <RadzenAlert @bind-Visible="@showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
-        @errorMessage
-    </RadzenAlert>
+<div class="modal-overlay" @onclick="Close">
+    <div class="modal-content" @onclick:stopPropagation>
+        <div class="modal-header">
+            <h3>@(IsEditMode ? "Редактирование абонента" : "Создание абонента")</h3>
+            <button class="modal-close" type="button" @onclick="Close">×</button>
+        </div>
 
-    <div style="display: grid; gap: 12px;">
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Фамилия *</label>
-            <RadzenTextBox @bind-Value="@LastName" Placeholder="Фамилия" Style="width: 100%;" />
-        </div>
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Имя *</label>
-            <RadzenTextBox @bind-Value="@FirstName" Placeholder="Имя" Style="width: 100%;" />
-        </div>
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Отчество</label>
-            <RadzenTextBox @bind-Value="@MiddleName" Placeholder="Отчество" Style="width: 100%;" />
-        </div>
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Идентификационный номер *</label>
-            <RadzenTextBox @bind-Value="@IdentificationNumber" Placeholder="ИНН" Style="width: 100%;" />
-        </div>
-        @if (!IsEditMode)
-        {
-            <div>
-                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Email *</label>
-                <RadzenTextBox @bind-Value="@Email" Placeholder="Email" Style="width: 100%;" />
-                <small style="color: #666;">Для отправки логина и пароля</small>
+        <div class="modal-body">
+            @if (showError)
+            {
+                <div class="alert alert-danger">
+                    <span>⚠️</span>
+                    @errorMessage
+                </div>
+            }
+
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Фамилия <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(lastName) ? "error" : "")"
+                           placeholder="Введите фамилию"
+                           @bind="lastName"
+                           @bind:event="oninput" />
+                    <span class="form-hint">От 2 до 50 символов</span>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Имя <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(firstName) ? "error" : "")"
+                           placeholder="Введите имя"
+                           @bind="firstName"
+                           @bind:event="oninput" />
+                    <span class="form-hint">От 2 до 50 символов</span>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Отчество</label>
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Введите отчество (необязательно)"
+                           @bind="middleName"
+                           @bind:event="oninput" />
+                    <span class="form-hint">Необязательное поле</span>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Идентификационный номер <span class="required">*</span></label>
+                    <input type="text"
+                           class="form-control @(showError && string.IsNullOrWhiteSpace(identificationNumber) ? "error" : "")"
+                           placeholder="Введите идентификационный номер"
+                           @bind="identificationNumber"
+                           @bind:event="oninput" />
+                    <span class="form-hint">Только заглавные буквы и цифры, от 5 до 20 символов</span>
+                </div>
+
+                @if (!IsEditMode)
+                {
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label">Email <span class="required">*</span></label>
+                        <input type="email"
+                               class="form-control @(showError && string.IsNullOrWhiteSpace(email) ? "error" : "")"
+                               placeholder="Введите email"
+                               @bind="email"
+                               @bind:event="oninput" />
+                        <span class="form-hint">Пример: user@example.com</span>
+                    </div>
+                }
             </div>
-        }
-    </div>
+        </div>
 
-    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
-        <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="@Close" />
-        <RadzenButton Text="@GetSaveButtonText()" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" @onclick="Close">Отмена</button>
+            <button class="btn btn-primary" type="button" @onclick="Save">
+                @(IsEditMode ? "Сохранить" : "Создать")
+            </button>
+        </div>
     </div>
-</RadzenCard>
+</div>
 
 @code {
-    [Parameter]
-    public bool IsEditMode { get; set; } = true;
-    [Parameter]
-    public string LastName { get; set; } = string.Empty;
-    [Parameter]
-    public string FirstName { get; set; } = string.Empty;
-    [Parameter]
-    public string? MiddleName { get; set; }
-    [Parameter]
-    public string IdentificationNumber { get; set; } = string.Empty;
-    [Parameter]
-    public string Email { get; set; } = string.Empty;
+    [Parameter] public string LastName { get; set; } = string.Empty;
+    [Parameter] public string FirstName { get; set; } = string.Empty;
+    [Parameter] public string? MiddleName { get; set; }
+    [Parameter] public string IdentificationNumber { get; set; } = string.Empty;
+    [Parameter] public string Email { get; set; } = string.Empty;
+    [Parameter] public bool IsEditMode { get; set; } = false;
 
+    private string lastName = string.Empty;
+    private string firstName = string.Empty;
+    private string? middleName;
+    private string identificationNumber = string.Empty;
+    private string email = string.Empty;
     private bool showError;
     private string errorMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        lastName = LastName ?? string.Empty;
+        firstName = FirstName ?? string.Empty;
+        middleName = MiddleName;
+        identificationNumber = IdentificationNumber ?? string.Empty;
+        email = Email ?? string.Empty;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+    }
 
     private void Close()
     {
@@ -64,62 +123,65 @@
     private async Task Save()
     {
         showError = false;
+        var errors = new List<string>();
 
-        var lastNameResult = AbonentValidationHelper.ValidateName(LastName, "Фамилия");
-        if (!lastNameResult.IsValid)
+        if (string.IsNullOrWhiteSpace(lastName))
+            errors.Add("Введите фамилию");
+        else if (lastName.Length < 2 || lastName.Length > 50)
+            errors.Add("Фамилия должна содержать от 2 до 50 символов");
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(lastName, @"^[А-Яа-яЁёA-Za-z\s\-]+$"))
+            errors.Add("Фамилия может содержать только буквы, пробелы и дефисы");
+
+        if (string.IsNullOrWhiteSpace(firstName))
+            errors.Add("Введите имя");
+        else if (firstName.Length < 2 || firstName.Length > 50)
+            errors.Add("Имя должно содержать от 2 до 50 символов");
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(firstName, @"^[А-Яа-яЁёA-Za-z\s\-]+$"))
+            errors.Add("Имя может содержать только буквы, пробелы и дефисы");
+
+        if (!string.IsNullOrEmpty(middleName))
         {
-            showError = true;
-            errorMessage = lastNameResult.ErrorMessage;
-            return;
+            if (middleName.Length > 50)
+                errors.Add("Отчество не может быть длиннее 50 символов");
+            else if (!System.Text.RegularExpressions.Regex.IsMatch(middleName, @"^[А-Яа-яЁёA-Za-z\s\-]*$"))
+                errors.Add("Отчество может содержать только буквы, пробелы и дефисы");
         }
 
-        var firstNameResult = AbonentValidationHelper.ValidateName(FirstName, "Имя");
-        if (!firstNameResult.IsValid)
-        {
-            showError = true;
-            errorMessage = firstNameResult.ErrorMessage;
-            return;
-        }
-
-        var middleNameResult = AbonentValidationHelper.ValidateMiddleName(MiddleName ?? string.Empty);
-        if (!middleNameResult.IsValid)
-        {
-            showError = true;
-            errorMessage = middleNameResult.ErrorMessage;
-            return;
-        }
-
-        var identificationResult = AbonentValidationHelper.ValidateIdentificationNumber(IdentificationNumber);
-        if (!identificationResult.IsValid)
-        {
-            showError = true;
-            errorMessage = identificationResult.ErrorMessage;
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(identificationNumber))
+            errors.Add("Введите идентификационный номер");
+        else if (identificationNumber.Length < 5 || identificationNumber.Length > 20)
+            errors.Add("Идентификационный номер должен содержать от 5 до 20 символов");
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(identificationNumber, @"^[A-Z0-9]+$"))
+            errors.Add("Идентификационный номер может содержать только заглавные буквы и цифры");
 
         if (!IsEditMode)
         {
-            var emailResult = AbonentValidationHelper.ValidateEmail(Email);
-            if (!emailResult.IsValid)
-            {
-                showError = true;
-                errorMessage = emailResult.ErrorMessage;
-                return;
-            }
+            if (string.IsNullOrWhiteSpace(email))
+                errors.Add("Введите email");
+            else if (!System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                errors.Add("Введите корректный email (пример: user@example.com)");
+            else if (email.Length > 100)
+                errors.Add("Email не может быть длиннее 100 символов");
+        }
+
+        if (errors.Count > 0)
+        {
+            showError = true;
+            errorMessage = string.Join("; ", errors);
+            StateHasChanged();
+            return;
         }
 
         var result = new EditAbonentDialogResult
         {
-            IsEditMode = IsEditMode,
-            LastName = AbonentValidationHelper.NormalizeName(LastName),
-            FirstName = AbonentValidationHelper.NormalizeName(FirstName),
-            MiddleName = AbonentValidationHelper.NormalizeName(MiddleName),
-            IdentificationNumber = AbonentValidationHelper.NormalizeIdentificationNumber(IdentificationNumber),
-            Email = Email?.Trim()
+            LastName = lastName.Trim(),
+            FirstName = firstName.Trim(),
+            MiddleName = middleName?.Trim(),
+            IdentificationNumber = identificationNumber.Trim(),
+            Email = email.Trim(),
+            IsEditMode = IsEditMode
         };
 
         DialogService.Close(result);
     }
-
-    private string GetSaveButtonText() => IsEditMode ? "Сохранить" : "Зарегистрировать";
 }

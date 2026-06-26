@@ -4,25 +4,44 @@
 
 <AuthorizeView>
     <Authorized>
-        <RadzenCard>
-            <h3 class="mb-0">Добро пожаловать</h3>
-            <div class="p-3">
-                <p>Вы вошли как: <strong>@context.User.Identity?.Name</strong></p>
-                <p>
-                    Ваши роли: 
-                    <strong>@string.Join(", ", context.User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value))</strong>
-                </p>
+        <div class="page-container">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Добро пожаловать</h3>
+                </div>
+                <div class="card-body">
+                    <div class="welcome-info">
+                        <p class="welcome-user">
+                            Вы вошли как: <strong>@context.User.Identity?.Name</strong>
+                        </p>
+                        <div class="welcome-roles">
+                            <span class="welcome-roles-label">Ваши роли:</span>
+                            <div class="roles-badges">
+                                @foreach (var role in context.User.Claims
+                                    .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
+                                    .Select(c => c.Value))
+                                {
+                                    <span class="badge badge-info">@role</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </RadzenCard>
+        </div>
     </Authorized>
     <NotAuthorized>
-        <RadzenCard>
-            <h3 class="mb-0">ClientOps Portal</h3>
-            <div class="p-3">
-                <p>Пожалуйста, войдите в систему для продолжения работы.</p>
-                <RadzenButton Text="Войти" ButtonStyle="ButtonStyle.Primary" Click="@GoToLogin" />
+        <div class="page-container">
+            <div class="card text-center">
+                <div style="padding: 40px 20px;">
+                    <h3 class="card-title" style="text-align: center;">ClientOps Portal</h3>
+                    <p style="color: var(--text-muted); margin: 8px 0 24px 0;">
+                        Пожалуйста, войдите в систему для продолжения работы.
+                    </p>
+                    <button class="btn btn-primary" @onclick="GoToLogin">Войти</button>
+                </div>
             </div>
-        </RadzenCard>
+        </div>
     </NotAuthorized>
 </AuthorizeView>
 

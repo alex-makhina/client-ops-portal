@@ -1,0 +1,75 @@
+﻿@using ClientOpsPortal.Web.Features.Shared.Notification
+@inject AppNotificationService AppNotificationService
+
+@if (_notifications.Any())
+{
+    <div class="notification-container">
+        @foreach (var notification in _notifications)
+        {
+            <div class="notification notification-@notification.Type.ToString().ToLower()"
+                 style="animation: slideInRight 0.3s ease;">
+                <div class="notification-content">
+                    <span class="notification-icon">@GetIcon(notification.Type)</span>
+                    <div class="notification-body">
+                        <div class="notification-title">@notification.Title</div>
+                        <div class="notification-message">@notification.Message</div>
+                    </div>
+                    <button class="notification-close" type="button" @onclick="() => RemoveNotification(notification)">×</button>
+                </div>
+                <div class="notification-progress" style="animation-duration: @(Duration)ms;"></div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int Duration { get; set; } = 5000;
+
+    private List<AppNotification> _notifications = new();
+
+    protected override void OnInitialized()
+    {
+        AppNotificationService.OnNotify += AddNotification;
+    }
+
+    private void AddNotification(AppNotification message)
+    {
+        _notifications.Add(message);
+        StateHasChanged();
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(Duration);
+            await InvokeAsync(() =>
+            {
+                RemoveNotification(message);
+            });
+        });
+    }
+
+    private void RemoveNotification(AppNotification message)
+    {
+        if (_notifications.Contains(message))
+        {
+            _notifications.Remove(message);
+            StateHasChanged();
+        }
+    }
+
+    private string GetIcon(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Success => "✅",
+            NotificationType.Error => "❌",
+            NotificationType.Warning => "⚠️",
+            NotificationType.Info => "ℹ️",
+            _ => "📌"
+        };
+    }
+
+    public void Dispose()
+    {
+        AppNotificationService.OnNotify -= AddNotification;
+    }
+}
