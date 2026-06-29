@@ -2,150 +2,197 @@
 @using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
 @using ClientOpsPortal.Web.Features.ServiceManagement.Validators
 @inject DialogService DialogService
+@inject IJSRuntime JSRuntime
 
-<RadzenCard Style="min-width: 650px; max-width: 800px;">
-    <div class="p-3">
-        <RadzenAlert @bind-Visible="showError" Severity="AlertStyle.Danger" Style="margin-bottom: 12px;">
-            @errorMessage
-        </RadzenAlert>
+<div class="modal-overlay" id="service-dialog-overlay">
+    <div class="modal-content" id="modal-content">
+        <div class="modal-header">
+            <div class="modal-header-left">
+                <h3>@(IsEditMode ? "Редактирование услуги" : "Создание услуги")</h3>
+            </div>
+            <button class="modal-close" type="button" @onclick="Close">×</button>
+        </div>
 
-        <!-- Основная информация -->
-        <div style="margin-bottom: 24px;">
-            <h5>Основная информация</h5>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
-                <div>
-                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">
-                        Название услуги <span style="color: red;">*</span>
-                    </label>
-                    <RadzenTextBox @bind-Value="serviceName"
-                                   Placeholder="Например: Интернет"
-                                   Style="width: 100%;" />
-                    <small style="color: #666; font-size: 12px;">
-                        От 3 до 100 символов
-                    </small>
+        <div class="modal-body" id="modal-body">
+            @if (showError)
+            {
+                <div class="alert alert-danger">
+                    <span class="alert-icon">⚠️</span>
+                    <span>@errorMessage</span>
                 </div>
-                <div>
-                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">
-                        Описание <span style="color: red;">*</span>
-                    </label>
-                    <RadzenTextArea @bind-Value="serviceDescription"
-                                    Placeholder="Описание услуги..."
-                                    Rows="3"
-                                    Style="width: 100%;" />
-                    <small style="color: #666; font-size: 12px;">
-                        От 10 до 500 символов
-                    </small>
+            }
+
+            <div class="section">
+                <div class="section-header">
+                    <h4 class="section-title">Основная информация</h4>
+                    <span class="section-badge">Обязательные поля *</span>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div>
-                        <label style="display: block; margin-bottom: 4px; font-weight: 500;">
-                            Дата начала <span style="color: red;">*</span>
+                <div class="form-grid">
+                    <div class="form-group form-group-full">
+                        <label class="form-label">
+                            Название услуги
+                            <span class="required">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-input"
+                               placeholder="Введите название услуги"
+                               value="@serviceName"
+                               @onchange="(e) => serviceName = e.Value?.ToString() ?? string.Empty"
+                               @oninput="(e) => serviceName = e.Value?.ToString() ?? string.Empty" />
+                        <span class="form-hint">
+                            <span class="hint-icon"></span>
+                            От 3 до 100 символов
+                        </span>
+                    </div>
+
+                    <div class="form-group form-group-full">
+                        <label class="form-label">
+                            Описание
+                            <span class="required">*</span>
+                        </label>
+                        <textarea class="form-textarea"
+                                  placeholder="Введите описание услуги"
+                                  rows="2"
+                                  value="@serviceDescription"
+                                  @onchange="(e) => serviceDescription = e.Value?.ToString() ?? string.Empty"
+                                  @oninput="(e) => serviceDescription = e.Value?.ToString() ?? string.Empty"></textarea>
+                        <span class="form-hint">
+                            <span class="hint-icon"></span>
+                            От 10 до 500 символов
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Дата начала
+                            <span class="required">*</span>
                         </label>
                         <RadzenDatePicker @bind-Value="serviceBeginDate"
-                                          Placeholder="дд.мм.гггг"
-                                          Style="width: 100%;" />
+                                          Placeholder="Выберите дату"
+                                          ShowIcon="true"
+                                          Style="width:100%;" />
                     </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 4px; font-weight: 500;">Дата окончания</label>
+
+                    <div class="form-group">
+                        <label class="form-label">Дата окончания</label>
                         <RadzenDatePicker @bind-Value="serviceEndDate"
-                                          Placeholder="дд.мм.гггг"
-                                          Style="width: 100%;" />
-                        <small style="color: #666; font-size: 12px;">
+                                          Placeholder="Не ограничено"
+                                          ShowIcon="true"
+                                          Style="width:100%;" />
+                        <span class="form-hint">
+                            <span class="hint-icon"></span>
                             Оставьте пустым, если услуга бессрочная
-                        </small>
+                        </span>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Тарифные планы -->
-        <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <h5>Тарифные планы</h5>
-                <RadzenButton Text=" Добавить тариф"
-                              ButtonStyle="ButtonStyle.Primary"
-                              Size="ButtonSize.Small"
-                              Icon="add"
-                              Click="AddTariffPlan" />
+            <div class="section">
+                <div class="section-header">
+                    <h4 class="section-title">Тарифные планы</h4>
+                    <button class="btn-add-tariff" @onclick="AddTariffPlan">
+                        ➕ Добавить тариф
+                    </button>
+                </div>
+
+                @if (tariffPlansList.Count == 0)
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p class="empty-state-title">Нет тарифных планов</p>
+                        <p class="empty-state-description">Нажмите кнопку "Добавить тариф", чтобы создать первый тарифный план</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="tariff-list">
+                        @for (int i = 0; i < tariffPlansList.Count; i++)
+                        {
+                            var index = i;
+                            var tariff = tariffPlansList[index];
+                            <div class="tariff-card" @key="tariff.Id">
+                                <div class="tariff-header">
+                                    <div class="tariff-header-left">
+                                        <span class="tariff-number">#@(index + 1)</span>
+                                        <strong class="tariff-title">Тарифный план</strong>
+                                    </div>
+                                    <button class="btn-delete-tariff" @onclick="() => RemoveTariffPlan(index)">
+                                        <span class="delete-icon">🗑️</span>
+                                    </button>
+                                </div>
+                                <div class="tariff-body">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            Название
+                                            <span class="required">*</span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-input form-input-sm"
+                                               placeholder="Например: Базовый"
+                                               value="@tariff.Name"
+                                               @onchange="(e) => OnTariffNameChange(index, e)"
+                                               @oninput="(e) => OnTariffNameChange(index, e)" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            Цена
+                                            <span class="required">*</span>
+                                        </label>
+                                        <div class="price-input-wrapper">
+                                            <span class="price-currency">₽</span>
+                                            <input type="number"
+                                                   class="price-input price-input-sm"
+                                                   min="0"
+                                                   step="0.01"
+                                                   placeholder="0"
+                                                   value="@tariff.Price"
+                                                   @onchange="(e) => OnPriceChange(index, e)"
+                                                   @oninput="(e) => OnPriceInput(index, e)" />
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-group-full">
+                                        <label class="form-label">Описание</label>
+                                        <input type="text"
+                                               class="form-input form-input-sm"
+                                               placeholder="Описание тарифного плана"
+                                               value="@tariff.Description"
+                                               @onchange="(e) => OnTariffDescriptionChange(index, e)"
+                                               @oninput="(e) => OnTariffDescriptionChange(index, e)" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            Дата начала
+                                            <span class="required">*</span>
+                                        </label>
+                                        <RadzenDatePicker @bind-Value="tariff.BeginDate"
+                                                          Placeholder="Выберите дату"
+                                                          ShowIcon="true"
+                                                          Style="width:100%;" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Дата окончания</label>
+                                        <RadzenDatePicker @bind-Value="tariff.EndDate"
+                                                          Placeholder="Не ограничено"
+                                                          ShowIcon="true"
+                                                          Style="width:100%;" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
-
-            @if (tariffPlansList.Count == 0)
-            {
-                <div style="text-align: center; padding: 30px; color: #666; border: 1px dashed #ccc; border-radius: 8px;">
-                    Нет тарифных планов. Нажмите "+ Добавить тариф"
-                </div>
-            }
-            else
-            {
-                <div style="display: flex; flex-direction: column; gap: 16px;">
-                    @for (int i = 0; i < tariffPlansList.Count; i++)
-                    {
-                        var index = i;
-                        var tariff = tariffPlansList[index];
-                        <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background-color: #fafafa;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <strong>Тарифный план @(index + 1)</strong>
-                                <RadzenButton Icon="delete"
-                                              ButtonStyle="ButtonStyle.Danger"
-                                              Size="ButtonSize.Small"
-                                              Click="() => RemoveTariffPlan(index)" />
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
-                                        Название <span style="color: red;">*</span>
-                                    </label>
-                                    <RadzenTextBox @bind-Value="tariff.Name"
-                                                   Placeholder="Например: Старт"
-                                                   Style="width: 100%;" />
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
-                                        Цена <span style="color: red;">*</span>
-                                    </label>
-                                    <RadzenNumeric @bind-Value="tariff.Price"
-                                                   Placeholder="0"
-                                                   Min="0"
-                                                   Format="C2"
-                                                   Style="width: 100%;" />
-                                </div>
-                                <div style="grid-column: span 2;">
-                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Описание</label>
-                                    <RadzenTextArea @bind-Value="tariff.Description"
-                                                    Placeholder="Описание тарифа"
-                                                    Rows="2"
-                                                    Style="width: 100%;" />
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
-                                        Дата начала <span style="color: red;">*</span>
-                                    </label>
-                                    <RadzenDatePicker @bind-Value="tariff.BeginDate"
-                                                      Placeholder="дд.мм.гггг"
-                                                      Style="width: 100%;" />
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Дата окончания</label>
-                                    <RadzenDatePicker @bind-Value="tariff.EndDate"
-                                                      Placeholder="дд.мм.гггг"
-                                                      Style="width: 100%;" />
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px;">
-            <RadzenButton Text="Отмена" ButtonStyle="ButtonStyle.Secondary" Click="Close" />
-            <RadzenButton Text="@GetSaveButtonText()"
-                          ButtonStyle="ButtonStyle.Primary"
-                          Icon="save"
-                          Click="Save" />
+        <div class="modal-footer">
+            <button class="btn-cancel" @onclick="Close">Отмена</button>
+            <button class="btn-save" @onclick="Save">
+                <span class="save-icon"></span>
+                @GetSaveButtonText()
+            </button>
         </div>
     </div>
-</RadzenCard>
+</div>
 
 @code {
     [Parameter] public bool IsEditMode { get; set; }
@@ -156,7 +203,6 @@
     [Parameter] public DateTimeOffset? EndDate { get; set; }
     [Parameter] public List<TariffPlanRequest> TariffPlans { get; set; } = new();
 
-    // Локальные поля для редактирования
     private string serviceName = string.Empty;
     private string serviceDescription = string.Empty;
     private DateTimeOffset serviceBeginDate = DateTimeOffset.UtcNow;
@@ -170,14 +216,55 @@
     {
         base.OnInitialized();
 
-        // Инициализация локальных полей из параметров
         serviceName = Name;
         serviceDescription = Description;
         serviceBeginDate = BeginDate;
         serviceEndDate = EndDate;
         tariffPlansList = TariffPlans?.ToList() ?? new List<TariffPlanRequest>();
+    }
 
-        Console.WriteLine($"ServiceEditDialog инициализирован: IsEditMode={IsEditMode}, Name={serviceName}, Tariffs={tariffPlansList.Count}");
+    private void OnTariffNameChange(int index, ChangeEventArgs e)
+    {
+        if (index >= 0 && index < tariffPlansList.Count)
+        {
+            tariffPlansList[index].Name = e.Value?.ToString() ?? string.Empty;
+        }
+    }
+
+    private void OnTariffDescriptionChange(int index, ChangeEventArgs e)
+    {
+        if (index >= 0 && index < tariffPlansList.Count)
+        {
+            tariffPlansList[index].Description = e.Value?.ToString() ?? string.Empty;
+        }
+    }
+
+    private void OnPriceChange(int index, ChangeEventArgs e)
+    {
+        if (index >= 0 && index < tariffPlansList.Count)
+        {
+            var value = e.Value?.ToString();
+            if (decimal.TryParse(value, out decimal result))
+            {
+                tariffPlansList[index].Price = result;
+            }
+            else if (string.IsNullOrEmpty(value))
+            {
+                tariffPlansList[index].Price = 0;
+            }
+        }
+    }
+
+    private void OnPriceInput(int index, ChangeEventArgs e)
+    {
+        if (index >= 0 && index < tariffPlansList.Count)
+        {
+            var value = e.Value?.ToString();
+            if (decimal.TryParse(value, out decimal result))
+            {
+                tariffPlansList[index].Price = result;
+            }
+        }
     }
 
     private void Close() => DialogService.Close(null);
@@ -194,8 +281,8 @@
             BeginDate = DateTimeOffset.UtcNow,
             EndDate = null
         });
+        
         StateHasChanged();
-        Console.WriteLine($"Добавлен тариф. Всего: {tariffPlansList.Count}");
     }
 
     private void RemoveTariffPlan(int index)
@@ -204,7 +291,6 @@
         {
             tariffPlansList.RemoveAt(index);
             StateHasChanged();
-            Console.WriteLine($"Удален тариф. Осталось: {tariffPlansList.Count}");
         }
     }
 
@@ -212,7 +298,6 @@
     {
         showError = false;
 
-        // Валидация услуги
         var serviceError = ServiceTariffValidator.ValidateService(serviceName, serviceDescription, serviceBeginDate, serviceEndDate);
         if (serviceError != null)
         {
@@ -221,7 +306,6 @@
             return;
         }
 
-        // Валидация тарифов
         for (int i = 0; i < tariffPlansList.Count; i++)
         {
             var tariffError = ServiceTariffValidator.ValidateTariffPlan(tariffPlansList[i], i);
@@ -245,7 +329,6 @@
                 EndDate = serviceEndDate,
                 TariffPlans = tariffPlansList.ToList()
             };
-            Console.WriteLine($"Сохранение изменений для услуги: {result.Name}");
             DialogService.Close(result);
         }
         else
@@ -258,7 +341,6 @@
                 EndDate = serviceEndDate,
                 TariffPlans = tariffPlansList.ToList()
             };
-            Console.WriteLine($"Создание новой услуги: {result.Name}");
             DialogService.Close(result);
         }
     }

@@ -29,7 +29,9 @@ namespace ClientOpsPortal.Application.Mappings
         {
             return new SubscriptionFullDataDto
             {
+                Id = subscription.Id,
                 ContractId = subscription.ContractId,
+                ContractNumber = subscription.Contract.ContractNumber,
                 ServiceId = subscription.ServiceId,
                 ServiceName = subscription.Service.Name,
                 TariffPlanId = subscription.TariffPlanId,

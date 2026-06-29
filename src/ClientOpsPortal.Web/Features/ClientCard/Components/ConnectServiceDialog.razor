@@ -1,0 +1,248 @@
+@inject IHttpClientFactory HttpClientFactory
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<div class="modal-overlay" @onclick="Close">
+    <div class="modal-content" @onclick:stopPropagation>
+        <div class="modal-header">
+            <h3>Подключение услуги</h3>
+            <button class="modal-close" type="button" @onclick="Close">×</button>
+        </div>
+
+        <div class="modal-body">
+            @if (showError)
+            {
+                <div class="alert alert-danger">
+                    <span>⚠️</span>
+                    @errorMessage
+                </div>
+            }
+
+            <div class="form-grid">
+                <!-- Услуга -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Услуга <span class="required">*</span></label>
+                    <select class="form-control @(showError && selectedServiceId == Guid.Empty ? "error" : "")"
+                            value="@selectedServiceId"
+                            @onchange="OnServiceChanged">
+                        <option value="@Guid.Empty">Выберите услугу...</option>
+                        @foreach (var service in services)
+                        {
+                            <option value="@service.Id">@service.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Тарифный план <span class="required">*</span></label>
+
+                    @if (isLoadingTariffs)
+                    {
+                        <div class="loading-tariffs">
+                            <div class="loading-spinner-small"></div>
+                            <span>Загрузка тарифов...</span>
+                        </div>
+                    }
+                    else if (tariffPlans.Count == 0 && selectedServiceId != Guid.Empty)
+                    {
+                        <div class="empty-state-small" style="padding: 16px;">
+                            <p style="font-size: 13px; margin: 0;">Нет доступных тарифных планов для выбранной услуги</p>
+                        </div>
+                    }
+                    else if (tariffPlans.Count > 0)
+                    {
+                        <div class="tariff-list">
+                            @foreach (var tariff in tariffPlans)
+                            {
+                                <div class="tariff-option @(selectedTariffPlanId == tariff.Id ? "selected" : "")"
+                                     @onclick="() => SelectTariff(tariff.Id)">
+                                    <div class="tariff-option-radio">
+                                        <input type="radio"
+                                               name="tariff"
+                                               value="@tariff.Id"
+                                               checked="@(selectedTariffPlanId == tariff.Id)"
+                                               @onchange="() => SelectTariff(tariff.Id)" />
+                                    </div>
+                                    <div class="tariff-option-info">
+                                        <div class="tariff-option-name">@tariff.Name</div>
+                                        <div class="tariff-option-price">@tariff.Price.ToString("F2") ₽</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Дата начала</label>
+                    <input type="date"
+                           class="form-control"
+                           value="@beginDate.ToString("yyyy-MM-dd")"
+                           @onchange="OnBeginDateChanged" />
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" @onclick="Close">Отмена</button>
+            <button class="btn btn-primary" type="button" @onclick="HandleConnect" disabled="@(!canConnect)">
+                Подключить
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid ContractId { get; set; }
+
+    private List<ServiceOption> services = new();
+    private List<TariffPlanOption> tariffPlans = new();
+    private Guid selectedServiceId = Guid.Empty;
+    private Guid selectedTariffPlanId = Guid.Empty;
+    private bool canConnect;
+    private DateTimeOffset beginDate = DateTimeOffset.UtcNow;
+    private bool isLoadingTariffs;
+    private bool showError;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServicesAsync();
+    }
+
+    private void UpdateCanConnect()
+    {
+        canConnect = selectedServiceId != Guid.Empty && selectedTariffPlanId != Guid.Empty;
+    }
+
+    private async Task LoadServicesAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            var response = await client.GetAsync("api/v1/Services/active");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<List<ServiceOption>>();
+                if (result != null)
+                    services = result;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading services: {ex.Message}");
+        }
+    }
+
+    private async Task OnServiceChanged(ChangeEventArgs e)
+    {
+        selectedTariffPlanId = Guid.Empty;
+        tariffPlans.Clear();
+        UpdateCanConnect();
+
+        if (!Guid.TryParse(e.Value?.ToString(), out var serviceId) || serviceId == Guid.Empty)
+        {
+            selectedServiceId = Guid.Empty;
+            UpdateCanConnect();
+            StateHasChanged();
+            return;
+        }
+
+        selectedServiceId = serviceId;
+        UpdateCanConnect();
+
+        isLoadingTariffs = true;
+        StateHasChanged();
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            var response = await client.GetAsync($"api/v1/TariffPlans/by-service/active/{selectedServiceId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<List<TariffPlanOption>>();
+                if (result != null)
+                    tariffPlans = result;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading tariffs: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingTariffs = false;
+            UpdateCanConnect();
+            StateHasChanged();
+        }
+    }
+
+    private void SelectTariff(Guid tariffId)
+    {
+        selectedTariffPlanId = tariffId;
+        UpdateCanConnect();
+        StateHasChanged();
+    }
+
+    private void OnBeginDateChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (DateTime.TryParse(value, out var dt))
+        {
+            beginDate = new DateTimeOffset(dt, TimeSpan.FromHours(3));
+        }
+    }
+
+    private void Close()
+    {
+        DialogService.Close(null);
+    }
+
+    private async Task HandleConnect()
+    {
+        if (!canConnect) return;
+
+        showError = false;
+        errorMessage = string.Empty;
+
+        if (selectedServiceId == Guid.Empty)
+        {
+            showError = true;
+            errorMessage = "Выберите услугу";
+            StateHasChanged();
+            return;
+        }
+
+        if (selectedTariffPlanId == Guid.Empty)
+        {
+            showError = true;
+            errorMessage = "Выберите тарифный план";
+            StateHasChanged();
+            return;
+        }
+
+        var result = new ConnectServiceDialogResult
+        {
+            ServiceId = selectedServiceId,
+            TariffPlanId = selectedTariffPlanId,
+            BeginDate = beginDate
+        };
+
+        DialogService.Close(result);
+    }
+
+    public class ServiceOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+
+    public class TariffPlanOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+    }
+}

@@ -1,0 +1,65 @@
+@inject DialogService DialogService
+
+<div class="modal-overlay" @onclick="Cancel">
+    <div class="modal-content modal-sm" @onclick:stopPropagation>
+        <div class="modal-header">
+            <h3>⚠️ @Title</h3>
+            <button class="modal-close" type="button" @onclick="Cancel">×</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="confirm-content">
+                <div class="confirm-icon">@Icon</div>
+                <p class="confirm-message">@Message</p>
+                @if (!string.IsNullOrEmpty(Detail))
+                {
+                    <p class="confirm-detail">@Detail</p>
+                }
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" @onclick="Cancel">@CancelText</button>
+            <button class="btn btn-danger" type="button" @onclick="Confirm" disabled="@isConfirming">
+                @if (isConfirming)
+                {
+                    <span>Подтверждение...</span>
+                }
+                else
+                {
+                    <span>@ConfirmText</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Подтверждение";
+    [Parameter]
+    public string Message { get; set; } = string.Empty;
+    [Parameter]
+    public string Detail { get; set; } = string.Empty;
+    [Parameter]
+    public string Icon { get; set; } = "⚠️";
+    [Parameter]
+    public string ConfirmText { get; set; } = "Да";
+    [Parameter]
+    public string CancelText { get; set; } = "Отмена";
+
+    private bool isConfirming;
+
+    private void Cancel()
+    {
+        DialogService.Close(false);
+    }
+
+    private async Task Confirm()
+    {
+        isConfirming = true;
+        StateHasChanged();
+        await Task.Delay(300);
+        DialogService.Close(true);
+    }
+}

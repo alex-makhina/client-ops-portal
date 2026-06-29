@@ -13,7 +13,7 @@
 @if (isLoading)
 {
     <RadzenCard>
-        <div style="text-align: center; padding: 50px;">
+        <div class="loading-container">
             <RadzenSpinner />
             <p style="margin-top: 16px; color: #666;">Загрузка услуг...</p>
         </div>
@@ -35,23 +35,84 @@ else if (errorMessage != null)
 else
 {
     <RadzenCard>
-        <div style="margin-bottom: 24px; padding-top: 34px;">
+        <div style="margin-bottom: 24px;">
             <div style="margin-bottom: 20px;">
                 <h3 style="margin: 0; color: #1a1a1a; font-weight: 600;">Справочник услуг</h3>
-                <p style="margin: 8px 0 0 0; color: #666; font-size: 14px;">Управление каталогом услуг и тарифных планов</p>
+                <p class="card-subtitle">Управление каталогом услуг и тарифных планов</p>
             </div>
 
-            <ServiceSearchToolbar SearchTerm="@searchTerm"
-                                  SearchTermChanged="OnSearchTermChanged"
-                                  ShowOnlyActive="@showOnlyActive"
-                                  ShowOnlyActiveChanged="OnShowOnlyActiveChanged"
-                                  OnCreateClick="OpenCreateDialog" />
+            <div class="search-section">
+                <div class="search-input-group">
+                    <div class="search-input-wrapper">
+                        <input type="text"
+                               class="search-input form-control"
+                               placeholder="Поиск услуг по названию или описанию..."
+                               value="@searchTerm"
+                               @oninput="(e) => OnSearchTermChanged(e.Value?.ToString() ?? string.Empty)" />
+                        @if (!string.IsNullOrWhiteSpace(searchTerm))
+                        {
+                            <button class="search-clear" @onclick="() => { searchTerm = string.Empty; FilterServices(); }">
+                                ✕
+                            </button>
+                        }
+                    </div>
 
-            <ServiceGrid Services="filteredServices"
-                         EmptyMessage="@GetEmptyMessage()"
-                         ShowResetButton="@(!string.IsNullOrWhiteSpace(searchTerm) || showOnlyActive)"
-                         OnReset="ResetFilters"
-                         OnCardClick="OpenEditDialog" />
+                    <div class="search-filters">
+                        <label class="filter-checkbox">
+                            <input type="checkbox" checked="@showOnlyActive" @onchange="(e) => OnShowOnlyActiveChanged(e.Value is bool b && b)" />
+                            Только активные
+                        </label>
+                    </div>
+
+                    <RadzenButton Text="Создать услугу"
+                                  class="btn-create"
+                                  Click="OpenCreateDialog" />
+                </div>
+            </div>
+
+            @if (filteredServices.Count == 0)
+            {
+                <div class="empty-state">
+                    <span class="empty-icon">📋</span>
+                    <p>@GetEmptyMessage()</p>
+                    @if (!string.IsNullOrWhiteSpace(searchTerm) || showOnlyActive)
+                    {
+                        <RadzenButton Text="Сбросить фильтры"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      Size="ButtonSize.Small"
+                                      Click="ResetFilters" />
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="services-grid">
+                    @foreach (var service in filteredServices)
+                    {
+                        var isActive = IsActive(service);
+                        <div class="service-card" @onclick="() => OpenEditDialog(service)">
+                            <div class="service-card-header">
+                                <h4 class="service-card-title">@service.Name</h4>
+                                <span class="badge @(isActive ? "badge-success" : "badge-secondary")">
+                                    @(isActive ? "Активна" : "Неактивна")
+                                </span>
+                            </div>
+                            <p class="service-card-description">@service.Description</p>
+                            <div class="service-card-footer">
+                                <span>@service.BeginDate.ToString("dd.MM.yyyy")</span>
+                                @if (service.EndDate.HasValue)
+                                {
+                                    <span>➜ @service.EndDate.Value.ToString("dd.MM.yyyy")</span>
+                                }
+                                else
+                                {
+                                    <span>Бессрочно</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </RadzenCard>
 }
@@ -133,7 +194,6 @@ else
         return service.EndDate == null || service.EndDate > DateTimeOffset.UtcNow;
     }
 
-    // Обработчики изменений
     private void OnSearchTermChanged(string value)
     {
         searchTerm = value;
@@ -177,7 +237,7 @@ else
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка при открытии диалога создания: {ex.Message}";
+            errorMessage = $"Ошибка при открытии диалога создания.";
             StateHasChanged();
         }
     }
@@ -233,7 +293,7 @@ else
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка при открытии диалога редактирования: {ex.Message}";
+            errorMessage = $"Ошибка при открытии диалога редактирования.";
             StateHasChanged();
         }
     }
@@ -310,14 +370,12 @@ else
         }
         catch (HttpRequestException ex)
         {
-            errorMessage = $"Ошибка сети: {ex.Message}";
-            Console.Error.WriteLine($"HTTP Error saving service: {ex.Message}");
+            errorMessage = $"Ошибка сети.";
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка при сохранении услуги: {ex.Message}";
-            Console.Error.WriteLine($"Error saving service: {ex.Message}");
+            errorMessage = $"Ошибка при сохранении услуги.";
             StateHasChanged();
         }
     }

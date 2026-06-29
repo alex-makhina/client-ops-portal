@@ -13,6 +13,7 @@ namespace ClientOpsPortal.Infrastructure.Data.Repositories
         {
             return query
                 .Include(x => x.Service)
+                .Include(x => x.Contract)
                 .Include(x => x.TariffPlan);
         }
     }

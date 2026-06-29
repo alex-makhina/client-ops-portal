@@ -14,6 +14,19 @@ namespace ClientOpsPortal.Application.DTOs
         public List<SubscriptionHistoryStep> Steps { get; set; } = [];
     }
 
+    public class SubscriptionHistoryFullDto : AuditableDto
+    {
+        public Guid SubscriptionId { get; set; }
+        public SubscriptionActionType ActionType { get; set; }
+        public SubscriptionActionStatus Status { get; set; }
+        public Guid TariffPlanId { get; set; }
+        public string TariffPlanName { get; set; }
+        public string ServiceName { get; set; }
+        public string ContractNumber { get; set; }
+        public DateTimeOffset StartDate { get; set; }
+        public List<SubscriptionHistoryStep> Steps { get; set; } = [];
+    }
+
     public class CreateSubscriptionHistoryDto 
     {
         public required Guid SubscriptionId { get; set; }

@@ -4,69 +4,93 @@
 @using ClientOpsPortal.Web.Features.AbonentManagement.Models
 @using ClientOpsPortal.Web.Features.AbonentManagement.Services
 @using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models
-@using Radzen
-@using Radzen.Blazor
 @using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog
+@using ClientOpsPortal.Web.Features.Shared.Notification
 
 @inject IAbonentManagementService AbonentSearchService
 @inject NavigationManager Navigation
 @inject DialogService DialogService
-@inject NotificationService NotificationService
+@inject AppNotificationService NotificationService
 
-<RadzenCard Style="max-width: 800px; margin: 20px auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <div>
-            <h3 class="mb-0">👥 Абоненты</h3>
-        </div>
-        <RadzenButton Text="Регистрация абонента"
-                      ButtonStyle="ButtonStyle.Primary"
-                      Icon="person_add"
-                      Click="@OpenRegisterDialog" />
-    </div>
-
-    <div class="p-3">
-        <div style="display: flex; gap: 12px; align-items: center;">
-            <RadzenTextBox @bind-Value="@searchTerm" Placeholder="Поиск по ФИО..." Style="flex: 1;" />
-            <RadzenButton Text="Найти" ButtonStyle="ButtonStyle.Primary" Click="@HandleSearch" Disabled="@isLoading" />
-        </div>
-
-        @if (showError)
-        {
-            <RadzenAlert Severity="AlertStyle.Danger" Style="margin-top: 16px;">
-                @errorMessage
-            </RadzenAlert>
-        }
-
-        @if (searchPerformed && !showError)
-        {
-            <div style="margin-top: 20px;">
-                @if (results.Count == 0)
-                {
-                    <RadzenAlert Severity="AlertStyle.Warning">
-                        Абоненты не найдены
-                    </RadzenAlert>
-                }
-                else
-                {
-                    <div Style="margin-top: 12px;">
-                        @foreach (var result in results)
-                        {
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 8px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
-                                <div>
-                                    <strong>@result.FullName</strong>
-                                    <br />
-                                    <small style="color: #64748b;">Лицевой счет: @result.AccountNumber</small>
-                                </div>
-                                <RadzenButton Text="Открыть карточку" ButtonStyle="ButtonStyle.Primary"
-                                              Click="@(() => NavigateToClientCard(result.Id))" />
-                            </div>
-                        }
-                    </div>
-                }
+<div class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Абоненты</h3>
             </div>
-        }
+            <button class="btn btn-primary" @onclick="OpenRegisterDialog">
+                Регистрация абонента
+            </button>
+        </div>
+
+        <div class="card-body">
+            <div class="search-section">
+                <div class="search-input-group">
+                    <div class="search-input-wrapper">
+                        <input type="text"
+                               class="form-control"
+                               placeholder="Поиск по ФИО..."
+                               @bind="searchTerm"
+                               @bind:event="oninput" />
+                    </div>
+                    <button class="btn btn-primary" @onclick="HandleSearch" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span>Поиск...</span>
+                        }
+                        else
+                        {
+                            <span>Найти</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            @if (showError)
+            {
+                <div class="alert alert-danger">
+                    <span>⚠️</span>
+                    @errorMessage
+                </div>
+            }
+
+            @if (searchPerformed && !showError)
+            {
+                <div class="results-section">
+                    @if (results.Count == 0)
+                    {
+                        <div class="alert alert-warning">
+                            <span>ℹ️</span>
+                            Абоненты не найдены
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="results-list">
+                            @foreach (var result in results)
+                            {
+                                <div class="list-item">
+                                    <div class="list-item-content">
+                                        <div class="list-item-title">@result.FullName</div>
+                                        <div class="list-item-subtitle">
+                                            Лицевой счет: @result.AccountNumber
+                                        </div>
+                                    </div>
+                                    <div class="list-item-actions">
+                                        <button class="btn btn-primary btn-sm"
+                                                @onclick="() => NavigateToClientCard(result.Id)">
+                                            Открыть карточку
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
     </div>
-</RadzenCard>
+</div>
 
 @code {
     private string searchTerm = string.Empty;
@@ -130,52 +154,27 @@
 
     private async Task HandleRegisterAbonent(EditAbonentDialogResult data)
     {
-        try
+        var request = new AbonentRequest
         {
-            var request = new AbonentRequest
-            {
-                LastName = data.LastName,
-                FirstName = data.FirstName,
-                MiddleName = data.MiddleName,
-                IdentificationNumber = data.IdentificationNumber,
-                Email = data.Email
-            };
+            LastName = data.LastName,
+            FirstName = data.FirstName,
+            MiddleName = data.MiddleName,
+            IdentificationNumber = data.IdentificationNumber,
+            Email = data.Email
+        };
 
-            var abonentId = await AbonentSearchService.RegisterAbonentAsync(request);
+        var abonentId = await AbonentSearchService.RegisterAbonentAsync(request);
 
-            if (abonentId.HasValue)
-            {
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Success,
-                    Summary = "Успех",
-                    Detail = "Абонент успешно зарегистрирован. Данные для входа отправлены на email.",
-                    Duration = 5000
-                });
+        if (abonentId.HasValue)
+        {
+            NotificationService.ShowSuccess($"Абонент успешно зарегистрирован. Данные для входа отправлены на email.");
 
-                searchTerm = $"{data.LastName} {data.FirstName}";
-                await HandleSearch();
-            }
-            else
-            {
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Error,
-                    Summary = "Ошибка",
-                    Detail = "Не удалось зарегистрировать абонента. Проверьте введенные данные.",
-                    Duration = 5000
-                });
-            }
+            searchTerm = $"{data.LastName} {data.FirstName}";
+            await HandleSearch();
         }
-        catch (Exception ex)
+        else
         {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Ошибка",
-                Detail = ex.Message,
-                Duration = 5000
-            });
+            NotificationService.ShowError("Не удалось зарегистрировать абонента. Проверьте введенные данные.");
         }
     }
 

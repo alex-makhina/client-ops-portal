@@ -17,6 +17,7 @@ public class AbonentServiceTests
 {
     private readonly Mock<IGenericRepository<Abonent>> _abonentRepositoryMock;
     private readonly Mock<IGenericRepository<Contract>> _contractRepositoryMock;
+    private readonly Mock<IGenericRepository<User>> _userRepositoryMock;
     private readonly Mock<IIdentityService> _identityServiceMock;
     private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly AbonentService _sut;
@@ -25,13 +26,15 @@ public class AbonentServiceTests
     {
         _abonentRepositoryMock = new Mock<IGenericRepository<Abonent>>();
         _contractRepositoryMock = new Mock<IGenericRepository<Contract>>();
+        _userRepositoryMock = new Mock<IGenericRepository<User>>();
         _identityServiceMock = new Mock<IIdentityService>();
         _notificationServiceMock = new Mock<INotificationService>();
         _sut = new AbonentService(
             _abonentRepositoryMock.Object,
             _contractRepositoryMock.Object,
             _identityServiceMock.Object,
-            _notificationServiceMock.Object);
+            _notificationServiceMock.Object,
+            _userRepositoryMock.Object);
     }
 
     #region GetByIdAsync Tests

@@ -1,6 +1,7 @@
 using ClientOpsPortal.Web.Features.ClientCard.Models;
 using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace ClientOpsPortal.Web.Features.ClientCard.Services
 {
@@ -69,6 +70,101 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
         {
             var response = await _httpClient.PatchAsync($"api/v1/Subscriptions/{subscriptionId}/cancel", null);
             return response.IsSuccessStatusCode;
+        }
+
+        public async Task<IReadOnlyCollection<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(Guid subscriptionId)
+        {
+            try
+            {
+                var url = $"api/v1/SubscriptionHistories/by-subscription/{subscriptionId}";
+                var response = await _httpClient.GetAsync(url);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return Array.Empty<SubscriptionHistoryItem>();
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+
+                var rawData = JsonSerializer.Deserialize<List<SubscriptionHistoryDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (rawData == null || rawData.Count == 0)
+                    return Array.Empty<SubscriptionHistoryItem>();
+
+                var result = rawData.Select(x => new SubscriptionHistoryItem
+                {
+                    Id = x.Id,
+                    SubscriptionId = x.SubscriptionId,
+                    ActionType = ((SubscriptionActionType)x.ActionType).ToString(),
+                    Status = ((SubscriptionActionStatus)x.Status).ToString(),
+                    StartDate = x.StartDate,
+                    CreatedAt = x.CreatedAt,
+                    ServiceName = x.ServiceName,
+                    TariffPlanName = x.TariffPlanName,
+                    Steps = x.Steps?.Select(s => new SubscriptionHistoryStepItem
+                    {
+                        Id = s.Id,
+                        SubscriptionHistoryId = s.SubscriptionHistoryId,
+                        Status = ((SubscriptionActionStatus)s.Status).ToString(),
+                        Message = s.Message,
+                        CreatedAt = s.CreatedAt
+                    }).ToList() ?? new()
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return Array.Empty<SubscriptionHistoryItem>();
+            }
+        }
+
+        public async Task<IReadOnlyCollection<SubscriptionHistoryItem>> GetSubscriptionHistoryByAbonentAsync(Guid abonentId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/v1/SubscriptionHistories/by-abonent/{abonentId}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return Array.Empty<SubscriptionHistoryItem>();
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var rawData = JsonSerializer.Deserialize<List<SubscriptionHistoryDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (rawData == null || rawData.Count == 0)
+                    return Array.Empty<SubscriptionHistoryItem>();
+
+                var result = rawData.Select(x => new SubscriptionHistoryItem
+                {
+                    Id = x.Id,
+                    SubscriptionId = x.SubscriptionId,
+                    ActionType = ((SubscriptionActionType)x.ActionType).ToString(),
+                    Status = ((SubscriptionActionStatus)x.Status).ToString(),
+                    StartDate = x.StartDate,
+                    CreatedAt = x.CreatedAt,
+                    ServiceName = x.ServiceName,
+                    TariffPlanName = x.TariffPlanName,
+                    ContractNum = x.ContractNumber,
+                    Steps = x.Steps?.Select(s => new SubscriptionHistoryStepItem
+                    {
+                        Id = s.Id,
+                        SubscriptionHistoryId = s.SubscriptionHistoryId,
+                        Status = ((SubscriptionActionStatus)s.Status).ToString(),
+                        Message = s.Message,
+                        CreatedAt = s.CreatedAt
+                    }).ToList() ?? new()
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return Array.Empty<SubscriptionHistoryItem>();
+            }
         }
     }
 }

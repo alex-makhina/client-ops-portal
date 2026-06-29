@@ -45,6 +45,13 @@ namespace ClientOpsPortal.Api.Controllers
             return Ok(histories);
         }
 
+        [HttpGet("by-abonent/{abonentId}")]
+        public async Task<IActionResult> GetByAbonent(Guid abonentId, CancellationToken ct = default)
+        {
+            var histories = await _historyService.GetSubscriptionsHistoryByAbonentIdAsync(abonentId, ct);
+            return Ok(histories);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create(CreateSubscriptionHistoryDto createDto, CancellationToken ct = default)
         {

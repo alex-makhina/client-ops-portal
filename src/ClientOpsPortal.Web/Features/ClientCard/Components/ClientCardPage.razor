@@ -1,0 +1,498 @@
+@page "/manager/client-card/{AbonentId:guid}"
+@attribute [Authorize(Roles = "Manager")]
+
+@using ClientOpsPortal.Web.Features.ClientCard.Models
+@using ClientOpsPortal.Web.Features.ClientCard.Services
+@using ClientOpsPortal.Web.Features.ClientCard.Components
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog
+@using ClientOpsPortal.Web.Features.SharedDialog.EditAbonentDialog.Models
+@using ClientOpsPortal.Web.Features.Shared.Notification
+
+@inject IClientCardService ClientCardService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@inject AppNotificationService NotificationService
+
+<div class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Карточка клиента</h3>
+                <p class="card-subtitle">Управление данными абонента и договорами</p>
+            </div>
+            <button class="btn btn-secondary" type="button" @onclick="GoBack">
+                ← Назад
+            </button>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Загрузка данных...</p>
+            </div>
+        }
+        else if (abonent == null)
+        {
+            <div class="alert alert-danger">
+                <span>⚠️</span>
+                Абонент не найден
+            </div>
+        }
+        else
+        {
+            <!-- Информация об абоненте -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <h4 class="info-card-title">Информация об абоненте</h4>
+                            <button class="btn btn-secondary btn-sm" type="button" @onclick="OpenEditDialog">
+                                Редактировать
+                            </button>
+                        </div>
+
+                        @if (showEditSuccess)
+                        {
+                            <div class="alert alert-success">
+                                <span>✅</span>
+                                Данные абонента обновлены
+                            </div>
+                        }
+
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Лицевой счет</span>
+                                <span class="info-value">@abonent.AccountNumber</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">ФИО</span>
+                                <span class="info-value">@abonent.FullName</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Идентификационный номер</span>
+                                <span class="info-value">@abonent.IdentificationNumber</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Договоры -->
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <h4 class="info-card-title">Договоры</h4>
+                            <button class="btn btn-primary btn-sm" type="button" @onclick="OpenCreateContractDialog">
+                                Новый договор
+                            </button>
+                        </div>
+
+                        @if (contracts.Count == 0)
+                        {
+                            <div class="empty-state-small">
+                                <span class="empty-icon-small">📋</span>
+                                <p>Нет договоров</p>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var contract in contracts)
+                            {
+                                <div class="contract-item">
+                                    <div class="contract-item-header" @onclick="() => ToggleContract(contract.Id)">
+                                        <div class="contract-item-info">
+                                            <strong>Договор № @contract.ContractNumber</strong>
+                                            <span class="badge @(contract.IsActive ? "badge-success" : "badge-secondary")">
+                                                @(contract.IsActive ? "Активен" : "Завершен")
+                                            </span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            @if (contract.IsActive)
+                                            {
+                                                <button class="btn btn-primary btn-sm" type="button"
+                                                        @onclick:stopPropagation
+                                                        @onclick="() => OpenConnectServiceDialog(contract.Id)"
+                                                        title="Подключить услугу">
+                                                    Подключить
+                                                </button>
+                                            }
+                                            <span class="contract-toggle">▼</span>
+                                        </div>
+                                    </div>
+
+                                    @if (expandedContractId == contract.Id)
+                                    {
+                                        <div class="contract-subscriptions">
+                                            @{
+                                                var subs = GetSubscriptionsForContract(contract.Id);
+                                            }
+                                            @if (subs.Count == 0)
+                                            {
+                                                <div class="empty-state-small" style="padding: 16px;">
+                                                    <p style="font-size: 13px;">Нет подключенных услуг</p>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var sub in subs)
+                                                {
+                                                    <div class="subscription-item">
+                                                        <div style="flex: 1;">
+                                                            <div class="subscription-name">@sub.ServiceName</div>
+                                                            <div class="subscription-details">
+                                                                Тариф: @sub.TariffPlanName
+                                                                <br />
+                                                                с @sub.BeginDate.LocalDateTime.ToString("dd.MM.yyyy")
+                                                                @if (sub.EndDate.HasValue)
+                                                                {
+                                                                    <span>по @sub.EndDate.Value.LocalDateTime.ToString("dd.MM.yyyy")</span>
+                                                                }
+                                                            </div>
+                                                            <span class="badge @(sub.IsActive ? "badge-success" : "badge-secondary")" style="font-size: 11px; margin-top: 4px;">
+                                                                @(sub.IsActive ? "Активна" : "Отключена")
+                                                            </span>
+                                                        </div>
+                                                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                                                            <button class="btn btn-secondary btn-sm" type="button"
+                                                                    @onclick="() => ShowSubscriptionHistory(sub.Id)"
+                                                                    title="История изменений">
+                                                                История
+                                                            </button>
+                                                            @if (sub.IsActive)
+                                                            {
+                                                                <button class="btn btn-danger btn-sm" type="button" @onclick="() => ConfirmCancelSubscription(sub)">
+                                                                    Отключить
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- История по всем договорам -->
+            <AllHistoryTable AbonentId="@AbonentId" />
+        }
+    </div>
+</div>
+
+<!-- Диалог истории изменений одной услуги -->
+@if (showHistoryModal)
+{
+    <SubscriptionHistoryDialog SubscriptionId="@selectedSubscriptionId"
+                               ServiceName="@selectedServiceName"
+                               TariffPlanName="@selectedTariffPlanName"
+                               BeginDate="@selectedServiceBeginDate"
+                               OnClose="CloseHistoryModal" />
+}
+
+@code {
+    [Parameter]
+    public Guid AbonentId { get; set; }
+
+    private AbonentDetail? abonent;
+    private List<ContractItem> contracts = new();
+    private Dictionary<Guid, List<SubscriptionItem>> subscriptionsByContract = new();
+    private Guid? expandedContractId;
+    private bool isLoading = true;
+    private bool showEditSuccess;
+
+    private bool showHistoryModal = false;
+    private string selectedServiceName = string.Empty;
+    private string selectedTariffPlanName = string.Empty;
+    private DateTimeOffset selectedServiceBeginDate = DateTimeOffset.Now;
+    private Guid selectedSubscriptionId = Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            abonent = await ClientCardService.GetAbonentAsync(AbonentId);
+            if (abonent != null)
+            {
+                var contractList = await ClientCardService.GetContractsAsync(AbonentId);
+                contracts = contractList.ToList();
+                subscriptionsByContract.Clear();
+            }
+        }
+        catch
+        {
+            abonent = null;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<SubscriptionItem> GetSubscriptionsForContract(Guid contractId)
+    {
+        return subscriptionsByContract.TryGetValue(contractId, out var subs) ? subs : new();
+    }
+
+    private async Task ToggleContract(Guid contractId)
+    {
+        if (expandedContractId == contractId)
+        {
+            expandedContractId = null;
+            StateHasChanged();
+            return;
+        }
+
+        expandedContractId = contractId;
+
+        if (!subscriptionsByContract.ContainsKey(contractId))
+        {
+            try
+            {
+                var subs = await ClientCardService.GetSubscriptionsByContractAsync(contractId);
+                subscriptionsByContract[contractId] = subs.ToList();
+            }
+            catch
+            {
+                subscriptionsByContract[contractId] = new();
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/manager/abonents");
+    }
+
+    private async Task OpenEditDialog()
+    {
+        if (abonent == null) return;
+
+        var result = await DialogService.OpenAsync<EditAbonentDialog>(
+            "Редактирование абонента",
+            new Dictionary<string, object?>
+            {
+                { "IsEditMode", true },
+                { "LastName", abonent.LastName },
+                { "FirstName", abonent.FirstName },
+                { "MiddleName", abonent.MiddleName ?? string.Empty },
+                { "IdentificationNumber", abonent.IdentificationNumber }
+            },
+            new DialogOptions { Width = "500px", CloseDialogOnOverlayClick = false, Resizable = true, Draggable = true }
+        );
+
+        if (result is EditAbonentDialogResult dialogResult)
+        {
+            await HandleUpdateAbonent(dialogResult);
+        }
+    }
+
+    private async Task HandleUpdateAbonent(EditAbonentDialogResult data)
+    {
+        var model = new AbonentRequest
+        {
+            LastName = data.LastName,
+            FirstName = data.FirstName,
+            MiddleName = data.MiddleName,
+            IdentificationNumber = data.IdentificationNumber
+        };
+
+        var success = await ClientCardService.UpdateAbonentAsync(AbonentId, model);
+        if (success)
+        {
+            showEditSuccess = true;
+            await LoadDataAsync();
+            NotificationService.ShowSuccess("Данные абонента обновлены");
+        }
+        else
+        {
+            NotificationService.ShowError("Не удалось обновить данные абонента");
+        }
+    }
+
+    private async Task OpenCreateContractDialog()
+    {
+        var result = await DialogService.OpenAsync<CreateContractDialog>(
+            "Новый договор",
+            new Dictionary<string, object?>
+            {
+                { "ContractNumber", string.Empty },
+                { "BeginDate", DateTimeOffset.UtcNow }
+            },
+            new DialogOptions
+            {
+                Width = "500px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
+        );
+
+        if (result is CreateContractDialogResult dialogResult)
+        {
+            await HandleCreateContract(dialogResult);
+        }
+    }
+
+    private async Task HandleCreateContract(CreateContractDialogResult data)
+    {
+        var model = new CreateContractModel
+        {
+            ContractNumber = data.ContractNumber,
+            AbonentId = AbonentId,
+            BeginDate = data.BeginDate
+        };
+
+        var success = await ClientCardService.CreateContractAsync(model);
+        if (success)
+        {
+            NotificationService.ShowSuccess("Договор создан");
+            await LoadDataAsync();
+        }
+        else
+        {
+            NotificationService.ShowError("Не удалось создать договор");
+        }
+    }
+
+    private async Task OpenConnectServiceDialog(Guid contractId)
+    {
+        var result = await DialogService.OpenAsync<ConnectServiceDialog>(
+            "Подключение услуги",
+            new Dictionary<string, object?>
+            {
+                { "ContractId", contractId }
+            },
+            new DialogOptions
+            {
+                Width = "550px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
+        );
+
+        if (result is ConnectServiceDialogResult dialogResult)
+        {
+            await HandleConnectService(contractId, dialogResult);
+        }
+    }
+
+    private async Task HandleConnectService(Guid contractId, ConnectServiceDialogResult data)
+    {
+        var model = new ConnectServiceModel
+        {
+            ContractId = contractId,
+            ServiceId = data.ServiceId,
+            TariffPlanId = data.TariffPlanId,
+            BeginDate = data.BeginDate
+        };
+
+        var success = await ClientCardService.ConnectServiceAsync(model);
+        if (success)
+        {
+            NotificationService.ShowSuccess("Услуга подключена");
+
+            if (expandedContractId == contractId)
+            {
+                var subs = await ClientCardService.GetSubscriptionsByContractAsync(contractId);
+                subscriptionsByContract[contractId] = subs.ToList();
+                StateHasChanged();
+            }
+
+            await LoadDataAsync();
+        }
+        else
+        {
+            NotificationService.ShowError("Не удалось подключить услугу");
+        }
+    }
+
+    private async Task ShowSubscriptionHistory(Guid subscriptionId)
+    {
+        selectedSubscriptionId = subscriptionId;
+
+        foreach (var contract in contracts)
+        {
+            var subs = GetSubscriptionsForContract(contract.Id);
+            var sub = subs.FirstOrDefault(s => s.Id == subscriptionId);
+            if (sub != null)
+            {
+                selectedServiceName = sub.ServiceName;
+                selectedTariffPlanName = sub.TariffPlanName;
+                selectedServiceBeginDate = sub.BeginDate;
+                break;
+            }
+        }
+
+        showHistoryModal = true;
+        StateHasChanged();
+    }
+
+    private async Task CloseHistoryModal()
+    {
+        showHistoryModal = false;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmCancelSubscription(SubscriptionItem subscription)
+    {
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>(
+            "Подтверждение отключения",
+            new Dictionary<string, object?>
+            {
+                { "Title", "Подтверждение отключения" },
+                { "Message", $"Вы уверены, что хотите отключить услугу \"{subscription.ServiceName}\"?" },
+                { "Detail", "Это действие отключит услугу и прекратит её использование." },
+                { "Icon", "🔌" },
+                { "ConfirmText", "Да, отключить" },
+                { "CancelText", "Отмена" }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
+        );
+
+        if (result is bool isConfirmed && isConfirmed)
+        {
+            await HandleCancelSubscription(subscription);
+        }
+    }
+
+    private async Task HandleCancelSubscription(SubscriptionItem subscription)
+    {
+        var success = await ClientCardService.CancelSubscriptionAsync(subscription.Id);
+        if (success)
+        {
+            NotificationService.ShowSuccess($"Услуга \"{subscription.ServiceName}\" отключена");
+
+            if (expandedContractId == subscription.ContractId)
+            {
+                var subs = await ClientCardService.GetSubscriptionsByContractAsync(subscription.ContractId);
+                subscriptionsByContract[subscription.ContractId] = subs.ToList();
+                StateHasChanged();
+            }
+
+            await LoadDataAsync();
+        }
+        else
+        {
+            NotificationService.ShowError("Не удалось отключить услугу");
+        }
+    }
+}

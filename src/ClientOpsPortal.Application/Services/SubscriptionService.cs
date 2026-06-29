@@ -110,15 +110,11 @@ namespace ClientOpsPortal.Application.Services
             return subscription.ToSubscriptionDto();
         }
 
-        public async Task<IReadOnlyCollection<SubscriptionFullDataDto>> GetSubscriptionsByAbonentIdAsync(
-            Guid abonentId,
-            bool onlyActive = true,
-            CancellationToken ct = default)
+        public async Task<IReadOnlyCollection<SubscriptionFullDataDto>> GetSubscriptionsByAbonentIdAsync(Guid abonentId, bool onlyActive = true, CancellationToken ct = default)
         {
             var now = DateTimeOffset.UtcNow;
 
-            var subscriptions = await _subscriptionRepository.GetWhereAsync(
-                s => s.Contract != null && s.Contract.AbonentId == abonentId &&
+            var subscriptions = await _subscriptionRepository.GetWhereAsync(s => s.Contract != null && s.Contract.AbonentId == abonentId &&
                      (!onlyActive || (s.EndDate == null || s.EndDate > now)),
                 true, ct);
 

@@ -8,55 +8,165 @@
 @inject NavigationManager Navigation
 @inject DialogService DialogService
 
-<RadzenCard>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 class="mb-0">Управление пользователями</h3>
-        <RadzenButton Text="Создать пользователя" ButtonStyle="ButtonStyle.Primary" Icon="person_add" Click="@OpenCreateDialog" />
+<div class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Управление пользователями</h3>
+                <p class="card-subtitle">Управление учетными записями сотрудников</p>
+            </div>
+            <button class="btn btn-primary" type="button" @onclick="OpenCreateDialog">
+                Создать пользователя
+            </button>
+        </div>
+
+        <div class="card-body">
+            <!-- Поиск -->
+            <div class="search-section">
+                <div class="search-input-group">
+                    <div class="search-input-wrapper">
+                        <input type="text"
+                               class="form-control search-input"
+                               placeholder="Поиск по ФИО, email, логину, должности..."
+                               value="@searchTerm"
+                               @oninput="OnSearchInput" />
+                        @if (!string.IsNullOrWhiteSpace(searchTerm))
+                        {
+                            <button class="search-clear" type="button" @onclick="ClearSearch">×</button>
+                        }
+                    </div>
+                    <div class="search-filters">
+                        <label class="filter-checkbox">
+                            <input type="checkbox"
+                                   checked="@showOnlyActive"
+                                   @onchange="OnShowOnlyActiveChanged" />
+                            <span>Только активные</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p>Загрузка пользователей...</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Таб. номер</th>
+                                <th>ФИО</th>
+                                <th>Должность</th>
+                                <th>Отдел</th>
+                                <th>Email</th>
+                                <th>Логин</th>
+                                <th>Роль</th>
+                                <th>Статус</th>
+                                <th style="text-align: center;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (filteredUsers.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="9" class="empty-state">
+                                        <span class="empty-icon"></span>
+                                        <p>@GetEmptyMessage()</p>
+                                        @if (!string.IsNullOrWhiteSpace(searchTerm) || showOnlyActive)
+                                        {
+                                            <button class="btn btn-secondary btn-sm" type="button" @onclick="ClearFilters">
+                                                Сбросить фильтры
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-primary btn-sm" type="button" @onclick="OpenCreateDialog">
+                                                Создать первого пользователя
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var user in filteredUsers)
+                                {
+                                    <tr>
+                                        <td><span class="badge badge-secondary">@user.StaffNumber</span></td>
+                                        <td><strong>@user.FullName</strong></td>
+                                        <td>@user.Post</td>
+                                        <td>@(user.Department ?? "—")</td>
+                                        <td><a href="mailto:@user.Email" class="email-link">@user.Email</a></td>
+                                        <td><code class="login-code">@user.Login</code></td>
+                                        <td><span class="badge badge-info">@user.Role</span></td>
+                                        <td>
+                                            <span class="badge @(user.IsActive ? "badge-success" : "badge-danger")">
+                                                @(user.IsActive ? "Активен" : "Заблокирован")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn-icon-only btn-edit" type="button"
+                                                        @onclick="() => OpenEditDialog(user)"
+                                                        title="Редактировать">
+                                                    ✏️
+                                                </button>
+                                                <button class="btn-icon-only @(user.IsActive ? "btn-block" : "btn-unblock")" type="button"
+                                                        @onclick="() => ToggleStatus(user)"
+                                                        title="@(user.IsActive ? "Заблокировать" : "Разблокировать")">
+                                                    @(user.IsActive ? "🔒" : "🔓")
+                                                </button>
+                                                <button class="btn-icon-only btn-delete" type="button"
+                                                        @onclick="() => ConfirmDelete(user)"
+                                                        title="Удалить">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+
+                    @if (filteredUsers.Count > 0)
+                    {
+                        <div class="table-footer">
+                            <span class="table-info">
+                                Найдено: <strong>@filteredUsers.Count</strong> пользователей
+                            </span>
+                            <span class="table-info">
+                                Активных: <strong class="text-success">@filteredUsers.Count(u => u.IsActive)</strong>
+                            </span>
+                            <span class="table-info">
+                                Заблокированных: <strong class="text-danger">@filteredUsers.Count(u => !u.IsActive)</strong>
+                            </span>
+                            @if (!string.IsNullOrWhiteSpace(searchTerm) || showOnlyActive)
+                            {
+                                <button class="btn btn-secondary btn-sm" type="button" @onclick="ClearFilters">
+                                    Сбросить фильтры
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
     </div>
-    <RadzenDataGrid @ref="@grid"
-                     Data="@users"
-                     TItem="UserListItem"
-                     AllowPaging="true"
-                     PageSize="15"
-                     AllowSorting="true"
-                     AllowFiltering="true"
-                     FilterMode="FilterMode.Simple"
-                     Style="margin-top: 12px;">
-        <Columns>
-            <RadzenDataGridColumn TItem="UserListItem" Property="StaffNumber" Title="Таб. номер" Width="120px" Sortable="true" Filterable="true" />
-            <RadzenDataGridColumn TItem="UserListItem" Property="FullName" Title="ФИО" Sortable="true" Filterable="true" />
-            <RadzenDataGridColumn TItem="UserListItem" Property="Post" Title="Должность" Sortable="true" Filterable="true" />
-            <RadzenDataGridColumn TItem="UserListItem" Property="Department" Title="Отдел" Sortable="true" Filterable="true" />
-            <RadzenDataGridColumn TItem="UserListItem" Property="Email" Title="Email" Sortable="true" Filterable="true" />
-            <RadzenDataGridColumn TItem="UserListItem" Property="Login" Title="Логин" Sortable="true" Filterable="true" />
-            <RadzenDataGridColumn TItem="UserListItem" Property="Role" Title="Роль" Sortable="true" Filterable="true" />
-            <RadzenDataGridColumn TItem="UserListItem" Property="IsActive" Title="Статус" Sortable="true" Filterable="true" Width="140px">
-                <Template Context="item">
-                    <RadzenChip Text="@GetStatusText(item.IsActive)"
-                                Style="@GetStatusChipStyle(item.IsActive)"
-                                Size="ChipSize.Small" />
-                </Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="UserListItem" Title="Действия" Width="200px">
-                <Template Context="item">
-                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
-                                  Click="@(args => OpenEditDialog(item))" />
-                    <RadzenButton Icon="@GetToggleIcon(item.IsActive)"
-                                  ButtonStyle="@GetToggleButtonStyle(item.IsActive)"
-                                  Size="ButtonSize.Small"
-                                  Click="@(args => ToggleStatus(item))" />
-                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
-                                  Click="@(args => ConfirmDelete(item))" />
-                </Template>
-            </RadzenDataGridColumn>
-        </Columns>
-    </RadzenDataGrid>
-</RadzenCard>
+</div>
 
 @code {
-    private RadzenDataGrid<UserListItem>? grid;
-    private List<UserListItem> users = new();
+    private List<UserListItem> allUsers = new();
+    private List<UserListItem> filteredUsers = new();
     private List<string> availableRoles = new();
+    private bool isLoading = true;
+    private string searchTerm = string.Empty;
+    private bool showOnlyActive = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -65,15 +175,83 @@
 
     private async Task LoadData()
     {
+        isLoading = true;
         try
         {
-            users = await UserManagementService.GetAllUsersAsync();
+            allUsers = await UserManagementService.GetAllUsersAsync();
             availableRoles = await UserManagementService.GetAvailableRolesAsync();
+            FilterUsers();
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error loading data: {ex.Message}");
         }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void FilterUsers()
+    {
+        var query = allUsers.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLower();
+            query = query.Where(u =>
+                u.FullName.ToLower().Contains(term) ||
+                u.Email.ToLower().Contains(term) ||
+                u.Login.ToLower().Contains(term) ||
+                u.Post.ToLower().Contains(term) ||
+                (u.Department != null && u.Department.ToLower().Contains(term)) ||
+                u.StaffNumber.ToLower().Contains(term) ||
+                u.Role.ToLower().Contains(term)
+            );
+        }
+
+        if (showOnlyActive)
+        {
+            query = query.Where(u => u.IsActive);
+        }
+
+        filteredUsers = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        FilterUsers();
+    }
+
+    private void OnShowOnlyActiveChanged(ChangeEventArgs e)
+    {
+        showOnlyActive = e.Value is true;
+        FilterUsers();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        FilterUsers();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = string.Empty;
+        showOnlyActive = false;
+        FilterUsers();
+    }
+
+    private string GetEmptyMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            return $"Пользователи по запросу \"{searchTerm}\" не найдены";
+        if (showOnlyActive)
+            return "Нет активных пользователей";
+        return "Пользователи не найдены";
     }
 
     private async Task OpenCreateDialog()
@@ -85,7 +263,13 @@
                 { "IsEditMode", false },
                 { "AvailableRoles", availableRoles }
             },
-            new Radzen.DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+            new DialogOptions
+            {
+                Width = "600px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
         );
 
         if (result is UserEditDialogResult dialogResult)
@@ -96,7 +280,7 @@
 
     private async Task OpenEditDialog(UserListItem item)
     {
-        var nameParts = item.FullName.Split(' ');
+        var nameParts = item.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         var result = await DialogService.OpenAsync<UserEditDialog>(
             "Редактирование пользователя",
@@ -115,7 +299,13 @@
                 { "Role", item.Role },
                 { "AvailableRoles", availableRoles }
             },
-            new DialogOptions { Width = "600px", CloseDialogOnOverlayClick = false }
+            new DialogOptions
+            {
+                Width = "600px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
         );
 
         if (result is UserEditDialogResult dialogResult)
@@ -164,12 +354,6 @@
             if (success)
             {
                 await LoadData();
-                if (grid != null)
-                    await grid.Reload();
-            }
-            else
-            {
-                Console.Error.WriteLine("Error saving user");
             }
         }
         catch (Exception ex)
@@ -180,20 +364,11 @@
 
     private async Task ToggleStatus(UserListItem item)
     {
-        try
+        var success = await UserManagementService.ToggleUserStatusAsync(item.EmployeeId);
+        if (success)
         {
-            var success = await UserManagementService.ToggleUserStatusAsync(item.EmployeeId);
-            if (success)
-            {
-                await LoadData();
-                if (grid != null)
-                    await grid.Reload();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Error toggling status: {ex.Message}");
-        }
+            await LoadData();
+        }     
     }
 
     private async Task ConfirmDelete(UserListItem item)
@@ -204,7 +379,13 @@
             {
                 { "UserName", item.FullName }
             },
-            new DialogOptions { Width = "450px", CloseDialogOnOverlayClick = false }
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
         );
 
         if (confirmed is bool isConfirmed && isConfirmed)
@@ -221,8 +402,6 @@
             if (success)
             {
                 await LoadData();
-                if (grid != null)
-                    await grid.Reload();
             }
         }
         catch (Exception ex)
@@ -230,9 +409,4 @@
             Console.Error.WriteLine($"Error deleting user: {ex.Message}");
         }
     }
-
-    private string GetStatusText(bool isActive) => isActive ? "Активен" : "Заблокирован";
-    private string GetStatusChipStyle(bool isActive) => isActive ? "Success" : "Danger";
-    private string GetToggleIcon(bool isActive) => isActive ? "block" : "check_circle";
-    private ButtonStyle GetToggleButtonStyle(bool isActive) => isActive ? ButtonStyle.Danger : ButtonStyle.Success;
 }
