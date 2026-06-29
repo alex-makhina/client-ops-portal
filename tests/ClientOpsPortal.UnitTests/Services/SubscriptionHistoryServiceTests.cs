@@ -17,15 +17,18 @@ public class SubscriptionHistoryServiceTests
 {
     private readonly Mock<IGenericRepository<SubscriptionHistory>> _historyRepositoryMock;
     private readonly Mock<IGenericRepository<SubscriptionHistoryStep>> _stepRepositoryMock;
+    private readonly Mock<IGenericRepository<Subscription>> _subscriptionRepositoryMock;
     private readonly SubscriptionHistoryService _sut;
 
     public SubscriptionHistoryServiceTests()
     {
         _historyRepositoryMock = new Mock<IGenericRepository<SubscriptionHistory>>();
         _stepRepositoryMock = new Mock<IGenericRepository<SubscriptionHistoryStep>>();
+        _subscriptionRepositoryMock = new Mock<IGenericRepository<Subscription>>();
         _sut = new SubscriptionHistoryService(
             _historyRepositoryMock.Object,
-            _stepRepositoryMock.Object);
+            _stepRepositoryMock.Object,
+            _subscriptionRepositoryMock.Object);
     }
 
     #region GetByIdAsync Tests
