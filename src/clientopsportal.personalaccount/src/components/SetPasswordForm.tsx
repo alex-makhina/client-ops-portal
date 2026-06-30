@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSetPassword } from '../hooks/useSetPassword';
 import { setPasswordSchema, type SetPasswordFormData } from '../schemas/auth.schema';
-import './SetPasswordForm.css';
+import './Login.css';
 
 export const SetPasswordForm: React.FC = () => {
     const [searchParams] = useSearchParams();

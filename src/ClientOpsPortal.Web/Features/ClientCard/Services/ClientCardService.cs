@@ -129,7 +129,7 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
 
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Array.Empty<SubscriptionHistoryItem>();
             }
@@ -176,7 +176,7 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
 
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Array.Empty<SubscriptionHistoryItem>();
             }
