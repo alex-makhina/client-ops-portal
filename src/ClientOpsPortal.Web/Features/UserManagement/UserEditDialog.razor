@@ -142,63 +142,94 @@
 
     private bool showError;
     private string errorMessage = string.Empty;
+    private bool isSaving;
 
     private void Close()
     {
-        Console.WriteLine("Close called");
         DialogService.Close(null);
     }
 
     private async Task Save()
     {
-        Console.WriteLine("Save called");
         showError = false;
+        isSaving = true;
 
-        var errors = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(StaffNumber))
-            errors.Add("Введите табельный номер");
-        if (string.IsNullOrWhiteSpace(LastName))
-            errors.Add("Введите фамилию");
-        if (string.IsNullOrWhiteSpace(FirstName))
-            errors.Add("Введите имя");
-        if (string.IsNullOrWhiteSpace(Post))
-            errors.Add("Введите должность");
-        if (string.IsNullOrWhiteSpace(Email))
-            errors.Add("Введите Email");
-        if (string.IsNullOrWhiteSpace(Login))
-            errors.Add("Введите логин");
-        if (string.IsNullOrWhiteSpace(Role))
-            errors.Add("Выберите роль");
-        if (!IsEditMode && string.IsNullOrWhiteSpace(Password))
-            errors.Add("Введите пароль");
-        if (!IsEditMode && Password?.Length < 6)
-            errors.Add("Пароль должен содержать минимум 6 символов");
-
-        if (errors.Count > 0)
+        try
         {
-            showError = true;
-            errorMessage = string.Join("; ", errors);
-            StateHasChanged();
-            return;
+            var errors = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(Login))
+                errors.Add("Введите логин");
+            else if (!System.Text.RegularExpressions.Regex.IsMatch(Login, @"^[a-zA-Z0-9\-._@+]+$"))
+                errors.Add("Логин может содержать только латинские буквы, цифры и символы: - . _ @ +");
+            else if (Login.Length > 256)
+                errors.Add("Логин не может быть длиннее 256 символов");
+
+            if (!IsEditMode)
+            {
+                if (string.IsNullOrWhiteSpace(Password))
+                    errors.Add("Введите пароль");
+                else
+                {
+                    if (Password.Length < 6)
+                        errors.Add("Пароль должен содержать минимум 6 символов");
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(Password, @"[0-9]"))
+                        errors.Add("Пароль должен содержать хотя бы одну цифру");
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(Password, @"[a-z]"))
+                        errors.Add("Пароль должен содержать хотя бы одну строчную букву");
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(Password, @"[A-Z]"))
+                        errors.Add("Пароль должен содержать хотя бы одну заглавную букву");
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(Password, @"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>/?]"))
+                        errors.Add("Пароль должен содержать хотя бы один специальный символ (!@#$%^&* и т.д.)");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(Email))
+                errors.Add("Введите Email");
+            else if (!System.Text.RegularExpressions.Regex.IsMatch(Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                errors.Add("Введите корректный Email");
+
+            if (string.IsNullOrWhiteSpace(StaffNumber))
+                errors.Add("Введите табельный номер");
+            if (string.IsNullOrWhiteSpace(LastName))
+                errors.Add("Введите фамилию");
+            if (string.IsNullOrWhiteSpace(FirstName))
+                errors.Add("Введите имя");
+            if (string.IsNullOrWhiteSpace(Post))
+                errors.Add("Введите должность");
+            if (string.IsNullOrWhiteSpace(Role))
+                errors.Add("Выберите роль");
+
+            if (errors.Count > 0)
+            {
+                showError = true;
+                errorMessage = string.Join("; ", errors);
+                StateHasChanged();
+                return;
+            }
+
+            var result = new UserEditDialogResult
+            {
+                IsEditMode = IsEditMode,
+                EmployeeId = EmployeeId,
+                StaffNumber = StaffNumber.Trim(),
+                FirstName = FirstName.Trim(),
+                LastName = LastName.Trim(),
+                MiddleName = MiddleName?.Trim(),
+                Post = Post.Trim(),
+                Department = Department?.Trim(),
+                Email = Email.Trim(),
+                Login = Login.Trim(),
+                Password = Password,
+                Role = Role
+            };
+
+            DialogService.Close(result);
         }
-
-        var result = new UserEditDialogResult
+        finally
         {
-            IsEditMode = IsEditMode,
-            EmployeeId = EmployeeId,
-            StaffNumber = StaffNumber.Trim(),
-            FirstName = FirstName.Trim(),
-            LastName = LastName.Trim(),
-            MiddleName = MiddleName?.Trim(),
-            Post = Post.Trim(),
-            Department = Department?.Trim(),
-            Email = Email.Trim(),
-            Login = Login.Trim(),
-            Password = Password,
-            Role = Role
-        };
-
-        DialogService.Close(result);
+            isSaving = false;
+            StateHasChanged();
+        }
     }
 }

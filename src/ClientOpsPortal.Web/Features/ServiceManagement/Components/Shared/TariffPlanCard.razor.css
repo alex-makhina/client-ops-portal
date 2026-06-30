@@ -1,0 +1,178 @@
+.tariff-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fafbfc;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .tariff-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    }
+
+.tariff-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tariff-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tariff-number {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    background: #ffffff;
+    padding: 1px 8px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.tariff-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.btn-delete-tariff {
+    background: transparent;
+    border: none;
+    padding: 2px 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    color: #94a3b8;
+    font-size: 16px;
+    line-height: 1;
+}
+
+    .btn-delete-tariff:hover {
+        color: #ef4444;
+        background: #fef2f2;
+    }
+
+.delete-icon {
+    display: block;
+    line-height: 1;
+}
+
+.tariff-body {
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+    .tariff-body .form-group-full {
+        grid-column: span 2;
+    }
+
+    .tariff-body .form-group {
+        margin-bottom: 0;
+    }
+
+    .tariff-body .form-label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 500;
+        font-size: 11px;
+        color: #334155;
+        letter-spacing: -0.01em;
+    }
+
+        .tariff-body .form-label .required {
+            color: #ef4444;
+            margin-left: 2px;
+        }
+
+    .tariff-body .form-input {
+        width: 100%;
+        padding: 5px 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        background: #ffffff;
+        color: #0f172a;
+        outline: none;
+        box-sizing: border-box;
+        line-height: 1.4;
+    }
+
+        .tariff-body .form-input:focus {
+            border-color: #1b6ec2;
+            box-shadow: 0 0 0 3px rgba(27, 110, 194, 0.1);
+        }
+
+    .tariff-body .form-input-sm {
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+
+    .tariff-body .price-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .tariff-body .price-currency {
+        position: absolute;
+        left: 10px;
+        font-weight: 600;
+        color: #64748b;
+        font-size: 12px;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .tariff-body .price-input {
+        width: 100%;
+        padding: 5px 10px 5px 24px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        background: #ffffff;
+        color: #0f172a;
+        outline: none;
+        box-sizing: border-box;
+        line-height: 1.4;
+        -moz-appearance: textfield;
+    }
+
+        .tariff-body .price-input::-webkit-outer-spin-button,
+        .tariff-body .price-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .tariff-body .price-input:focus {
+            border-color: #1b6ec2;
+            box-shadow: 0 0 0 3px rgba(27, 110, 194, 0.1);
+        }
+
+    /* Стили для datetime-local */
+    .tariff-body input[type="datetime-local"] {
+        appearance: auto !important;
+        -webkit-appearance: auto !important;
+    }
+
+@media (max-width: 640px) {
+    .tariff-body {
+        grid-template-columns: 1fr;
+    }
+
+        .tariff-body .form-group-full {
+            grid-column: span 1;
+        }
+}

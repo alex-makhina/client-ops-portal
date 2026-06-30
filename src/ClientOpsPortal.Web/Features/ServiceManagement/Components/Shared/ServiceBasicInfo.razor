@@ -1,0 +1,119 @@
+﻿@* ServiceBasicInfo.razor *@
+
+<div class="service-basic-info">
+    <div class="section">
+        <div class="section-header">
+            <h4 class="section-title">Основная информация</h4>
+            <span class="section-badge">Обязательные поля *</span>
+        </div>
+        <div class="form-grid">
+            <div class="form-group form-group-full">
+                <label class="form-label">
+                    Название услуги
+                    <span class="required">*</span>
+                </label>
+                <input type="text"
+                       class="form-input"
+                       placeholder="Введите название услуги"
+                       value="@Name"
+                       @onchange="OnNameChanged"
+                       @oninput="OnNameChanged" />
+                <span class="form-hint">
+                    <span class="hint-icon"></span>
+                    От 3 до 100 символов
+                </span>
+            </div>
+
+            <div class="form-group form-group-full">
+                <label class="form-label">
+                    Описание
+                    <span class="required">*</span>
+                </label>
+                <textarea class="form-textarea"
+                          placeholder="Введите описание услуги"
+                          rows="2"
+                          value="@Description"
+                          @onchange="OnDescriptionChanged"
+                          @oninput="OnDescriptionChanged"></textarea>
+                <span class="form-hint">
+                    <span class="hint-icon"></span>
+                    От 10 до 500 символов
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    Дата начала
+                    <span class="required">*</span>
+                </label>
+                <input type="date"
+                       class="form-input"
+                       value="@BeginDate.ToString("yyyy-MM-dd")"
+                       @onchange="OnBeginDateDateChanged" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Дата окончания</label>
+                <input type="date"
+                       class="form-input"
+                       value="@(EndDate?.ToString("yyyy-MM-dd") ?? "")"
+                       @onchange="OnEndDateDateChanged" />
+                <span class="form-hint">
+                    <span class="hint-icon"></span>
+                    Оставьте пустым, если услуга бессрочная
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Name { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> NameChanged { get; set; }
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> DescriptionChanged { get; set; }
+    [Parameter] public DateTimeOffset BeginDate { get; set; } = DateTimeOffset.UtcNow;
+    [Parameter] public EventCallback<DateTimeOffset> BeginDateChanged { get; set; }
+    [Parameter] public DateTimeOffset? EndDate { get; set; }
+    [Parameter] public EventCallback<DateTimeOffset?> EndDateChanged { get; set; }
+
+    private async Task OnNameChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? string.Empty;
+        await NameChanged.InvokeAsync(value);
+    }
+
+    private async Task OnDescriptionChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? string.Empty;
+        await DescriptionChanged.InvokeAsync(value);
+    }
+
+    private async Task OnBeginDateDateChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(value) && DateTime.TryParse(value, out var date))
+        {
+            var newDate = new DateTimeOffset(date, TimeSpan.Zero);
+            await BeginDateChanged.InvokeAsync(newDate);
+        }
+    }
+
+    private async Task OnEndDateDateChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(value) && DateTime.TryParse(value, out var date))
+        {
+            var endOfDay = date.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+            var newDate = new DateTimeOffset(endOfDay, TimeSpan.Zero);
+
+            await EndDateChanged.InvokeAsync(newDate);
+        }
+        else
+        {
+            await EndDateChanged.InvokeAsync(null);
+        }
+    }
+}

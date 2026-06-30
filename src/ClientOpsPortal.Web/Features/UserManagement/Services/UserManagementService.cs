@@ -1,5 +1,6 @@
 using ClientOpsPortal.Web.Features.UserManagement.Models;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace ClientOpsPortal.Web.Features.UserManagement.Services
 {
@@ -21,16 +22,34 @@ namespace ClientOpsPortal.Web.Features.UserManagement.Services
             return await response.Content.ReadFromJsonAsync<List<UserListItem>>() ?? new List<UserListItem>();
         }
 
-        public async Task<bool> CreateUserAsync(CreateUserRequest request)
+        public async Task<(bool success, string errorMessage)> CreateUserAsync(CreateUserRequest request)
         {
             var response = await _httpClient.PostAsJsonAsync("api/v1/employees/create", request);
-            return response.IsSuccessStatusCode;
+
+            if (response.IsSuccessStatusCode)
+                return (true, string.Empty);
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+
+            if (!string.IsNullOrEmpty(errorContent) && !errorContent.TrimStart().StartsWith("{") && !errorContent.TrimStart().StartsWith("["))
+                return (false, errorContent);
+
+            return (false, $"Ошибка при создании пользователя (статус: {(int)response.StatusCode})");
         }
 
-        public async Task<bool> UpdateUserAsync(Guid employeeId, UpdateUserRequest request)
+        public async Task<(bool success, string errorMessage)> UpdateUserAsync(Guid employeeId, UpdateUserRequest request)
         {
             var response = await _httpClient.PutAsJsonAsync($"api/v1/employees/{employeeId}/update", request);
-            return response.IsSuccessStatusCode;
+
+            if (response.IsSuccessStatusCode)
+                return (true, string.Empty);
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+
+            if (!string.IsNullOrEmpty(errorContent) && !errorContent.TrimStart().StartsWith("{") && !errorContent.TrimStart().StartsWith("["))
+                return (false, errorContent);
+
+            return (false, $"Ошибка при редактировании пользователя (статус: {(int)response.StatusCode})");
         }
 
         public async Task<bool> ToggleUserStatusAsync(Guid employeeId)

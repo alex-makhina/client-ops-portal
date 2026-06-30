@@ -3,10 +3,12 @@
 
 @using ClientOpsPortal.Web.Features.UserManagement.Models
 @using ClientOpsPortal.Web.Features.UserManagement.Services
+@using ClientOpsPortal.Web.Features.Shared.Notification
 
 @inject IUserManagementService UserManagementService
 @inject NavigationManager Navigation
 @inject DialogService DialogService
+@inject AppNotificationService NotificationService
 
 <div class="page-container">
     <div class="card">
@@ -319,6 +321,8 @@
         try
         {
             bool success;
+            string errorMessage = string.Empty;
+
             if (data.IsEditMode)
             {
                 var request = new UpdateUserRequest
@@ -331,7 +335,7 @@
                     Department = data.Department,
                     Role = data.Role
                 };
-                success = await UserManagementService.UpdateUserAsync(data.EmployeeId, request);
+                (success, errorMessage) = await UserManagementService.UpdateUserAsync(data.EmployeeId, request);
             }
             else
             {
@@ -348,12 +352,32 @@
                     Password = data.Password,
                     Role = data.Role
                 };
-                success = await UserManagementService.CreateUserAsync(request);
+                (success, errorMessage) = await UserManagementService.CreateUserAsync(request);
             }
 
             if (success)
             {
+                NotificationService.ShowSuccess(
+                data.IsEditMode
+                    ? $"Пользователь {data.LastName} {data.FirstName} успешно обновлен"
+                    : $"Пользователь {data.LastName} {data.FirstName} успешно создан"
+            );
                 await LoadData();
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    NotificationService.ShowError(errorMessage);
+                }
+                else
+                {
+                    NotificationService.ShowError(
+                        data.IsEditMode
+                            ? "Не удалось обновить пользователя"
+                            : "Не удалось создать пользователя"
+                    );
+                }
             }
         }
         catch (Exception ex)
@@ -377,7 +401,11 @@
             "Подтверждение удаления",
             new Dictionary<string, object?>
             {
-                { "UserName", item.FullName }
+                { "Title", "Подтверждение удаления" },
+                { "Message", $"Вы уверены, что хотите удалить пользователя \"{item.FullName}\"?" },
+                { "Detail", "Это действие нельзя отменить. Учетная запись пользователя будет полностью удалена." },
+                { "ConfirmText", "Да, удалить" },
+                { "CancelText", "Отмена" }
             },
             new DialogOptions
             {

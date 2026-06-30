@@ -3,8 +3,6 @@
 
 @using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
 @using ClientOpsPortal.Web.Features.ServiceManagement.Models.Responses
-@using ClientOpsPortal.Web.Features.ServiceManagement.Services
-@using ClientOpsPortal.Web.Features.ServiceManagement.Validators
 @using ClientOpsPortal.Web.Features.ServiceManagement.Components.Shared
 @using Microsoft.AspNetCore.Authorization
 @inject IServiceManagementService ServiceManagementService
@@ -41,34 +39,12 @@ else
                 <p class="card-subtitle">Управление каталогом услуг и тарифных планов</p>
             </div>
 
-            <div class="search-section">
-                <div class="search-input-group">
-                    <div class="search-input-wrapper">
-                        <input type="text"
-                               class="search-input form-control"
-                               placeholder="Поиск услуг по названию или описанию..."
-                               value="@searchTerm"
-                               @oninput="(e) => OnSearchTermChanged(e.Value?.ToString() ?? string.Empty)" />
-                        @if (!string.IsNullOrWhiteSpace(searchTerm))
-                        {
-                            <button class="search-clear" @onclick="() => { searchTerm = string.Empty; FilterServices(); }">
-                                ✕
-                            </button>
-                        }
-                    </div>
-
-                    <div class="search-filters">
-                        <label class="filter-checkbox">
-                            <input type="checkbox" checked="@showOnlyActive" @onchange="(e) => OnShowOnlyActiveChanged(e.Value is bool b && b)" />
-                            Только активные
-                        </label>
-                    </div>
-
-                    <RadzenButton Text="Создать услугу"
-                                  class="btn-create"
-                                  Click="OpenCreateDialog" />
-                </div>
-            </div>
+            <ServiceSearchToolbar 
+                SearchTerm="@searchTerm"
+                SearchTermChanged="@OnSearchTermChanged"
+                ShowOnlyActive="@showOnlyActive"
+                ShowOnlyActiveChanged="@OnShowOnlyActiveChanged"
+                OnCreateClick="@OpenCreateDialog" />
 
             @if (filteredServices.Count == 0)
             {
@@ -89,27 +65,7 @@ else
                 <div class="services-grid">
                     @foreach (var service in filteredServices)
                     {
-                        var isActive = IsActive(service);
-                        <div class="service-card" @onclick="() => OpenEditDialog(service)">
-                            <div class="service-card-header">
-                                <h4 class="service-card-title">@service.Name</h4>
-                                <span class="badge @(isActive ? "badge-success" : "badge-secondary")">
-                                    @(isActive ? "Активна" : "Неактивна")
-                                </span>
-                            </div>
-                            <p class="service-card-description">@service.Description</p>
-                            <div class="service-card-footer">
-                                <span>@service.BeginDate.ToString("dd.MM.yyyy")</span>
-                                @if (service.EndDate.HasValue)
-                                {
-                                    <span>➜ @service.EndDate.Value.ToString("dd.MM.yyyy")</span>
-                                }
-                                else
-                                {
-                                    <span>Бессрочно</span>
-                                }
-                            </div>
-                        </div>
+                        <ServiceCard Service="@service" OnCardClick="OpenEditDialog" />
                     }
                 </div>
             }
@@ -182,25 +138,20 @@ else
         
         if (showOnlyActive)
         {
-            query = query.Where(s => IsActive(s));
+            query = query.Where(s => s.EndDate == null || s.EndDate > DateTimeOffset.UtcNow);
         }
         
         filteredServices = query.ToList();
         StateHasChanged();
     }
 
-    private bool IsActive(ServiceListItem service)
-    {
-        return service.EndDate == null || service.EndDate > DateTimeOffset.UtcNow;
-    }
-
-    private void OnSearchTermChanged(string value)
+    private async Task OnSearchTermChanged(string value)
     {
         searchTerm = value;
         FilterServices();
     }
 
-    private void OnShowOnlyActiveChanged(bool value)
+    private async Task OnShowOnlyActiveChanged(bool value)
     {
         showOnlyActive = value;
         FilterServices();
@@ -237,7 +188,6 @@ else
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка при открытии диалога создания.";
             StateHasChanged();
         }
     }
@@ -250,7 +200,6 @@ else
             
             if (fullService == null)
             {
-                errorMessage = $"Не удалось загрузить данные услуги {service.Name}";
                 StateHasChanged();
                 return;
             }
@@ -293,7 +242,6 @@ else
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка при открытии диалога редактирования.";
             StateHasChanged();
         }
     }
@@ -357,7 +305,6 @@ else
             }
             else
             {
-                errorMessage = "Не удалось сохранить услугу. Пожалуйста, проверьте введенные данные и попробуйте снова.";
                 StateHasChanged();
                 
                 await Task.Delay(5000);
@@ -370,12 +317,10 @@ else
         }
         catch (HttpRequestException ex)
         {
-            errorMessage = $"Ошибка сети.";
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка при сохранении услуги.";
             StateHasChanged();
         }
     }
