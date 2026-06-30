@@ -52,7 +52,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in historyItems.OrderByDescending(x => x.CreatedAt))
+                    @foreach (var item in currentPageItems)
                     {
                         <tr>
                             <td class="history-cell-date">@item.CreatedAt.LocalDateTime.ToString("dd.MM.yyyy HH:mm")</td>
@@ -94,15 +94,65 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        @if (totalPages > 1)
+        {
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Показано <strong>@(startIndex + 1)</strong> - <strong>@(Math.Min(startIndex + pageSize, totalItems))</strong> из <strong>@totalItems</strong>
+                </div>
+                <div class="pagination-controls">
+                    <button class="btn btn-secondary btn-sm" 
+                            type="button" 
+                            @onclick="@(() => GoToPage(currentPage - 1))" 
+                            disabled="@(currentPage == 1)">
+                        ◀
+                    </button>
+                    
+                    @foreach (var p in GetVisiblePages())
+                    {
+                        if (p == -1)
+                        {
+                            <span class="pagination-ellipsis">…</span>
+                        }
+                        else
+                        {
+                            <button class="btn @(p == currentPage ? "btn-primary" : "btn-secondary") btn-sm"
+                                    type="button"
+                                    @onclick="@(() => GoToPage(p))">
+                                @p
+                            </button>
+                        }
+                    }
+                    
+                    <button class="btn btn-secondary btn-sm" 
+                            type="button" 
+                            @onclick="@(() => GoToPage(currentPage + 1))" 
+                            disabled="@(currentPage == totalPages)">
+                        ▶
+                    </button>
+                </div>
+            </div>
+        }
     }
 </div>
 
 @code {
-    [Parameter]
-    public Guid AbonentId { get; set; }
+    [Parameter] public Guid AbonentId { get; set; }
 
     private List<SubscriptionHistoryItem> historyItems = new();
     private bool isLoading = true;
+
+    // Pagination properties
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalItems = 0;
+    private int totalPages = 0;
+    private int startIndex = 0;
+    private int endIndex = 0;
+
+    private List<SubscriptionHistoryItem> currentPageItems = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,16 +166,87 @@
         {
             var history = await ClientCardService.GetSubscriptionHistoryByAbonentAsync(AbonentId);
             historyItems = history.ToList();
+            totalItems = historyItems.Count;
+            UpdatePagination();
         }
         catch (Exception ex)
         {
             historyItems = new();
+            totalItems = 0;
         }
         finally
         {
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    public async Task RefreshHistoryAsync()
+    {
+        await LoadHistoryAsync();
+    }
+
+    private void UpdatePagination()
+    {
+        totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+        if (currentPage > totalPages && totalPages > 0)
+            currentPage = totalPages;
+        else if (currentPage < 1)
+            currentPage = 1;
+
+        startIndex = (currentPage - 1) * pageSize;
+        endIndex = Math.Min(startIndex + pageSize, totalItems);
+
+        currentPageItems = historyItems
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip(startIndex)
+            .Take(pageSize)
+            .ToList();
+
+        StateHasChanged();
+    }
+
+    private void GoToPage(int pageNumber)
+    {
+        if (pageNumber < 1 || pageNumber > totalPages)
+            return;
+
+        currentPage = pageNumber;
+        UpdatePagination();
+    }
+
+    private List<int> GetVisiblePages()
+    {
+        var pages = new List<int>();
+        int maxVisible = 5;
+
+        if (totalPages <= maxVisible)
+        {
+            for (int i = 1; i <= totalPages; i++)
+                pages.Add(i);
+
+            return pages;
+        }
+
+        pages.Add(1);
+
+        int start = Math.Max(2, currentPage - 1);
+        int end = Math.Min(totalPages - 1, currentPage + 1);
+
+        if (start > 2)
+            pages.Add(-1); 
+
+        for (int i = start; i <= end; i++)
+            pages.Add(i);
+
+        if (end < totalPages - 1)
+            pages.Add(-1); 
+
+        if (totalPages > 1)
+            pages.Add(totalPages);
+
+        return pages;
     }
 
     private string GetStatusDisplayName(string status)

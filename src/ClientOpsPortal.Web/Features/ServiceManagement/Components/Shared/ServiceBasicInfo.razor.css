@@ -1,0 +1,119 @@
+.service-basic-info .section {
+    margin-bottom: 24px;
+}
+
+.service-basic-info .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.service-basic-info .section-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+}
+
+.service-basic-info .section-badge {
+    font-size: 11px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 10px;
+    border-radius: 16px;
+    font-weight: 500;
+}
+
+.service-basic-info .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.service-basic-info .form-group {
+    margin-bottom: 0;
+}
+
+.service-basic-info .form-group-full {
+    grid-column: span 2;
+}
+
+.service-basic-info .form-label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+    font-size: 12px;
+    color: #334155;
+    letter-spacing: -0.01em;
+}
+
+    .service-basic-info .form-label .required {
+        color: #ef4444;
+        margin-left: 2px;
+    }
+
+.service-basic-info .form-hint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.service-basic-info .form-input,
+.service-basic-info .form-textarea {
+    width: 100%;
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    color: #0f172a;
+    outline: none;
+    box-sizing: border-box;
+    line-height: 1.4;
+}
+
+    .service-basic-info .form-input:focus,
+    .service-basic-info .form-textarea:focus {
+        border-color: #1b6ec2;
+        box-shadow: 0 0 0 3px rgba(27, 110, 194, 0.1);
+    }
+
+.service-basic-info .form-textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+/* Стили для datetime-local */
+.service-basic-info input[type="datetime-local"] {
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+}
+
+@media (max-width: 640px) {
+    .service-basic-info .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .service-basic-info .form-group-full {
+        grid-column: span 1;
+    }
+
+    .service-basic-info .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .service-basic-info .section-badge {
+        align-self: flex-start;
+    }
+}

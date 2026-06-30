@@ -1,14 +1,13 @@
 ﻿@* ServiceCard.razor *@
 @using ClientOpsPortal.Web.Features.ServiceManagement.Models.Responses
 
-<div style="border: 1px solid @BorderColor; border-radius: 12px; padding: 16px; background-color: @BackgroundColor; transition: all 0.2s ease; cursor: pointer;"
-     @onclick="OnCardClickHandler">
-    <div style="display: flex; flex-direction: column; height: 100%;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-            <h4 style="margin: 0; color: #333; font-size: 16px; @(IsActive ? "" : "opacity: 0.7;")">@Service?.Name</h4>
+<div class="service-card @(IsActive ? "active" : "inactive")" @onclick="OnCardClickHandler">
+    <div class="service-card-content">
+        <div class="service-card-header">
+            <h4 class="service-card-title">@Service?.Name</h4>
         </div>
-        <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; line-height: 1.4; @(IsActive ? "" : "opacity: 0.7;")">@Service?.Description</p>
-        <div style="display: flex; gap: 12px; font-size: 11px; color: #999; margin-top: auto; @(IsActive ? "" : "opacity: 0.7;")">
+        <p class="service-card-description">@Service?.Description</p>
+        <div class="service-card-footer">
             <span>Начало: @(Service?.BeginDate.ToString("dd.MM.yyyy") ?? "—")</span>
             @if (Service?.EndDate.HasValue == true)
             {
@@ -27,8 +26,6 @@
     [Parameter] public EventCallback<ServiceListItem> OnCardClick { get; set; }
 
     private bool IsActive => Service?.EndDate == null || Service.EndDate > DateTimeOffset.UtcNow;
-    private string BackgroundColor => IsActive ? "#fff" : "#f5f5f5";
-    private string BorderColor => IsActive ? "#e8e8e8" : "#e0e0e0";
 
     private async Task OnCardClickHandler()
     {

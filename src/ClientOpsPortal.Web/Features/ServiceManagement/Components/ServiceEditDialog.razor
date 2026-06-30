@@ -1,6 +1,6 @@
-﻿@* ServiceEditDialog.razor *@
-@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
+﻿@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
 @using ClientOpsPortal.Web.Features.ServiceManagement.Validators
+@using ClientOpsPortal.Web.Features.ServiceManagement.Components.Shared
 @inject DialogService DialogService
 @inject IJSRuntime JSRuntime
 
@@ -22,172 +22,23 @@
                 </div>
             }
 
-            <div class="section">
-                <div class="section-header">
-                    <h4 class="section-title">Основная информация</h4>
-                    <span class="section-badge">Обязательные поля *</span>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group form-group-full">
-                        <label class="form-label">
-                            Название услуги
-                            <span class="required">*</span>
-                        </label>
-                        <input type="text"
-                               class="form-input"
-                               placeholder="Введите название услуги"
-                               value="@serviceName"
-                               @onchange="(e) => serviceName = e.Value?.ToString() ?? string.Empty"
-                               @oninput="(e) => serviceName = e.Value?.ToString() ?? string.Empty" />
-                        <span class="form-hint">
-                            <span class="hint-icon"></span>
-                            От 3 до 100 символов
-                        </span>
-                    </div>
+            <ServiceBasicInfo Name="@serviceName"
+                              NameChanged="@OnServiceNameChanged"
+                              Description="@serviceDescription"
+                              DescriptionChanged="@OnServiceDescriptionChanged"
+                              BeginDate="@serviceBeginDate"
+                              BeginDateChanged="@OnServiceBeginDateChanged"
+                              EndDate="@serviceEndDate"
+                              EndDateChanged="@OnServiceEndDateChanged" />
 
-                    <div class="form-group form-group-full">
-                        <label class="form-label">
-                            Описание
-                            <span class="required">*</span>
-                        </label>
-                        <textarea class="form-textarea"
-                                  placeholder="Введите описание услуги"
-                                  rows="2"
-                                  value="@serviceDescription"
-                                  @onchange="(e) => serviceDescription = e.Value?.ToString() ?? string.Empty"
-                                  @oninput="(e) => serviceDescription = e.Value?.ToString() ?? string.Empty"></textarea>
-                        <span class="form-hint">
-                            <span class="hint-icon"></span>
-                            От 10 до 500 символов
-                        </span>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">
-                            Дата начала
-                            <span class="required">*</span>
-                        </label>
-                        <RadzenDatePicker @bind-Value="serviceBeginDate"
-                                          Placeholder="Выберите дату"
-                                          ShowIcon="true"
-                                          Style="width:100%;" />
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Дата окончания</label>
-                        <RadzenDatePicker @bind-Value="serviceEndDate"
-                                          Placeholder="Не ограничено"
-                                          ShowIcon="true"
-                                          Style="width:100%;" />
-                        <span class="form-hint">
-                            <span class="hint-icon"></span>
-                            Оставьте пустым, если услуга бессрочная
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-header">
-                    <h4 class="section-title">Тарифные планы</h4>
-                    <button class="btn-add-tariff" @onclick="AddTariffPlan">
-                        ➕ Добавить тариф
-                    </button>
-                </div>
-
-                @if (tariffPlansList.Count == 0)
-                {
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📋</div>
-                        <p class="empty-state-title">Нет тарифных планов</p>
-                        <p class="empty-state-description">Нажмите кнопку "Добавить тариф", чтобы создать первый тарифный план</p>
-                    </div>
-                }
-                else
-                {
-                    <div class="tariff-list">
-                        @for (int i = 0; i < tariffPlansList.Count; i++)
-                        {
-                            var index = i;
-                            var tariff = tariffPlansList[index];
-                            <div class="tariff-card" @key="tariff.Id">
-                                <div class="tariff-header">
-                                    <div class="tariff-header-left">
-                                        <span class="tariff-number">#@(index + 1)</span>
-                                        <strong class="tariff-title">Тарифный план</strong>
-                                    </div>
-                                    <button class="btn-delete-tariff" @onclick="() => RemoveTariffPlan(index)">
-                                        <span class="delete-icon">🗑️</span>
-                                    </button>
-                                </div>
-                                <div class="tariff-body">
-                                    <div class="form-group">
-                                        <label class="form-label">
-                                            Название
-                                            <span class="required">*</span>
-                                        </label>
-                                        <input type="text"
-                                               class="form-input form-input-sm"
-                                               placeholder="Например: Базовый"
-                                               value="@tariff.Name"
-                                               @onchange="(e) => OnTariffNameChange(index, e)"
-                                               @oninput="(e) => OnTariffNameChange(index, e)" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">
-                                            Цена
-                                            <span class="required">*</span>
-                                        </label>
-                                        <div class="price-input-wrapper">
-                                            <span class="price-currency">₽</span>
-                                            <input type="number"
-                                                   class="price-input price-input-sm"
-                                                   min="0"
-                                                   step="0.01"
-                                                   placeholder="0"
-                                                   value="@tariff.Price"
-                                                   @onchange="(e) => OnPriceChange(index, e)"
-                                                   @oninput="(e) => OnPriceInput(index, e)" />
-                                        </div>
-                                    </div>
-                                    <div class="form-group form-group-full">
-                                        <label class="form-label">Описание</label>
-                                        <input type="text"
-                                               class="form-input form-input-sm"
-                                               placeholder="Описание тарифного плана"
-                                               value="@tariff.Description"
-                                               @onchange="(e) => OnTariffDescriptionChange(index, e)"
-                                               @oninput="(e) => OnTariffDescriptionChange(index, e)" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">
-                                            Дата начала
-                                            <span class="required">*</span>
-                                        </label>
-                                        <RadzenDatePicker @bind-Value="tariff.BeginDate"
-                                                          Placeholder="Выберите дату"
-                                                          ShowIcon="true"
-                                                          Style="width:100%;" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Дата окончания</label>
-                                        <RadzenDatePicker @bind-Value="tariff.EndDate"
-                                                          Placeholder="Не ограничено"
-                                                          ShowIcon="true"
-                                                          Style="width:100%;" />
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
+            <TariffPlansSection TariffPlans="@tariffPlansList"
+                                OnAddTariff="@AddTariffPlan"
+                                OnRemoveTariff="@RemoveTariffPlan" />
         </div>
 
         <div class="modal-footer">
             <button class="btn-cancel" @onclick="Close">Отмена</button>
             <button class="btn-save" @onclick="Save">
-                <span class="save-icon"></span>
                 @GetSaveButtonText()
             </button>
         </div>
@@ -223,53 +74,38 @@
         tariffPlansList = TariffPlans?.ToList() ?? new List<TariffPlanRequest>();
     }
 
-    private void OnTariffNameChange(int index, ChangeEventArgs e)
+    protected override void OnParametersSet()
     {
-        if (index >= 0 && index < tariffPlansList.Count)
-        {
-            tariffPlansList[index].Name = e.Value?.ToString() ?? string.Empty;
-        }
+        base.OnParametersSet();
     }
 
-    private void OnTariffDescriptionChange(int index, ChangeEventArgs e)
+    private async Task OnServiceNameChanged(string value)
     {
-        if (index >= 0 && index < tariffPlansList.Count)
-        {
-            tariffPlansList[index].Description = e.Value?.ToString() ?? string.Empty;
-        }
+        serviceName = value;
+        await Task.CompletedTask;
     }
 
-    private void OnPriceChange(int index, ChangeEventArgs e)
+    private async Task OnServiceDescriptionChanged(string value)
     {
-        if (index >= 0 && index < tariffPlansList.Count)
-        {
-            var value = e.Value?.ToString();
-            if (decimal.TryParse(value, out decimal result))
-            {
-                tariffPlansList[index].Price = result;
-            }
-            else if (string.IsNullOrEmpty(value))
-            {
-                tariffPlansList[index].Price = 0;
-            }
-        }
+        serviceDescription = value;
+        await Task.CompletedTask;
     }
 
-    private void OnPriceInput(int index, ChangeEventArgs e)
+    private async Task OnServiceBeginDateChanged(DateTimeOffset value)
     {
-        if (index >= 0 && index < tariffPlansList.Count)
-        {
-            var value = e.Value?.ToString();
-            if (decimal.TryParse(value, out decimal result))
-            {
-                tariffPlansList[index].Price = result;
-            }
-        }
+        serviceBeginDate = value;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnServiceEndDateChanged(DateTimeOffset? value)
+    {
+        serviceEndDate = value;
+        await Task.CompletedTask;
     }
 
     private void Close() => DialogService.Close(null);
 
-    private void AddTariffPlan()
+    private async Task AddTariffPlan()
     {
         tariffPlansList.Add(new TariffPlanRequest
         {
@@ -281,17 +117,19 @@
             BeginDate = DateTimeOffset.UtcNow,
             EndDate = null
         });
-        
+
         StateHasChanged();
+        await Task.CompletedTask;
     }
 
-    private void RemoveTariffPlan(int index)
+    private async Task RemoveTariffPlan(int index)
     {
         if (index >= 0 && index < tariffPlansList.Count)
         {
             tariffPlansList.RemoveAt(index);
             StateHasChanged();
         }
+        await Task.CompletedTask;
     }
 
     private async Task Save()
@@ -329,6 +167,7 @@
                 EndDate = serviceEndDate,
                 TariffPlans = tariffPlansList.ToList()
             };
+
             DialogService.Close(result);
         }
         else
@@ -341,6 +180,7 @@
                 EndDate = serviceEndDate,
                 TariffPlans = tariffPlansList.ToList()
             };
+
             DialogService.Close(result);
         }
     }

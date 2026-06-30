@@ -1,56 +1,132 @@
-﻿@* TariffPlanCard.razor *@
-@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
+﻿@using ClientOpsPortal.Web.Features.ServiceManagement.Models.Requests
 
-<div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background-color: #fafafa; transition: all 0.2s;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <strong style="font-size: 14px; color: #333;">Тарифный план @Index</strong>
-        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="OnRemove" />
+<div class="tariff-card">
+    <div class="tariff-header">
+        <div class="tariff-header-left">
+            <span class="tariff-number">#@Index</span>
+            <strong class="tariff-title">Тарифный план</strong>
+        </div>
+        <button class="btn-delete-tariff" @onclick="OnRemove">
+            <span class="delete-icon">🗑️</span>
+        </button>
     </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
-                Название <span style="color: red;">*</span>
+    <div class="tariff-body">
+        <div class="form-group">
+            <label class="form-label">
+                Название
+                <span class="required">*</span>
             </label>
-            <RadzenTextBox @bind-Value="Model.Name"
-                           Placeholder="Например: Старт"
-                           Style="width: 100%;" />
+            <input type="text"
+                   class="form-input form-input-sm"
+                   placeholder="Например: Базовый"
+                   value="@Model.Name"
+                   @onchange="OnNameChanged"
+                   @oninput="OnNameChanged" />
         </div>
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
-                Цена <span style="color: red;">*</span>
+        <div class="form-group">
+            <label class="form-label">
+                Цена
+                <span class="required">*</span>
             </label>
-            <RadzenNumeric @bind-Value="Model.Price"
-                           Placeholder="0"
-                           Min="0"
-                           Format="C2"
-                           Style="width: 100%;" />
+            <div class="price-input-wrapper">
+                <span class="price-currency">₽</span>
+                <input type="number"
+                       class="price-input price-input-sm"
+                       min="0"
+                       step="0.01"
+                       placeholder="0"
+                       value="@Model.Price"
+                       @onchange="OnPriceChanged"
+                       @oninput="OnPriceChanged" />
+            </div>
         </div>
-        <div style="grid-column: span 2;">
-            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Описание</label>
-            <RadzenTextArea @bind-Value="Model.Description"
-                            Placeholder="Описание тарифа"
-                            Rows="2"
-                            Style="width: 100%;" />
+        <div class="form-group form-group-full">
+            <label class="form-label">Описание</label>
+            <input type="text"
+                   class="form-input form-input-sm"
+                   placeholder="Описание тарифного плана"
+                   value="@Model.Description"
+                   @onchange="OnDescriptionChanged"
+                   @oninput="OnDescriptionChanged" />
         </div>
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">
-                Дата начала <span style="color: red;">*</span>
+        <div class="form-group">
+            <label class="form-label">
+                Дата начала
+                <span class="required">*</span>
             </label>
-            <RadzenDatePicker @bind-Value="Model.BeginDate"
-                              Placeholder="дд.мм.гггг"
-                              Style="width: 100%;" />
+            <input type="date"
+                   class="form-input form-input-sm"
+                   value="@Model.BeginDate.ToString("yyyy-MM-dd")"
+                   @onchange="(e) => OnTariffBeginDateChanged(e, Model)" />
         </div>
-        <div>
-            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Дата окончания</label>
-            <RadzenDatePicker @bind-Value="Model.EndDate"
-                              Placeholder="дд.мм.гггг"
-                              Style="width: 100%;" />
+
+        <div class="form-group">
+            <label class="form-label">Дата окончания</label>
+            <input type="date"
+                   class="form-input form-input-sm"
+                   value="@(Model.EndDate?.ToString("yyyy-MM-dd") ?? "")"
+                   @onchange="(e) => OnTariffEndDateChanged(e, Model)" />
         </div>
     </div>
 </div>
+
 
 @code {
     [Parameter] public TariffPlanRequest Model { get; set; } = null!;
     [Parameter] public int Index { get; set; }
     [Parameter] public EventCallback OnRemove { get; set; }
+
+    private async Task OnNameChanged(ChangeEventArgs e)
+    {
+        Model.Name = e.Value?.ToString() ?? string.Empty;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnDescriptionChanged(ChangeEventArgs e)
+    {
+        Model.Description = e.Value?.ToString() ?? string.Empty;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnPriceChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (decimal.TryParse(value, out decimal result))
+        {
+            Model.Price = result;
+        }
+        else if (string.IsNullOrEmpty(value))
+        {
+            Model.Price = 0;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnTariffBeginDateChanged(ChangeEventArgs e, TariffPlanRequest tariff)
+    {
+        var value = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(value) && DateTime.TryParse(value, out var date))
+            tariff.BeginDate = new DateTimeOffset(date, TimeSpan.Zero);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnTariffEndDateChanged(ChangeEventArgs e, TariffPlanRequest tariff)
+    {
+        var value = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(value) && DateTime.TryParse(value, out var date))
+        {
+            var endOfDay = date.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+            tariff.EndDate = new DateTimeOffset(endOfDay, TimeSpan.Zero);
+        }
+        else
+        {
+            tariff.EndDate = null;;
+        }
+
+        await Task.CompletedTask;
+    }
 }

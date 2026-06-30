@@ -1,0 +1,118 @@
+.service-card {
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    padding: 16px;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+    .service-card:hover {
+        border-color: #1b6ec2;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .service-card.inactive {
+        background-color: #f5f5f5;
+        border-color: #e0e0e0;
+        opacity: 0.85;
+    }
+
+        .service-card.inactive:hover {
+            opacity: 1;
+            border-color: #1b6ec2;
+        }
+
+.service-card-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.service-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.service-card-title {
+    margin: 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.service-card.inactive .service-card-title {
+    opacity: 0.7;
+}
+
+.service-card-description {
+    margin: 0 0 12px 0;
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.service-card.inactive .service-card-description {
+    opacity: 0.7;
+}
+
+.service-card-footer {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: #999;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.service-card.inactive .service-card-footer {
+    opacity: 0.7;
+}
+
+/* Badge для статуса (опционально) */
+.service-card .status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+    .service-card .status-badge.active {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .service-card .status-badge.inactive {
+        background: #e2e8f0;
+        color: #475569;
+    }
+
+@media (max-width: 640px) {
+    .service-card-title {
+        font-size: 14px;
+    }
+
+    .service-card-description {
+        font-size: 12px;
+    }
+
+    .service-card-footer {
+        font-size: 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}

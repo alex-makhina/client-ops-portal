@@ -52,14 +52,6 @@
                             </button>
                         </div>
 
-                        @if (showEditSuccess)
-                        {
-                            <div class="alert alert-success">
-                                <span>✅</span>
-                                Данные абонента обновлены
-                            </div>
-                        }
-
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="info-label">Лицевой счет</span>
@@ -178,7 +170,7 @@
             </div>
 
             <!-- История по всем договорам -->
-            <AllHistoryTable AbonentId="@AbonentId" />
+            <AllHistoryTable @ref="historyTable" AbonentId="@AbonentId" />
         }
     </div>
 </div>
@@ -194,21 +186,20 @@
 }
 
 @code {
-    [Parameter]
-    public Guid AbonentId { get; set; }
+    [Parameter] public Guid AbonentId { get; set; }
 
     private AbonentDetail? abonent;
     private List<ContractItem> contracts = new();
     private Dictionary<Guid, List<SubscriptionItem>> subscriptionsByContract = new();
     private Guid? expandedContractId;
     private bool isLoading = true;
-    private bool showEditSuccess;
 
     private bool showHistoryModal = false;
     private string selectedServiceName = string.Empty;
     private string selectedTariffPlanName = string.Empty;
     private DateTimeOffset selectedServiceBeginDate = DateTimeOffset.Now;
     private Guid selectedSubscriptionId = Guid.Empty;
+    private AllHistoryTable? historyTable;
 
     protected override async Task OnInitializedAsync()
     {
@@ -311,7 +302,6 @@
         var success = await ClientCardService.UpdateAbonentAsync(AbonentId, model);
         if (success)
         {
-            showEditSuccess = true;
             await LoadDataAsync();
             NotificationService.ShowSuccess("Данные абонента обновлены");
         }
@@ -404,14 +394,18 @@
         {
             NotificationService.ShowSuccess("Услуга подключена");
 
+            await LoadDataAsync();
+
             if (expandedContractId == contractId)
             {
                 var subs = await ClientCardService.GetSubscriptionsByContractAsync(contractId);
                 subscriptionsByContract[contractId] = subs.ToList();
-                StateHasChanged();
             }
 
-            await LoadDataAsync();
+            if (historyTable != null)
+                await historyTable.RefreshHistoryAsync();
+
+            StateHasChanged();
         }
         else
         {
@@ -455,7 +449,6 @@
                 { "Title", "Подтверждение отключения" },
                 { "Message", $"Вы уверены, что хотите отключить услугу \"{subscription.ServiceName}\"?" },
                 { "Detail", "Это действие отключит услугу и прекратит её использование." },
-                { "Icon", "🔌" },
                 { "ConfirmText", "Да, отключить" },
                 { "CancelText", "Отмена" }
             },
@@ -481,14 +474,18 @@
         {
             NotificationService.ShowSuccess($"Услуга \"{subscription.ServiceName}\" отключена");
 
+            await LoadDataAsync();
+
             if (expandedContractId == subscription.ContractId)
             {
                 var subs = await ClientCardService.GetSubscriptionsByContractAsync(subscription.ContractId);
-                subscriptionsByContract[subscription.ContractId] = subs.ToList();
-                StateHasChanged();
+                subscriptionsByContract[subscription.ContractId] = subs.ToList();              
             }
 
-            await LoadDataAsync();
+            if (historyTable != null)
+                await historyTable.RefreshHistoryAsync();
+
+            StateHasChanged();
         }
         else
         {
