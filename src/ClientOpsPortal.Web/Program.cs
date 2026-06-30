@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Radzen;
 using ClientOpsPortal.Web.Features.Shared.Notification;
+using ClientOpsPortal.Web.Features.Reports.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -36,6 +37,7 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IAbonentManagementService, AbonentManagementService>();
 builder.Services.AddScoped<IClientCardService, ClientCardService>();
 builder.Services.AddScoped<IServiceManagementService, ServiceManagementService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<AppNotificationService>();
 
 await builder.Build().RunAsync();
