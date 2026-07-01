@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { useForgotPassword } from '../hooks/useForgotPassword';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '../schemas/auth.schema';
-import './SetPasswordForm.css';
+import './Login.css';
 
 export const ForgotPasswordForm: React.FC = () => {
     const { mutate, isPending, isError, error, isSuccess } = useForgotPassword();

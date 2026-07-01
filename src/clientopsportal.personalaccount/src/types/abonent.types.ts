@@ -13,12 +13,15 @@ export interface Abonent {
 }
 
 export interface ContractShortData {
+    id: string;
     contractNumber: string;
     abonentId: string;
     beginDate: string;
+    endDate: string;
 }
 
 export interface SubscriptionFullData {
+    id: string;
     contractId: string;
     serviceId: string;
     serviceName: string;
