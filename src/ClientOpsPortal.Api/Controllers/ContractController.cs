@@ -82,6 +82,10 @@ namespace ClientOpsPortal.Api.Controllers
             {
                 return NotFound($"Договор с ID {id} не найден");
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{id}")]

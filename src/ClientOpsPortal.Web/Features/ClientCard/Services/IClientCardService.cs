@@ -9,10 +9,13 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
         Task<bool> UpdateAbonentAsync(Guid abonentId, AbonentRequest model);
         Task<IReadOnlyCollection<ContractItem>> GetContractsAsync(Guid abonentId);
         Task<bool> CreateContractAsync(CreateContractModel model);
+        Task<(bool success, string errorMessage)> CloseContractAsync(Guid contractId, CloseContractModel model);
         Task<IReadOnlyCollection<SubscriptionItem>> GetSubscriptionsByContractAsync(Guid contractId);
         Task<bool> ConnectServiceAsync(ConnectServiceModel model);
         Task<bool> CancelSubscriptionAsync(Guid subscriptionId);
         Task<IReadOnlyCollection<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(Guid subscriptionId); 
         Task<IReadOnlyCollection<SubscriptionHistoryItem>> GetSubscriptionHistoryByAbonentAsync(Guid abonentId);
+        Task<bool> ChangeTariffPlanAsync(Guid subscriptionId, Guid newTariffPlanId);
+        Task<List<TariffPlanOption>> GetActiveTariffPlansByServiceAsync(Guid serviceId);
     }
 }

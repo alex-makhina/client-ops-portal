@@ -47,6 +47,9 @@ namespace ClientOpsPortal.Web.Features.ServiceManagement.Validators
             if (tariff.Price < 0)
                 return $"Цена тарифного плана #{index + 1} не может быть отрицательной";
 
+            if (tariff.Price > 999)
+                return $"Цена тарифного плана #{index + 1} должна быть в диапазоне от 0 до 999";
+
             if (tariff.BeginDate == default)
                 return $"Укажите дату начала тарифного плана #{index + 1}";
 

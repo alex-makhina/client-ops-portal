@@ -16,4 +16,9 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Models
         public Guid AbonentId { get; set; }
         public DateTimeOffset BeginDate { get; set; } = DateTimeOffset.UtcNow;
     }
+
+    public class CloseContractModel
+    {
+        public DateTimeOffset EndDate { get; set; } = DateTimeOffset.UtcNow;
+    }
 }
