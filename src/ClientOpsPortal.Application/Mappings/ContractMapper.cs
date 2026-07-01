@@ -31,7 +31,8 @@ namespace ClientOpsPortal.Application.Mappings
                 Id = contract.Id,
                 ContractNumber = contract.ContractNumber,
                 AbonentId = contract.AbonentId,
-                BeginDate = contract.BeginDate
+                BeginDate = contract.BeginDate,
+                EndDate = contract.EndDate
             };
         }
 

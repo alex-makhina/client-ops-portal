@@ -45,6 +45,21 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
             return response.IsSuccessStatusCode;
         }
 
+        public async Task<(bool success, string errorMessage)> CloseContractAsync(Guid contractId, CloseContractModel request)
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/v1/Contracts/{contractId}", request);
+
+            if (response.IsSuccessStatusCode)
+                return (true, string.Empty);
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+
+            if (!string.IsNullOrEmpty(errorContent) && !errorContent.TrimStart().StartsWith("{") && !errorContent.TrimStart().StartsWith("["))
+                return (false, errorContent);
+
+            return (false, $"Ошибка при закрытии договора (статус: {(int)response.StatusCode})");
+        }
+
         public async Task<bool> ConnectServiceAsync(ConnectServiceModel model)
         {
             var response = await _httpClient.PostAsJsonAsync("api/v1/Subscriptions/connect", model);
@@ -164,6 +179,39 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
             catch (Exception ex)
             {
                 return Array.Empty<SubscriptionHistoryItem>();
+            }
+        }
+
+        public async Task<bool> ChangeTariffPlanAsync(Guid subscriptionId, Guid newTariffPlanId)
+        {
+            var response = await _httpClient.PatchAsync($"api/v1/Subscriptions/{subscriptionId}/change-tariff?newTariffPlanId={newTariffPlanId}", null);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.Error.WriteLine($"ChangeTariffPlan error ({response.StatusCode}): {error}");
+            }
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<List<TariffPlanOption>> GetActiveTariffPlansByServiceAsync(Guid serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/v1/TariffPlans/by-service/active/{serviceId}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    return new List<TariffPlanOption>();
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<List<TariffPlanOption>>();
+                return result ?? new List<TariffPlanOption>();
+            }
+            catch (Exception ex)
+            {
+                return new List<TariffPlanOption>();
             }
         }
     }

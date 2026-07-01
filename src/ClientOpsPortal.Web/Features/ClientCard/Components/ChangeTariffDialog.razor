@@ -1,0 +1,166 @@
+﻿@* Features/ClientCard/Components/ChangeTariffDialog.razor *@
+@inject IClientCardService ClientCardService
+@inject DialogService DialogService
+
+<div class="modal-overlay" @onclick="Close">
+    <div class="modal-content" @onclick:stopPropagation>
+        <div class="modal-header">
+            <h3>🔄 Смена тарифного плана</h3>
+            <button class="modal-close" type="button" @onclick="Close">×</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="subscription-info">
+                <div class="subscription-info-item">
+                    <span class="label">Услуга</span>
+                    <span class="value">@ServiceName</span>
+                </div>
+                <div class="subscription-info-item">
+                    <span class="label">Текущий тариф</span>
+                    <span class="value">@CurrentTariffName</span>
+                </div>
+            </div>
+
+            @if (showError)
+            {
+                <div class="alert alert-danger">
+                    <span>⚠️</span>
+                    @errorMessage
+                </div>
+            }
+
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Новый тарифный план <span class="required">*</span></label>
+
+                    @if (isLoadingTariffs)
+                    {
+                        <div class="loading-tariffs">
+                            <div class="loading-spinner-small"></div>
+                            <span>Загрузка тарифов...</span>
+                        </div>
+                    }
+                    else if (availableTariffs.Count == 0)
+                    {
+                        <div class="empty-state-small" style="padding: 16px;">
+                            <p style="font-size: 13px; margin: 0;">Нет доступных тарифных планов для смены</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="tariff-list">
+                            @foreach (var tariff in availableTariffs)
+                            {
+                                var isSelected = selectedTariffId == tariff.Id;
+                                <div class="tariff-option @(isSelected ? "selected" : "")"
+                                     @onclick="() => SelectTariff(tariff.Id)">
+                                    <div class="tariff-option-radio">
+                                        <input type="radio"
+                                               name="tariff"
+                                               value="@tariff.Id"
+                                               checked="@isSelected"
+                                               @onchange="() => SelectTariff(tariff.Id)" />
+                                    </div>
+                                    <div class="tariff-option-info">
+                                        <div class="tariff-option-name">@tariff.Name</div>
+                                        <div class="tariff-option-price">@tariff.Price.ToString("F2") ₽</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" @onclick="Close">Отмена</button>
+            <button class="btn btn-primary" type="button" @onclick="HandleChange" disabled="@(!canChange)">
+                Сменить тариф
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid SubscriptionId { get; set; }
+    [Parameter] public string ServiceName { get; set; } = string.Empty;
+    [Parameter] public string CurrentTariffName { get; set; } = string.Empty;
+    [Parameter] public Guid CurrentTariffId { get; set; }
+    [Parameter] public Guid ServiceId { get; set; }
+
+    [Inject] private IClientCardService _clientCardService { get; set; } = null!;
+
+    private List<TariffPlanOption> availableTariffs = new();
+    private Guid selectedTariffId = Guid.Empty;
+    private bool isLoadingTariffs;
+    private bool showError;
+    private string errorMessage = string.Empty;
+    private bool canChange => selectedTariffId != Guid.Empty && selectedTariffId != CurrentTariffId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTariffsAsync();
+    }
+
+    private async Task LoadTariffsAsync()
+    {
+        isLoadingTariffs = true;
+        try
+        {
+            var tariffs = await _clientCardService.GetActiveTariffPlansByServiceAsync(ServiceId);
+            availableTariffs = tariffs.Where(t => t.Id != CurrentTariffId).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading tariffs: {ex.Message}");
+            availableTariffs = new List<TariffPlanOption>();
+        }
+        finally
+        {
+            isLoadingTariffs = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectTariff(Guid tariffId)
+    {
+        selectedTariffId = tariffId;
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        DialogService.Close(null);
+    }
+
+    private async Task HandleChange()
+    {
+        if (!canChange) return;
+
+        showError = false;
+        errorMessage = string.Empty;
+
+        if (selectedTariffId == Guid.Empty)
+        {
+            showError = true;
+            errorMessage = "Выберите тарифный план";
+            StateHasChanged();
+            return;
+        }
+
+        var result = new ChangeTariffDialogResult
+        {
+            SubscriptionId = SubscriptionId,
+            NewTariffPlanId = selectedTariffId
+        };
+
+        DialogService.Close(result);
+    }
+
+    public class ChangeTariffDialogResult
+    {
+        public Guid SubscriptionId { get; set; }
+        public Guid NewTariffPlanId { get; set; }
+    }
+}

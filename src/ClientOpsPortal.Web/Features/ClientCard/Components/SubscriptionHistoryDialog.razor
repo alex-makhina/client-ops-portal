@@ -32,45 +32,51 @@
             }
             else
             {
-                <div class="history-list">
-                    @foreach (var item in historyItems)
-                    {
-                        <div class="history-item">
-                            <div class="history-item-header">
-                                <span class="history-date">@item.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</span>
-                                <span class="badge @GetStatusBadgeClass(item.Status)">
-                                    @GetStatusDisplayName(item.Status)
-                                </span>
-                            </div>
-                            <div class="history-item-body">
-                                <div class="history-action">
-                                    <strong>@GetActionDisplayName(item.ActionType)</strong>
-                                    @if (!string.IsNullOrEmpty(item.TariffPlanName))
-                                    {
-                                        <span>— Тариф "@item.TariffPlanName"</span>
-                                    }
+                <div class="history-list-wrapper">
+                    <div class="history-list">
+                        @foreach (var item in historyItems)
+                        {
+                            <div class="history-item">
+                                <div class="history-item-header">
+                                    <span class="history-date">@item.CreatedAt.LocalDateTime.ToString("dd.MM.yyyy HH:mm")</span>
+                                    <span class="badge @GetStatusBadgeClass(item.Status)">
+                                        @GetStatusDisplayName(item.Status)
+                                    </span>
                                 </div>
-                                @if (item.Steps != null && item.Steps.Count > 0)
-                                {
-                                    <div class="history-steps">
-                                        @foreach (var step in item.Steps)
+                                <div class="history-item-body">
+                                    <div class="history-action">
+                                        <strong>@GetActionDisplayName(item.ActionType)</strong>
+                                        @if (!string.IsNullOrEmpty(item.TariffPlanName) && item.ActionType == "TariffChange")
                                         {
-                                            <div class="history-step">
-                                                <span class="step-time">[@step.CreatedAt.LocalDateTime.ToString("HH:mm:ss")]</span>
-                                                <span class="step-status @GetStepStatusClass(step.Status)">
-                                                    @GetStatusDisplayName(step.Status)
-                                                </span>
-                                                @if (!string.IsNullOrEmpty(step.Message))
-                                                {
-                                                    <span class="step-message">— @step.Message</span>
-                                                }
-                                            </div>
+                                            <span class="tariff-change-name">→ @item.TariffPlanName</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.TariffPlanName) && item.ActionType == "Open")
+                                        {
+                                            <span>— Тариф "@item.TariffPlanName"</span>
                                         }
                                     </div>
-                                }
+                                    @if (item.Steps != null && item.Steps.Count > 0)
+                                    {
+                                        <div class="history-steps">
+                                            @foreach (var step in item.Steps)
+                                            {
+                                                <div class="history-step">
+                                                    <span class="step-time">[@step.CreatedAt.LocalDateTime.ToString("HH:mm:ss")]</span>
+                                                    <span class="step-status @GetStepStatusClass(step.Status)">
+                                                        @GetStatusDisplayName(step.Status)
+                                                    </span>
+                                                    @if (!string.IsNullOrEmpty(step.Message))
+                                                    {
+                                                        <span class="step-message">— @step.Message</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
                             </div>
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             }
         </div>
@@ -101,7 +107,7 @@
         try
         {
             var history = await ClientCardService.GetSubscriptionHistoryAsync(SubscriptionId);
-            historyItems = history.ToList();
+            historyItems = history.OrderByDescending(x => x.CreatedAt).ToList();
         }
         catch (Exception ex)
         {
@@ -162,9 +168,9 @@
     {
         return action switch
         {
-            "Open" => "Подключение услуги",
-            "Close" => "Отключение услуги",
-            "TariffChange" => "Смена тарифного плана",
+            "Open" => "Подключение",
+            "Close" => "Отключение",
+            "TariffChange" => "Смена тарифа",
             _ => action
         };
     }
