@@ -32,6 +32,13 @@ builder.Services.AddHttpClient("Api", client =>
 })
 .AddHttpMessageHandler<TokenHttpMessageHandler>();
 
+var apiAddressServiceUrl = builder.Configuration["ApiAddressServiceUrl"];
+builder.Services.AddHttpClient("ApiAddress", client =>
+{
+    client.BaseAddress = new Uri(apiAddressServiceUrl!);
+})
+.AddHttpMessageHandler<TokenHttpMessageHandler>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IAbonentManagementService, AbonentManagementService>();

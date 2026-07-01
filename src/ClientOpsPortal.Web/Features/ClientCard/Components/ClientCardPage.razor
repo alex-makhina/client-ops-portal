@@ -131,6 +131,7 @@
                                                     <div class="subscription-item">
                                                         <div style="flex: 1;">
                                                             <div class="subscription-name">@sub.ServiceName</div>
+                                                            <div class="subscription-name">@sub.AddressText</div>
                                                             <div class="subscription-details">
                                                                 Тариф: @sub.TariffPlanName
                                                                 <br />
@@ -253,7 +254,7 @@
                 var subs = await ClientCardService.GetSubscriptionsByContractAsync(contractId);
                 subscriptionsByContract[contractId] = subs.ToList();
             }
-            catch
+            catch(Exception ex)
             {
                 subscriptionsByContract[contractId] = new();
             }
@@ -386,7 +387,9 @@
             ContractId = contractId,
             ServiceId = data.ServiceId,
             TariffPlanId = data.TariffPlanId,
-            BeginDate = data.BeginDate
+            BeginDate = data.BeginDate,
+            AddressId = data.AddressId,
+            AddressText = data.AddressText
         };
 
         var success = await ClientCardService.ConnectServiceAsync(model);

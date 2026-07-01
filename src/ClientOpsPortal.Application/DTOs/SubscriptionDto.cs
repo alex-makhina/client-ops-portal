@@ -9,6 +9,8 @@ namespace ClientOpsPortal.Application.DTOs
         public Guid TariffPlanId { get; set; }
         public DateTimeOffset BeginDate { get; set; }
         public DateTimeOffset? EndDate { get; set; }
+        public Guid AddressId { get; set; }
+        public string AddressText { get; set; } = string.Empty;
     }
 
     public class SubscriptionFullDataDto 
@@ -23,6 +25,8 @@ namespace ClientOpsPortal.Application.DTOs
         public DateTimeOffset BeginDate { get; set; }
         public DateTimeOffset? EndDate { get; set; }
         public bool IsActive => EndDate == null || EndDate > DateTimeOffset.UtcNow;
+        public Guid? AddressId { get; set; }
+        public string AddressText { get; set; } = string.Empty;
     }
 
     public class UpdateSubscriptionDto : BaseDto

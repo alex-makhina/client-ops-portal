@@ -45,6 +45,7 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
             return response.IsSuccessStatusCode;
         }
 
+
         public async Task<bool> ConnectServiceAsync(ConnectServiceModel model)
         {
             var response = await _httpClient.PostAsJsonAsync("api/v1/Subscriptions/connect", model);

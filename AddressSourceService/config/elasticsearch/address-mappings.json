@@ -1,0 +1,60 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "filter": {
+        "russian_stop":   { "type": "stop",      "stopwords": "_russian_" },
+        "russian_keywords": { "type": "keyword_marker", "keywords": "_russian_" },
+        "russian_stemmer": { "type": "stemmer",  "language": "russian" }
+      },
+      "analyzer": {
+        "russian": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "russian_stop",
+            "russian_keywords",
+            "russian_stemmer"
+          ]
+        },
+        "edge_ngram_analyzer": {
+          "tokenizer": "edge_ngram_tokenizer",
+          "filter": ["lowercase"]
+        }
+      },
+      "tokenizer": {
+        "edge_ngram_tokenizer": {
+          "type": "edge_ngram",
+          "min_gram": 2,
+          "max_gram": 15,
+          "token_chars": ["letter", "digit"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "id":          { "type": "keyword" },
+      "parentId":    { "type": "keyword" },
+      "osmId":       { "type": "long" },
+      "type":        { "type": "keyword" },
+      "name": {
+        "type": "text",
+        "analyzer": "russian",
+        "fields": {
+          "keyword": { "type": "keyword", "ignore_above": 256 },
+          "prefix":  { "type": "text", "analyzer": "edge_ngram_analyzer", "search_analyzer": "russian" }
+        }
+      },
+      "fullPath": {
+        "type": "text",
+        "analyzer": "russian",
+        "fields": {
+          "keyword": { "type": "keyword", "ignore_above": 1024 },
+          "prefix":  { "type": "text", "analyzer": "edge_ngram_analyzer", "search_analyzer": "russian" }
+        }
+      }
+    }
+  }
+}
