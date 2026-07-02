@@ -21,7 +21,9 @@ namespace ClientOpsPortal.Application.Mappings
                 CreatedAt = subscription.CreatedAt,
                 CreatedBy = subscription.CreatedBy,
                 UpdatedAt = subscription.UpdatedAt,
-                UpdatedBy = subscription.UpdatedBy
+                UpdatedBy = subscription.UpdatedBy,
+                AddressId = subscription.Address.Id,
+                AddressText = subscription.Address?.AddressText
             };
         }
 
@@ -37,12 +39,14 @@ namespace ClientOpsPortal.Application.Mappings
                 TariffPlanId = subscription.TariffPlanId,
                 TariffPlanName = subscription.TariffPlan.Name,
                 BeginDate = subscription.BeginDate,
-                EndDate = subscription.EndDate
+                EndDate = subscription.EndDate,
+                AddressId = subscription.Address?.Id,
+                AddressText = subscription.Address?.AddressText
             };
         }
 
         public static Subscription ToEntity(this SubscriptionDto createDto)
-        {
+        { 
             return new Subscription
             {
                 Id = Guid.NewGuid(),

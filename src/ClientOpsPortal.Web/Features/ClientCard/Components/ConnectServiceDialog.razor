@@ -2,6 +2,10 @@
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 
+@* @@ADDRESS_SEARCH_START@@ *@
+@implements IDisposable 
+@* @@ADDRESS_SEARCH_END@@ *@
+
 <div class="modal-overlay" @onclick="Close">
     <div class="modal-content" @onclick:stopPropagation>
         <div class="modal-header">
@@ -73,6 +77,57 @@
                     }
                 </div>
 
+                @* @@ADDRESS_SEARCH_START@@ *@
+                <!-- Адрес подключения (typeahead через /api/addresses/suggest) -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Адрес подключения</label>
+                    <div class="address-search">
+                        <input type="text"
+                               class="form-control address-search-input"
+                               value="@addressQuery"
+                               @oninput="OnAddressInput"
+                               @onblur="OnAddressBlur"
+                               @onfocus="OnAddressFocus"
+                               placeholder="Начните вводить адрес..." />
+
+                        @if (isLoadingAddresses)
+                        {
+                            <div class="address-search-spinner">
+                                <div class="loading-spinner-small"></div>
+                            </div>
+                        }
+
+                        @if (showAddressDropdown && addressSuggestions.Count > 0)
+                        {
+                            <div class="address-dropdown">
+                                @foreach (var addr in addressSuggestions)
+                                {
+                                    <div class="address-option"
+                                         @onmousedown="() => SelectAddress(addr)">
+                                        <span class="address-option-badge address-type-@addr.Type">@GetTypeLabel(addr.Type)</span>
+                                        <span class="address-option-text">@addr.FullPath</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (showAddressDropdown && !isLoadingAddresses && addressQuery.Trim().Length >= 2 && addressSuggestions.Count == 0)
+                        {
+                            <div class="address-dropdown">
+                                <div class="address-empty">Ничего не найдено</div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (selectedAddressId != Guid.Empty)
+                    {
+                        <div class="address-selected">
+                            <span class="address-selected-icon">✓</span>
+                            <span>Адрес выбран: @selectedAddressText</span>
+                        </div>
+                    }
+                </div> 
+                @* @@ADDRESS_SEARCH_END@@ *@
+
                 <div class="form-group">
                     <label class="form-label">Дата начала</label>
                     <input type="date"
@@ -106,6 +161,16 @@
     private bool showError;
     private string errorMessage = string.Empty;
 
+    @* @@ADDRESS_SEARCH_START@@ *@
+    private string addressQuery = string.Empty;
+    private List<AddressSuggestion> addressSuggestions = new();
+    private Guid selectedAddressId = Guid.Empty;
+    private string selectedAddressText = string.Empty;
+    private bool isLoadingAddresses;
+    private bool showAddressDropdown;
+    private CancellationTokenSource? addressCts; 
+    @* @@ADDRESS_SEARCH_END@@ *@
+
     protected override async Task OnInitializedAsync()
     {
         await LoadServicesAsync();
@@ -114,6 +179,12 @@
     private void UpdateCanConnect()
     {
         canConnect = selectedServiceId != Guid.Empty && selectedTariffPlanId != Guid.Empty;
+
+        @* @@ADDRESS_SEARCH_START@@ *@
+        @* // canConnect = selectedServiceId != Guid.Empty
+        //            && selectedTariffPlanId != Guid.Empty
+        //            && selectedAddressId != Guid.Empty; *@
+        @* @@ADDRESS_SEARCH_END@@ *@
     }
 
     private async Task LoadServicesAsync()
@@ -185,6 +256,124 @@
         StateHasChanged();
     }
 
+    @* @@ADDRESS_SEARCH_START@@ *@
+    private async Task OnAddressInput(ChangeEventArgs e)
+    {
+        addressQuery = e.Value?.ToString() ?? "";
+
+        if (selectedAddressId != Guid.Empty)
+        {
+            selectedAddressId = Guid.Empty;
+            selectedAddressText = string.Empty;
+            UpdateCanConnect();
+        }
+
+        addressCts?.Cancel();
+        addressCts?.Dispose();
+        addressCts = new CancellationTokenSource();
+        var token = addressCts.Token;
+
+        if (addressQuery.Trim().Length < 2)
+        {
+            addressSuggestions.Clear();
+            showAddressDropdown = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(300, token);
+            if (token.IsCancellationRequested) return;
+
+            await SearchAddressesAsync(token);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error in address search: {ex.Message}");
+        }
+    }
+
+    private async Task SearchAddressesAsync(CancellationToken ct)
+    {
+        isLoadingAddresses = true;
+        showAddressDropdown = true;
+        StateHasChanged();
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiAddress");
+            var query = Uri.EscapeDataString(addressQuery.Trim());
+            var response = await client.GetAsync($"api/addresses/suggest?query={query}&limit=10", ct);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<List<AddressSuggestion>>(cancellationToken: ct);
+                addressSuggestions = result ?? new();
+            }
+            else
+            {
+                addressSuggestions.Clear();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error fetching address suggestions: {ex.Message}");
+            addressSuggestions.Clear();
+        }
+        finally
+        {
+            isLoadingAddresses = false;
+            if (!ct.IsCancellationRequested)
+                StateHasChanged();
+        }
+    }
+
+    private void SelectAddress(AddressSuggestion suggestion)
+    {
+        selectedAddressId   = suggestion.Id;
+        selectedAddressText = suggestion.FullPath ?? "";
+        addressQuery        = suggestion.FullPath ?? "";
+        showAddressDropdown = false;
+        addressSuggestions.Clear();
+        UpdateCanConnect();
+        StateHasChanged();
+    }
+
+    private void OnAddressFocus()
+    {
+        if (addressSuggestions.Count > 0 && addressQuery.Trim().Length >= 2)
+        {
+            showAddressDropdown = true;
+        }
+    }
+
+    private async Task OnAddressBlur()
+    {
+        await Task.Delay(200);
+        showAddressDropdown = false;
+        StateHasChanged();
+    }
+
+    private static string GetTypeLabel(string? type) => type switch
+    {
+        "building" => "Дом",
+        "street"   => "Улица",
+        "square"   => "Пл.",
+        "city"     => "Город",
+        "village"  => "Дер.",
+        "suburb"   => "Р-н",
+        "district" => "Р-н",
+        "region"   => "Обл.",
+        _          => "•"
+    }; 
+    @* @@ADDRESS_SEARCH_END@@ *@
+
     private void OnBeginDateChanged(ChangeEventArgs e)
     {
         var value = e.Value?.ToString();
@@ -227,10 +416,21 @@
             ServiceId = selectedServiceId,
             TariffPlanId = selectedTariffPlanId,
             BeginDate = beginDate
+
+            , AddressId   = selectedAddressId
+            , AddressText = selectedAddressText 
         };
 
         DialogService.Close(result);
     }
+
+    @* @@ADDRESS_SEARCH_START@@ *@
+    public void Dispose()
+    {
+        addressCts?.Cancel();
+        addressCts?.Dispose();
+    } 
+    @* @@ADDRESS_SEARCH_END@@ *@
 
     public class ServiceOption
     {
@@ -245,4 +445,14 @@
         public string Name { get; set; } = string.Empty;
         public decimal Price { get; set; }
     }
+
+    @* @@ADDRESS_SEARCH_START@@ *@
+     public class AddressSuggestion
+    {
+        public Guid Id { get; set; }
+        public string? FullPath { get; set; }
+        public string? Type { get; set; }
+        public double? Score { get; set; }
+    } 
+    @* @@ADDRESS_SEARCH_END@@ *@
 }

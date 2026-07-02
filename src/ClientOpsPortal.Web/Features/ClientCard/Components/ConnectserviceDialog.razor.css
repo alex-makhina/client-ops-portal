@@ -371,3 +371,192 @@
         gap: 4px;
     }
 }
+.address-search {
+    position: relative;
+}
+
+/* Инпут — наследует от .form-control, добавляем только padding под спиннер */
+.address-search-input {
+    padding-right: 38px;
+}
+
+/* Спиннер внутри инпута */
+.address-search-spinner {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+/* Выпадающее меню */
+.address-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    animation: slideUp 0.15s ease;
+}
+
+/* Пункт меню */
+.address-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f3f5;
+    transition: background 0.15s ease;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+    .address-option:last-child {
+        border-bottom: none;
+    }
+
+    .address-option:hover {
+        background: #f8faff;
+    }
+
+    .address-option:active {
+        background: #eff6ff;
+    }
+
+/* Бейдж типа адреса */
+.address-option-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #fff;
+    background: #8a8aa8;
+    flex-shrink: 0;
+}
+
+/* Цвета бейджей под вашу палитру + тип-специфичные оттенки */
+.address-type-building {
+    background: #1b6ec2;
+}
+/* синий акцент — дома (самый частый выбор) */
+.address-type-street {
+    background: #155a9e;
+}
+/* тёмно-синий — улицы */
+.address-type-square {
+    background: #155a9e;
+}
+
+.address-type-city {
+    background: #1b6ec2;
+}
+
+.address-type-village {
+    background: #1b6ec2;
+}
+
+.address-type-suburb {
+    background: #8a8aa8;
+}
+/* серый — районы */
+.address-type-district {
+    background: #8a8aa8;
+}
+
+.address-type-region {
+    background: #4a4a6a;
+}
+/* тёмно-серый — регионы */
+
+.address-option-text {
+    flex: 1;
+    color: #1a1a2e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Пустой результат */
+.address-empty {
+    padding: 16px 14px;
+    text-align: center;
+    color: #8a8aa8;
+    font-size: 14px;
+}
+
+/* Индикатор выбранного адреса (под инпутом) */
+.address-selected {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #1b6ec2;
+}
+
+.address-selected-icon {
+    font-weight: bold;
+    color: #1b6ec2;
+}
+
+.address-selected code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 12px;
+    color: #155a9e;
+    background: transparent;
+    padding: 0;
+}
+
+/* Скроллбар в выпадающем меню */
+.address-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.address-dropdown::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 3px;
+}
+
+.address-dropdown::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+    .address-dropdown::-webkit-scrollbar-thumb:hover {
+        background: #8a8aa8;
+    }
+
+/* Responsive — прячем бейджи на узких экранах, оставляем только текст */
+@media (max-width: 480px) {
+    .address-option {
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .address-option-badge {
+        min-width: 36px;
+        height: 18px;
+        font-size: 9px;
+    }
+}

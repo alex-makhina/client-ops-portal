@@ -1,0 +1,107 @@
+# docker-compose.yml — минимальный стек для сервиса проверки адресов
+# Запуск:  docker compose up -d
+# Остановка: docker compose down -v   (с удалением данных)
+#
+# Требования к хосту:
+#   - Docker 24+ и Docker Compose v2
+#   - Минимум 2-4 ГБ свободной RAM для Elasticsearch
+#   - На Linux: выполнить `sudo sysctl -w vm.max_map_count=262144`
+
+services:
+  # ───────────────────────────────────────────────────────────────────────
+  # PostgreSQL 16 + PostGIS — хранилище адресов
+  # ───────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: addr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: addresses
+      POSTGRES_USER: addr
+      POSTGRES_PASSWORD: addr_secret
+      # Используем C.UTF-8, так как локаль ru_RU.UTF-8 отсутствует в базовом образе
+      POSTGRES_INITDB_ARGS: "--locale=C.UTF-8"
+      TZ: Europe/Minsk
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Раскомментируйте строки ниже, когда создадите папку scripts и положите туда файлы:
+      # - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      # - ./scripts/import-osm.sh:/usr/local/bin/import-osm.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U addr -d addresses"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - addr-net
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Elasticsearch 8 — поиск по адресам
+  # ───────────────────────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: addr-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - cluster.name=addr-cluster
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      # В образе ES нет curl, используем проверку порта через bash
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9200' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - addr-net
+
+  # ───────────────────────────────────────────────────────────────────────
+  # pgAdmin 4 — веб-UI для PostgreSQL (порт 5050)
+  # ───────────────────────────────────────────────────────────────────────
+  # Логин/пароль для входа в UI:
+  #     user:    admin@example.com
+  #     password: admin_secret
+  # После входа добавьте сервер (Host: postgres, Port: 5432, DB: addresses, User: addr, Pass: addr_secret)
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: addr-pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Используем @example.com, так как pgAdmin 8 отклоняет зоны вроде .local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin_secret
+      PGADMIN_DISABLE_POSTFIX: "true"
+    ports:
+      - "5050:80" # Проброс порта хоста 5050 на стандартный порт контейнера 80
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - addr-net
+
+volumes:
+  postgres_data:
+    driver: local
+  es_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  addr-net:
+    driver: bridge

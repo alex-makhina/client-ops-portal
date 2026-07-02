@@ -13,13 +13,16 @@ namespace ClientOpsPortal.Application.Services
     {
         private readonly IGenericRepository<Subscription> _subscriptionRepository;
         private readonly IGenericRepository<SubscriptionHistory> _historyRepository;
+        private readonly IGenericRepository<Address> _addressRepository;
 
         public SubscriptionService(
             IGenericRepository<Subscription> subscriptionRepository,
-            IGenericRepository<SubscriptionHistory> historyRepository)
+            IGenericRepository<SubscriptionHistory> historyRepository,
+            IGenericRepository<Address> addressRepository)
         {
             _subscriptionRepository = subscriptionRepository;
             _historyRepository = historyRepository;
+            _addressRepository = addressRepository;
         }
 
         public async Task<SubscriptionDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -36,7 +39,17 @@ namespace ClientOpsPortal.Application.Services
 
         public async Task<SubscriptionDto> CreateAsync(SubscriptionDto createDto, CancellationToken ct = default)
         {
-            var subscription = createDto.ToEntity();       
+            var subscription = createDto.ToEntity();
+            var address = await _addressRepository.GetByIdAsync(createDto.AddressId, false);
+            if (address != null)
+            {
+                subscription.Address = address;
+            }
+            else
+            {
+                subscription.Address = new Address() { Id = createDto.AddressId , AddressText = createDto.AddressText};
+            }
+
             var history = CreateHistory(subscription.Id, SubscriptionActionType.Open, SubscriptionActionStatus.Pending, subscription.TariffPlanId);
 
             await _subscriptionRepository.AddAsync(subscription, ct);

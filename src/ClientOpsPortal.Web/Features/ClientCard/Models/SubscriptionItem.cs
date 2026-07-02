@@ -11,6 +11,8 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Models
         public DateTimeOffset BeginDate { get; set; }
         public DateTimeOffset? EndDate { get; set; }
         public bool IsActive => EndDate == null || EndDate > DateTimeOffset.UtcNow;
+        public Guid? AddressId { get; set; }
+        public string AddressText { get; set; } = string.Empty;
     }
 
     public class ConnectServiceModel
@@ -19,6 +21,8 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Models
         public Guid ServiceId { get; set; }
         public Guid TariffPlanId { get; set; }
         public DateTimeOffset BeginDate { get; set; } = DateTimeOffset.UtcNow;
+        public Guid AddressId { get; set; }
+        public string AddressText { get; set; } = string.Empty;
     }
 
     public class ServiceOption
