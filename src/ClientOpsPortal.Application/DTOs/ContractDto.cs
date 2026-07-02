@@ -17,6 +17,7 @@ namespace ClientOpsPortal.Application.DTOs
         public required string ContractNumber { get; set; }
         public Guid AbonentId { get; set; }
         public DateTimeOffset? BeginDate { get; set; }
+        public DateTimeOffset? EndDate { get; set; }
     }
 
     public class UpdateContractDto : AuditableDto

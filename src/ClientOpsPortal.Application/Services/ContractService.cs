@@ -38,9 +38,14 @@ namespace ClientOpsPortal.Application.Services
 
         public async Task<ContractDataDto> UpdateAsync(Guid id, UpdateContractDto updateDto, CancellationToken ct = default)
         {
-            var contract = await _contractRepository.GetByIdAsync(id, false, ct);
+            var contract = await _contractRepository.GetByIdAsync(id, true, ct);
             if (contract == null)
                 throw new EntityNotFoundException(typeof(Contract), id);
+
+            var activeSubscriptions = contract.Subscriptions.Where(d => d.EndDate == null || d.EndDate > DateTimeOffset.UtcNow).ToList().Count;
+
+            if (activeSubscriptions > 0)
+                throw new InvalidOperationException($"На договоре есть активные подписки");
 
             updateDto.UpdateEntity(contract);
             await _contractRepository.UpdateAsync(contract, ct);

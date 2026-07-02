@@ -55,7 +55,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Abonent")]
         public async Task<IActionResult> Create(ContractDataDto createDto, CancellationToken ct = default)
         {
             try
@@ -70,7 +70,7 @@ namespace ClientOpsPortal.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Abonent")]
         public async Task<IActionResult> Update(Guid id, UpdateContractDto updateDto, CancellationToken ct = default)
         {
             try
@@ -81,6 +81,10 @@ namespace ClientOpsPortal.Api.Controllers
             catch (EntityNotFoundException)
             {
                 return NotFound($"Договор с ID {id} не найден");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 

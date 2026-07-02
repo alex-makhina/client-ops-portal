@@ -22,28 +22,31 @@
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     animation: slideUp 0.25s ease;
     cursor: default;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-history {
-    max-width: 700px !important;
+    max-width: 650px !important;
+    max-height: 85vh !important;
+    height: auto !important;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px;
+    padding: 16px 20px;
     border-bottom: 1px solid #e2e8f0;
-    position: sticky;
-    top: 0;
     background: #ffffff;
     border-radius: 16px 16px 0 0;
     z-index: 1;
+    flex-shrink: 0;
 }
 
     .modal-header h3 {
         margin: 0;
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         color: #1a1a2e;
     }
@@ -51,14 +54,14 @@
 .modal-close {
     background: none;
     border: none;
-    font-size: 28px;
+    font-size: 24px;
     cursor: pointer;
     color: #8a8aa8;
     padding: 0;
     transition: all 0.2s ease;
     line-height: 1;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -73,20 +76,23 @@
     }
 
 .modal-body {
-    padding: 24px;
+    padding: 16px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .modal-footer {
-    padding: 16px 24px;
+    padding: 12px 20px;
     border-top: 1px solid #e2e8f0;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    position: sticky;
-    bottom: 0;
     background: #ffffff;
     border-radius: 0 0 16px 16px;
     z-index: 1;
+    flex-shrink: 0;
 }
 
     .modal-footer .btn {
@@ -96,22 +102,23 @@
 
 /* History Service Info */
 .history-service-info {
-    padding: 12px 16px;
+    padding: 10px 14px;
     background: #f8fafc;
     border-radius: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     border: 1px solid #e2e8f0;
+    flex-shrink: 0;
 }
 
     .history-service-info h4 {
-        margin: 0 0 4px 0;
-        font-size: 16px;
+        margin: 0 0 2px 0;
+        font-size: 15px;
         color: #1a1a2e;
     }
 
     .history-service-info p {
-        margin: 2px 0;
-        font-size: 14px;
+        margin: 1px 0;
+        font-size: 13px;
         color: #8a8aa8;
     }
 
@@ -119,99 +126,126 @@
             color: #1a1a2e;
         }
 
-/* History List */
+/* History List Wrapper - для прокрутки */
+.history-list-wrapper {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+}
+
 .history-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     max-height: 400px;
     overflow-y: auto;
     padding-right: 4px;
+    height: 100%;
 }
 
     .history-list::-webkit-scrollbar {
-        width: 4px;
+        width: 5px;
     }
 
     .history-list::-webkit-scrollbar-track {
         background: #f1f3f5;
-        border-radius: 2px;
+        border-radius: 3px;
     }
 
     .history-list::-webkit-scrollbar-thumb {
-        background: #8a8aa8;
-        border-radius: 2px;
+        background: #cbd5e1;
+        border-radius: 3px;
     }
 
         .history-list::-webkit-scrollbar-thumb:hover {
-            background: #4a4a6a;
+            background: #94a3b8;
         }
 
 .history-item {
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 6px;
     overflow: hidden;
     background: #ffffff;
+    flex-shrink: 0;
 }
+
+    .history-item.tariff-change {
+        border-left: 3px solid #f59e0b;
+    }
 
 .history-item-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 14px;
+    padding: 6px 12px;
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
 }
 
 .history-date {
     font-weight: 500;
-    font-size: 14px;
+    font-size: 12px;
     color: #1a1a2e;
 }
 
 .history-item-body {
-    padding: 12px 14px;
+    padding: 8px 12px;
 }
 
 .history-action {
-    font-size: 14px;
+    font-size: 13px;
     color: #1a1a2e;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
 }
+
+    .history-action .action-icon {
+        font-size: 14px;
+    }
 
     .history-action strong {
         color: #1a1a2e;
+        font-weight: 600;
+    }
+
+    .history-action .tariff-change-name {
+        color: #f59e0b;
+        font-weight: 600;
     }
 
 .history-steps {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding-left: 8px;
+    gap: 2px;
+    padding-left: 6px;
     border-left: 2px solid #e2e8f0;
 }
 
 .history-step {
-    font-size: 13px;
+    font-size: 12px;
     color: #8a8aa8;
-    padding: 2px 0;
+    padding: 1px 0;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
 }
 
 .step-time {
     color: #8a8aa8;
-    font-size: 12px;
+    font-size: 11px;
     font-family: monospace;
 }
 
 .step-status {
     font-weight: 500;
-    font-size: 12px;
-    padding: 1px 8px;
-    border-radius: 12px;
+    font-size: 11px;
+    padding: 0 6px;
+    border-radius: 10px;
 }
 
 .step-success {
@@ -236,18 +270,20 @@
 
 .step-message {
     color: #4a4a6a;
+    font-size: 11px;
 }
 
 /* Badges */
 .badge {
     display: inline-block;
-    padding: 3px 12px;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 16px;
+    font-size: 11px;
     font-weight: 500;
     line-height: 1.5;
     text-align: center;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .badge-success {
@@ -318,16 +354,16 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 20px;
+    padding: 8px 16px;
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: inherit;
     line-height: 1;
-    min-height: 40px;
+    min-height: 36px;
 }
 
     .btn:active {
@@ -377,19 +413,19 @@
     .modal-history {
         max-width: 100% !important;
         margin: 10px;
-        max-height: 95vh;
+        max-height: 95vh !important;
     }
 
     .modal-header {
-        padding: 16px 20px;
+        padding: 12px 16px;
     }
 
     .modal-body {
-        padding: 16px 20px;
+        padding: 12px 16px;
     }
 
     .modal-footer {
-        padding: 12px 20px;
+        padding: 10px 16px;
         flex-direction: column;
     }
 
@@ -406,5 +442,13 @@
 
     .history-step {
         flex-wrap: wrap;
+    }
+
+    .history-list {
+        max-height: 300px;
+    }
+
+    .history-action {
+        font-size: 12px;
     }
 }

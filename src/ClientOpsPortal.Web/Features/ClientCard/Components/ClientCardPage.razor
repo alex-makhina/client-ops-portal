@@ -94,9 +94,6 @@
                                     <div class="contract-item-header" @onclick="() => ToggleContract(contract.Id)">
                                         <div class="contract-item-info">
                                             <strong>Договор № @contract.ContractNumber</strong>
-                                            <span class="badge @(contract.IsActive ? "badge-success" : "badge-secondary")">
-                                                @(contract.IsActive ? "Активен" : "Завершен")
-                                            </span>
                                         </div>
                                         <div style="display: flex; align-items: center; gap: 8px;">
                                             @if (contract.IsActive)
@@ -106,6 +103,12 @@
                                                         @onclick="() => OpenConnectServiceDialog(contract.Id)"
                                                         title="Подключить услугу">
                                                     Подключить
+                                                </button>
+                                                <button class="btn btn-danger btn-sm" type="button"
+                                                        @onclick:stopPropagation
+                                                        @onclick="() => ConfirmCloseContract(contract.Id, contract.ContractNumber)"
+                                                        title="Закрыть договор">
+                                                    Закрыть
                                                 </button>
                                             }
                                             <span class="contract-toggle">▼</span>
@@ -145,7 +148,7 @@
                                                                 @(sub.IsActive ? "Активна" : "Отключена")
                                                             </span>
                                                         </div>
-                                                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                                                        <div style="display: flex; gap: 4px; flex-shrink: 0; align-items: center; position: relative;">
                                                             <button class="btn btn-secondary btn-sm" type="button"
                                                                     @onclick="() => ShowSubscriptionHistory(sub.Id)"
                                                                     title="История изменений">
@@ -153,9 +156,29 @@
                                                             </button>
                                                             @if (sub.IsActive)
                                                             {
-                                                                <button class="btn btn-danger btn-sm" type="button" @onclick="() => ConfirmCancelSubscription(sub)">
-                                                                    Отключить
-                                                                </button>
+                                                                <div class="dropdown-wrapper" @onclick:stopPropagation>
+                                                                    <button class="btn btn-secondary btn-sm dropdown-toggle"
+                                                                            type="button"
+                                                                            @onclick="() => ToggleDropdown(sub.Id)"
+                                                                            title="Действия">
+                                                                        ⋯
+                                                                    </button>
+                                                                    @if (activeDropdownId == sub.Id)
+                                                                    {
+                                                                        <div class="dropdown-menu @GetDropdownPosition(sub)">
+                                                                            <button class="dropdown-item"
+                                                                                    type="button"
+                                                                                    @onclick="() => { activeDropdownId = null; OpenChangeTariffDialog(sub); }">
+                                                                                Сменить тариф
+                                                                            </button>
+                                                                            <button class="dropdown-item dropdown-item-danger"
+                                                                                    type="button"
+                                                                                    @onclick="() => { activeDropdownId = null; ConfirmCancelSubscription(sub); }">
+                                                                                Отключить
+                                                                            </button>
+                                                                        </div>
+                                                                    }
+                                                                </div>
                                                             }
                                                         </div>
                                                     </div>
@@ -201,6 +224,7 @@
     private DateTimeOffset selectedServiceBeginDate = DateTimeOffset.Now;
     private Guid selectedSubscriptionId = Guid.Empty;
     private AllHistoryTable? historyTable;
+    private Guid? activeDropdownId = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -216,7 +240,7 @@
             if (abonent != null)
             {
                 var contractList = await ClientCardService.GetContractsAsync(AbonentId);
-                contracts = contractList.ToList();
+                contracts = contractList.Where(c => c.EndDate == null || c.EndDate > DateTimeOffset.UtcNow).ToList();
                 subscriptionsByContract.Clear();
             }
         }
@@ -494,5 +518,163 @@
         {
             NotificationService.ShowError("Не удалось отключить услугу");
         }
+    }
+
+    private async Task ConfirmCloseContract(Guid contractId, string contractNumber)
+    {
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>(
+            "Подтверждение закрытия",
+            new Dictionary<string, object?>
+            {
+                { "Title", "Подтверждение закрытия" },
+                { "Message", $"Вы уверены, что хотите закрыть договор №{contractNumber}?" },
+                { "Detail", "Дата закрытия: сегодня" },
+                { "ConfirmText", "Да, закрыть" },
+                { "CancelText", "Отмена" }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
+        );
+
+        if (result is bool isConfirmed && isConfirmed)
+        {
+            await HandleCloseContract(contractId);
+        }
+    }
+
+    private async Task HandleCloseContract(Guid contractId)
+    {
+        try
+        {
+            var model = new CloseContractModel
+            {
+                EndDate = DateTimeOffset.UtcNow
+            };
+
+            var (success, errorMessage) = await ClientCardService.CloseContractAsync(contractId, model);
+
+            if (success)
+            {
+                NotificationService.ShowSuccess($"Договор успешно закрыт");
+
+                await LoadDataAsync();
+
+                if (expandedContractId == contractId)
+                {
+                    expandedContractId = null;
+                }
+
+                if (historyTable != null)
+                    await historyTable.RefreshHistoryAsync();
+
+                StateHasChanged();
+            }
+            else
+            {
+                NotificationService.ShowError(errorMessage ?? "Не удалось закрыть договор");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError($"Ошибка при закрытии договора.");
+        }
+    }
+
+    private async Task OpenChangeTariffDialog(SubscriptionItem subscription)
+    {
+        var result = await DialogService.OpenAsync<ChangeTariffDialog>(
+            "Смена тарифного плана",
+            new Dictionary<string, object?>
+            {
+            { "SubscriptionId", subscription.Id },
+            { "ServiceName", subscription.ServiceName },
+            { "CurrentTariffName", subscription.TariffPlanName },
+            { "CurrentTariffId", subscription.TariffPlanId },
+            { "ServiceId", subscription.ServiceId }
+            },
+            new DialogOptions
+            {
+                Width = "500px",
+                CloseDialogOnOverlayClick = false,
+                Resizable = true,
+                Draggable = true
+            }
+        );
+
+        if (result is ChangeTariffDialog.ChangeTariffDialogResult dialogResult)
+        {
+            await HandleChangeTariff(dialogResult);
+        }
+    }
+
+    private async Task HandleChangeTariff(ChangeTariffDialog.ChangeTariffDialogResult data)
+    {
+        try
+        {
+            var success = await ClientCardService.ChangeTariffPlanAsync(data.SubscriptionId, data.NewTariffPlanId);
+
+            if (success)
+            {
+                NotificationService.ShowSuccess("Тарифный план успешно изменен");
+
+                await LoadDataAsync();
+
+                if (expandedContractId.HasValue)
+                {
+                    var subs = await ClientCardService.GetSubscriptionsByContractAsync(expandedContractId.Value);
+                    subscriptionsByContract[expandedContractId.Value] = subs.ToList();
+                }
+
+                if (historyTable != null)
+                    await historyTable.RefreshHistoryAsync();
+
+                StateHasChanged();
+            }
+            else
+            {
+                NotificationService.ShowError("Не удалось изменить тарифный план");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError($"Ошибка при смене тарифа.");
+        }
+    }
+
+    private void ToggleDropdown(Guid subscriptionId)
+    {
+        if (activeDropdownId == subscriptionId)
+        {
+            activeDropdownId = null;
+        }
+        else
+        {
+            activeDropdownId = subscriptionId;
+        }
+        StateHasChanged();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+    }
+
+    private string GetDropdownPosition(SubscriptionItem sub)
+    {
+        // Определяем позицию подписки в списке
+        var index = subscriptionsByContract.Values.SelectMany(x => x).ToList().IndexOf(sub);
+        var total = subscriptionsByContract.Values.SelectMany(x => x).Count();
+
+        // Если подписка последняя или предпоследняя - показываем меню вверх
+        if (index >= total - 2)
+        {
+            return "dropdown-up";
+        }
+        return "dropdown-down";
     }
 }
