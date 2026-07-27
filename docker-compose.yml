@@ -12,6 +12,8 @@ services:
       - "5433:5432"
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
+    networks:
+      - cop-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
@@ -30,6 +32,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cop-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
@@ -43,11 +47,69 @@ services:
     ports:
       - 8080:8080
     environment:
-      ADMINER_DEFAULT_SERVER: postgres 
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - cop-network
     depends_on:
       db:
         condition: service_healthy
 
+  api:
+    build:
+      context: .
+      dockerfile: src/ClientOpsPortal.Api/Dockerfile
+    container_name: client_ops_portal_api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-5079}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__AppConnection: Host=db;Port=5432;Database=ClientOpsPortalDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      ConnectionStrings__AppAuthConnection: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+    networks:
+      - cop-network
+    depends_on:
+      db:
+        condition: service_healthy
+      db_auth:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: src/ClientOpsPortal.Web/Dockerfile
+    container_name: client_ops_portal_web
+    restart: unless-stopped
+    ports:
+      - "${BLAZOR_PORT:-5022}:80"
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:5079}
+    networks:
+      - cop-network
+    depends_on:
+      - api
+
+  personal-account:
+    build:
+      context: .
+      dockerfile: src/clientopsportal.personalaccount/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5079/api/v1}
+    container_name: client_ops_portal_pa
+    restart: unless-stopped
+    ports:
+      - "${REACT_PORT:-62000}:80"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5079/api/v1}
+    networks:
+      - cop-network
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   postgres_auth_data:
+
+networks:
+  cop-network:
+    driver: bridge

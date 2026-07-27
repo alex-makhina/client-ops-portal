@@ -455,6 +455,7 @@ public class BaseControllerTests
         {
             ContractId = contractId,
             ServiceId = Guid.NewGuid(),
+            ContractNumber = "ctr-999",
             ServiceName = "Test Service",
             TariffPlanId = Guid.NewGuid(),
             TariffPlanName = "Test Tariff",

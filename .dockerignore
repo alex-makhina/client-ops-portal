@@ -1,0 +1,45 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+# Build outputs
+**/bin/
+**/obj/
+**/dist/
+**/out/
+**/publish/
+**/artifacts/
+
+# Node
+**/node_modules/
+
+# Documentation & plans
+Documentation/
+plans/
+
+# Test projects
+tests/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs & temp
+*.log
+*.tmp
+tmp/
+temp/
+
+# OS files
+Thumbs.db
+.DS_Store
