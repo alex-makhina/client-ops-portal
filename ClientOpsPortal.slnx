@@ -1,17 +1,28 @@
 <Solution>
-  <Folder Name="/src/">
-    <File Path="docker-compose.yml" />
-    <Project Path="src/ClientOpsPortal.PersonalAccount/clientopsportal.personalaccount.esproj">
+  <Folder Name="/src/" />
+  <Folder Name="/src/apps/" />
+  <Folder Name="/src/apps/personal-account/">
+    <Project Path="src/apps/personal-account/clientopsportal.personalaccount/clientopsportal.personalaccount.esproj">
       <Build />
       <Deploy />
     </Project>
-    <Project Path="src/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
-    <Project Path="src/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
-    <Project Path="src/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
-    <Project Path="src/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
-    <Project Path="src/ClientOpsPortal.Web/ClientOpsPortal.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/apps/admin-portal/">
+    <Project Path="src/apps/admin-portal/ClientOpsPortal.Web/ClientOpsPortal.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/services/" />
+  <Folder Name="/src/services/client-ops-api/">
+    <Project Path="src/services/client-ops-api/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
+    <Project Path="src/services/client-ops-api/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
+    <Project Path="src/services/client-ops-api/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
+    <Project Path="src/services/client-ops-api/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/services/services-directory/">
+    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
+    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
+    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" Id="de2f9098-9562-4c60-8a26-2cbd24fc1c47" />
+    <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
   </Folder>
 </Solution>
