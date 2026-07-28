@@ -22,9 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ClientOpsPortal.Api\ClientOpsPortal.Api.csproj" />
     <ProjectReference Include="..\..\src\ClientOpsPortal.Application\ClientOpsPortal.Application.csproj" />
-    <ProjectReference Include="..\..\src\ClientOpsPortal.Domain\ClientOpsPortal.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

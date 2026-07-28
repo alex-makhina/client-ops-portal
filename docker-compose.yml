@@ -12,6 +12,8 @@ services:
       - "5433:5432"
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
+    networks:
+      - cop-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
@@ -30,6 +32,26 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  directory-db:
+    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    container_name: client_ops_portal_directory_db
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_directory_data:/var/lib/postgresql/data
+    networks:
+      - cop-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
@@ -43,11 +65,112 @@ services:
     ports:
       - 8080:8080
     environment:
-      ADMINER_DEFAULT_SERVER: postgres 
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - cop-network
     depends_on:
       db:
         condition: service_healthy
 
+  api:
+    build:
+      context: .
+      dockerfile: src/services/client-ops-api/Dockerfile
+    container_name: client_ops_portal_api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-5079}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__AppConnection: Host=db;Port=5432;Database=ClientOpsPortalDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      ConnectionStrings__AppAuthConnection: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      ServicesDirectory__BaseUrl: http://services-directory:8080
+    networks:
+      - cop-network
+    depends_on:
+      db:
+        condition: service_healthy
+      db_auth:
+        condition: service_healthy
+      services-directory:
+        condition: service_started
+
+  services-directory:
+    build:
+      context: .
+      dockerfile: src/services/services-directory/Dockerfile
+    container_name: client_ops_portal_services_dir
+    restart: unless-stopped
+    ports:
+      - "${DIRECTORY_PORT:-5100}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__DirectoryDb: Host=directory-db;Port=5432;Database=ClientOpsPortalDirectoryDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      Redis__Configuration: ${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
+    networks:
+      - cop-network
+    depends_on:
+      directory-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:${REDIS_VERSION:-7-alpine}
+    container_name: client_ops_portal_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cop-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: src/apps/admin-portal/Dockerfile
+    container_name: client_ops_portal_web
+    restart: unless-stopped
+    ports:
+      - "${BLAZOR_PORT:-5022}:80"
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:5079}
+    networks:
+      - cop-network
+    depends_on:
+      - api
+
+  personal-account:
+    build:
+      context: .
+      dockerfile: src/apps/personal-account/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5079/api/v1}
+    container_name: client_ops_portal_pa
+    restart: unless-stopped
+    ports:
+      - "${REACT_PORT:-62000}:80"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5079/api/v1}
+    networks:
+      - cop-network
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   postgres_auth_data:
+  postgres_directory_data:
+  redis_data:
+
+networks:
+  cop-network:
+    driver: bridge
+
+

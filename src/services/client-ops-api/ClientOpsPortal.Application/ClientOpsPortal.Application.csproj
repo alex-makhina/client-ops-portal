@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClientOpsPortal.Domain\ClientOpsPortal.Domain.csproj" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <ProjectReference Include="..\..\services-directory\ClientOpsPortal.Services.Directory.Contracts\ClientOpsPortal.Services.Directory.Contracts.csproj" />
+  </ItemGroup>
+</Project>
