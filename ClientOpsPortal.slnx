@@ -21,7 +21,7 @@
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
-  </Folder>
+  </Folder>  
   <Folder Name="/tests/">
     <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
   </Folder>
