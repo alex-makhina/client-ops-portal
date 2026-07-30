@@ -58,6 +58,24 @@ services:
       timeout: 5s
       retries: 5
 
+  reporting-db:
+    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    container_name: client_ops_portal_reporting_db
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_reporting_data:/var/lib/postgresql
+    networks:
+      - cop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
   adminer:
     image: adminer:${ADMINER_VERSION:-5.4.2}
     container_name: client_ops_portal_adminer
@@ -132,7 +150,6 @@ services:
       timeout: 5s
       retries: 5
 
-
   auth:
     build:
       context: .
@@ -154,6 +171,23 @@ services:
       db_auth:
         condition: service_healthy
 
+  reporting:
+    build:
+      context: .
+      dockerfile: src/services/reporting/Dockerfile
+    container_name: client_ops_portal_reporting
+    restart: unless-stopped
+    ports:
+      - "${REPORTING_PORT:-5200}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__ReportingDb: Host=reporting-db;Port=5432;Database=ClientOpsPortalReportingDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+    networks:
+      - cop-network
+    depends_on:
+      reporting-db:
+        condition: service_healthy
+        
   web:
     build:
       context: .
@@ -190,7 +224,8 @@ volumes:
   postgres_data:
   postgres_auth_data:
   postgres_directory_data:
-  redis_data:
+  postgres_reporting_data:
+  redis_data:  
 
 networks:
   cop-network:
