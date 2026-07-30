@@ -96,7 +96,7 @@ namespace ClientOpsPortal.Services.Directory.Services
         public async Task<ServiceDto> CreateServiceAsync(CreateServiceDto createDto, CancellationToken ct)
         {
             if (!await IsServiceNameUniqueAsync(createDto.Name, null, ct))
-                throw new InvalidOperationException($"РЈСЃР»СѓРіР° СЃ РЅР°Р·РІР°РЅРёРµРј '{createDto.Name}' СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
+                throw new InvalidOperationException($"Услуга с названием '{createDto.Name}' уже существует");
 
             var service = ToEntity(createDto);
             await _serviceRepository.AddAsync(service, ct);
@@ -112,7 +112,7 @@ namespace ClientOpsPortal.Services.Directory.Services
 
             if (!string.IsNullOrWhiteSpace(updateDto.Name) && service.Name != updateDto.Name)
                 if (!await IsServiceNameUniqueAsync(updateDto.Name, id, ct))
-                    throw new InvalidOperationException($"РЈСЃР»СѓРіР° СЃ РЅР°Р·РІР°РЅРёРµРј '{updateDto.Name}' СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
+                    throw new InvalidOperationException($"Услуга с названием '{updateDto.Name}' уже существует");
 
             if (!string.IsNullOrWhiteSpace(updateDto.Name))
                 service.Name = updateDto.Name;

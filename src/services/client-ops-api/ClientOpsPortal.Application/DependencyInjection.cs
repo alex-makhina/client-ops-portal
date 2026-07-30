@@ -17,10 +17,6 @@ namespace ClientOpsPortal.Application
             services.AddScoped<ISubscriptionHistoryService, SubscriptionHistoryService>();
             services.AddScoped<ISubscriptionHistoryStepService, SubscriptionHistoryStepService>();
             services.AddScoped<IReportsService, ReportsService>();
-
-            services.AddScoped<IIdentityService, IdentityService>();
-            services.AddScoped<INotificationService, ConsoleNotificationService>();
-
             return services;
         }
 

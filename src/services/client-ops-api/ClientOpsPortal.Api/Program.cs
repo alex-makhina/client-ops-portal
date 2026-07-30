@@ -1,12 +1,9 @@
 using ClientOpsPortal.Api.Services;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Services;
-using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Interfaces.Services;
 using ClientOpsPortal.Infrastructure;
 using ClientOpsPortal.Infrastructure.Data;
-using ClientOpsPortal.Infrastructure.Data.Context;
-using Microsoft.AspNetCore.Identity;
 using ClientOpsPortal.Application;
 using Scalar.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -14,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ClientOpsPortal.Application.Settings;
 using ClientOpsPortal.Services.Directory.Client;
+using ClientOpsPortal.Services.Auth.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +20,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
-builder.Services.AddScoped<ICurrentUserService,CurrentUserService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 builder.Services.AddCors(options =>
 {
@@ -41,19 +39,14 @@ builder.Services.AddEmailSettings(builder.Configuration);
 var directoryServiceUrl = builder.Configuration.GetValue<string>("ServicesDirectory:BaseUrl")
     ?? "http://localhost:5100";
 builder.Services.AddMemoryCache();
-            builder.Services.AddServicesDirectoryClient(directoryServiceUrl);
-            builder.Services.AddSingleton<ClientOpsPortal.Application.Interfaces.IDirectoryCacheService, ClientOpsPortal.Api.Services.DirectoryCacheService>();
+builder.Services.AddServicesDirectoryClient(directoryServiceUrl);
+builder.Services.AddSingleton<IDirectoryCacheService, DirectoryCacheService>();
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddScoped<INotificationService, ConsoleNotificationService>();
-}
+var authServiceUrl = builder.Configuration.GetValue<string>("AuthService:BaseUrl")
+    ?? "http://localhost:5110";
+builder.Services.AddAuthClient(authServiceUrl);
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-
-builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
-    .AddEntityFrameworkStores<AuthDbContext>()
-    .AddDefaultTokenProviders();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -78,7 +71,6 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-app.EnsureAppAuthDatabase();
 app.EnsureAppDatabase();
 
 if (app.Environment.IsDevelopment())
@@ -86,7 +78,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
     app.UseDeveloperExceptionPage();
-
     await app.SeedDatabaseAsync();
 }
 else
@@ -102,4 +93,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
