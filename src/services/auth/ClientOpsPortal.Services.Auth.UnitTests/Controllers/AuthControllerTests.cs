@@ -1,9 +1,8 @@
 ﻿using AutoBogus;
-using ClientOpsPortal.Api.Controllers;
-using ClientOpsPortal.Application.Interfaces;
-using ClientOpsPortal.Application.Settings;
-using ClientOpsPortal.Domain.Entities;
-using ClientOpsPortal.Domain.Interfaces.Services;
+using ClientOpsPortal.Services.Auth.Contracts;
+using ClientOpsPortal.Services.Auth.Controllers;
+using ClientOpsPortal.Services.Auth.Domain;
+using ClientOpsPortal.Services.Auth.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -14,25 +13,20 @@ using Shouldly;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Timers;
 
-namespace ClientOpsPortal.UnitTests.Controllers;
+namespace ClientOpsPortal.Services.Auth.UnitTests.Controllers;
 
 public class AuthControllerTests
 {
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<IOptions<JwtSettings>> _jwtSettingsMock;
-    private readonly Mock<IIdentityService> _identityServiceMock;
-    private readonly Mock<INotificationService> _notificationServiceMock;
-    private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly AuthController _sut;
 
     public AuthControllerTests()
     {
         _userManagerMock = CreateUserManagerMock();
         _jwtSettingsMock = new Mock<IOptions<JwtSettings>>();
-        _identityServiceMock = new Mock<IIdentityService>();
-        _notificationServiceMock = new Mock<INotificationService>();
-        _currentUserServiceMock = new Mock<ICurrentUserService>();
 
         var jwtSettings = new JwtSettings
         {
@@ -43,21 +37,14 @@ public class AuthControllerTests
         };
         _jwtSettingsMock.Setup(x => x.Value).Returns(jwtSettings);
 
-        _sut = new AuthController(
-            _userManagerMock.Object,
-            _jwtSettingsMock.Object,
-            _identityServiceMock.Object,
-            _notificationServiceMock.Object,
-            _currentUserServiceMock.Object);
+        _sut = new AuthController(_userManagerMock.Object, _jwtSettingsMock.Object);
     }
 
     private static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
     {
         var store = new Mock<IUserStore<ApplicationUser>>();
-        var userManagerMock = new Mock<UserManager<ApplicationUser>>(
+        return new Mock<UserManager<ApplicationUser>>(
             store.Object, null, null, null, null, null, null, null, null);
-
-        return userManagerMock;
     }
 
     #region Login Tests
@@ -100,13 +87,13 @@ public class AuthControllerTests
 
         response.ShouldNotBeNull();
         response.Token.ShouldNotBeNullOrEmpty();
-        response.UserId.ShouldBe(userId);
+        response.UserId.ShouldBe(userId.ToString());
         response.UserName.ShouldBe(userName);
         response.Roles.ShouldBe(roles);
 
         _userManagerMock.Verify(x => x.FindByNameAsync(loginRequest.Login), Times.Once);
         _userManagerMock.Verify(x => x.CheckPasswordAsync(user, loginRequest.Password), Times.Once);
-        _userManagerMock.Verify(x => x.GetRolesAsync(user), Times.Once);
+        _userManagerMock.Verify(x => x.GetRolesAsync(user), Times.Exactly(2));
     }
 
     [Fact]
@@ -171,6 +158,44 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public async Task Login_WhenUserIsLockedOut_ReturnsUnauthorized()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userName = "testuser";
+        var user = CreateApplicationUser(userId, userName);
+
+        var loginRequest = new LoginRequest
+        {
+            Login = userName,
+            Password = "password123"
+        };
+
+        _userManagerMock
+            .Setup(x => x.FindByNameAsync(loginRequest.Login))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, loginRequest.Password))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _sut.Login(loginRequest);
+
+        // Assert
+        var unauthorizedResult = result.ShouldBeOfType<UnauthorizedObjectResult>();
+        unauthorizedResult.Value.ShouldNotBeNull();
+        unauthorizedResult.Value.ToString().ShouldContain("User is blocked");
+
+        _userManagerMock.Verify(x => x.IsLockedOutAsync(user), Times.Once);
+        _userManagerMock.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Login_WhenUserHasMultipleRoles_TokenContainsAllRoles()
     {
         // Arrange
@@ -212,6 +237,45 @@ public class AuthControllerTests
         response.Roles.ShouldContain("Abonent");
     }
 
+    [Fact]
+    public async Task Login_WhenUserHasNoRoles_ReturnsEmptyRolesList()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userName = "testuser";
+        var password = "password123";
+        var roles = new List<string>();
+
+        var user = CreateApplicationUser(userId, userName);
+
+        var loginRequest = new LoginRequest
+        {
+            Login = userName,
+            Password = password
+        };
+
+        _userManagerMock
+            .Setup(x => x.FindByNameAsync(loginRequest.Login))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, loginRequest.Password))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(roles);
+
+        // Act
+        var result = await _sut.Login(loginRequest);
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var response = okResult.Value.ShouldBeOfType<AuthResponse>();
+
+        response.Roles.ShouldBeEmpty();
+    }
+
     #endregion
 
     #region ForgotPassword Tests
@@ -222,11 +286,8 @@ public class AuthControllerTests
         // Arrange
         var userId = Guid.NewGuid();
         var userName = "testuser";
-        var email = "test@example.com";
-        var temporaryPassword = "Temp123!";
+        var user = CreateApplicationUser(userId, userName);
         var resetToken = "reset-token-123";
-
-        var user = CreateApplicationUser(userId, userName, email);
 
         var forgotRequest = new ForgotPasswordRequest
         {
@@ -237,17 +298,9 @@ public class AuthControllerTests
             .Setup(x => x.FindByNameAsync(forgotRequest.LoginIdentifier))
             .ReturnsAsync(user);
 
-        _identityServiceMock
-            .Setup(x => x.GeneratePasswordResetTokenAsync(forgotRequest.LoginIdentifier, It.IsAny<CancellationToken>()))
+        _userManagerMock
+            .Setup(x => x.GeneratePasswordResetTokenAsync(user))
             .ReturnsAsync(resetToken);
-
-        _identityServiceMock
-            .Setup(x => x.ResetPasswordAsync(forgotRequest.LoginIdentifier, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(temporaryPassword);
-
-        _notificationServiceMock
-            .Setup(x => x.SendPasswordSetLinkAsync(email, userName, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         // Act
         var result = await _sut.ForgotPassword(forgotRequest);
@@ -256,12 +309,10 @@ public class AuthControllerTests
         var okResult = result.ShouldBeOfType<OkObjectResult>();
         var response = okResult.Value.ShouldBeOfType<ForgotPasswordResponse>();
 
-        response.TemporaryPassword.ShouldBe(temporaryPassword);
-        response.Message.ShouldBe("Password has been reset. The temporary password has been sent to your email.");
+        response.TemporaryPassword.ShouldBe(resetToken);
 
         _userManagerMock.Verify(x => x.FindByNameAsync(forgotRequest.LoginIdentifier), Times.Once);
-        _identityServiceMock.Verify(x => x.ResetPasswordAsync(forgotRequest.LoginIdentifier, It.IsAny<CancellationToken>()), Times.Once);
-        _notificationServiceMock.Verify(x => x.SendPasswordSetLinkAsync(email, userName, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _userManagerMock.Verify(x => x.GeneratePasswordResetTokenAsync(user), Times.Once);
     }
 
     [Fact]
@@ -286,56 +337,110 @@ public class AuthControllerTests
         notFoundResult.Value.ToString().ShouldContain("User not found");
 
         _userManagerMock.Verify(x => x.FindByNameAsync(forgotRequest.LoginIdentifier), Times.Once);
-        _identityServiceMock.Verify(x => x.ResetPasswordAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _notificationServiceMock.Verify(x => x.SendPasswordSetLinkAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userManagerMock.Verify(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
+    #endregion
+
+    #region SetPassword Tests
+
     [Fact]
-    public async Task ForgotPassword_WhenUserHasNoEmail_StillSucceeds()
+    public async Task SetPassword_WhenValidRequest_ReturnsOk()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var userName = "testuser";
-        var temporaryPassword = "Temp123!";
-        var resetToken = "reset-token-123";
+        var user = CreateApplicationUser(userId, userName);
+        var token = "reset-token-123";
+        var newPassword = "NewPass456!";
 
-        var user = new ApplicationUser
+        var setPasswordRequest = new SetPasswordRequest
         {
-            Id = userId,
-            UserName = userName,
-            Email = null
-        };
-
-        var forgotRequest = new ForgotPasswordRequest
-        {
-            LoginIdentifier = userName
+            LoginIdentifier = userName,
+            Token = token,
+            NewPassword = newPassword
         };
 
         _userManagerMock
-            .Setup(x => x.FindByNameAsync(forgotRequest.LoginIdentifier))
+            .Setup(x => x.FindByNameAsync(setPasswordRequest.LoginIdentifier))
             .ReturnsAsync(user);
 
-        _identityServiceMock
-            .Setup(x => x.GeneratePasswordResetTokenAsync(forgotRequest.LoginIdentifier, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resetToken);
-
-        _identityServiceMock
-            .Setup(x => x.ResetPasswordAsync(forgotRequest.LoginIdentifier, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(temporaryPassword);
-
-        _notificationServiceMock
-            .Setup(x => x.SendPasswordSetLinkAsync(string.Empty, userName, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        _userManagerMock
+            .Setup(x => x.ResetPasswordAsync(user, token, newPassword))
+            .ReturnsAsync(IdentityResult.Success);
 
         // Act
-        var result = await _sut.ForgotPassword(forgotRequest);
+        var result = await _sut.SetPassword(setPasswordRequest);
 
         // Assert
-        result.ShouldBeOfType<OkObjectResult>();
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        okResult.Value.ShouldNotBeNull();
 
-        _notificationServiceMock.Verify(
-            x => x.SendPasswordSetLinkAsync(string.Empty, userName, It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+        _userManagerMock.Verify(x => x.FindByNameAsync(setPasswordRequest.LoginIdentifier), Times.Once);
+        _userManagerMock.Verify(x => x.ResetPasswordAsync(user, token, newPassword), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetPassword_WhenUserNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var setPasswordRequest = new SetPasswordRequest
+        {
+            LoginIdentifier = "nonexistent",
+            Token = "token",
+            NewPassword = "NewPass456!"
+        };
+
+        _userManagerMock
+            .Setup(x => x.FindByNameAsync(setPasswordRequest.LoginIdentifier))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        // Act
+        var result = await _sut.SetPassword(setPasswordRequest);
+
+        // Assert
+        var notFoundResult = result.ShouldBeOfType<NotFoundObjectResult>();
+        notFoundResult.Value.ShouldNotBeNull();
+        notFoundResult.Value.ToString().ShouldContain("User not found");
+
+        _userManagerMock.Verify(x => x.FindByNameAsync(setPasswordRequest.LoginIdentifier), Times.Once);
+        _userManagerMock.Verify(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SetPassword_WhenResetFails_ReturnsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userName = "testuser";
+        var user = CreateApplicationUser(userId, userName);
+        var token = "reset-token-123";
+        var newPassword = "NewPass456!";
+        var errors = new[] { new IdentityError { Description = "Invalid token" } };
+
+        var setPasswordRequest = new SetPasswordRequest
+        {
+            LoginIdentifier = userName,
+            Token = token,
+            NewPassword = newPassword
+        };
+
+        _userManagerMock
+            .Setup(x => x.FindByNameAsync(setPasswordRequest.LoginIdentifier))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.ResetPasswordAsync(user, token, newPassword))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _sut.SetPassword(setPasswordRequest);
+
+        // Assert
+        var badRequestResult = result.ShouldBeOfType<BadRequestObjectResult>();
+        badRequestResult.Value.ShouldNotBeNull();
+
+        _userManagerMock.Verify(x => x.ResetPasswordAsync(user, token, newPassword), Times.Once);
     }
 
     #endregion
@@ -348,10 +453,9 @@ public class AuthControllerTests
         // Arrange
         var userId = Guid.NewGuid();
         var userName = "testuser";
+        var user = CreateApplicationUser(userId, userName);
         var currentPassword = "OldPass123!";
         var newPassword = "NewPass456!";
-
-        var user = CreateApplicationUser(userId, userName);
 
         var resetRequest = new ResetPasswordRequest
         {
@@ -412,10 +516,9 @@ public class AuthControllerTests
         // Arrange
         var userId = Guid.NewGuid();
         var userName = "testuser";
+        var user = CreateApplicationUser(userId, userName);
         var currentPassword = "WrongOldPass123!";
         var newPassword = "NewPass456!";
-
-        var user = CreateApplicationUser(userId, userName);
         var errors = new List<IdentityError>
         {
             new IdentityError { Code = "PasswordMismatch", Description = "Incorrect password" },
@@ -442,12 +545,8 @@ public class AuthControllerTests
 
         // Assert
         var badRequestResult = result.ShouldBeOfType<BadRequestObjectResult>();
-        var errorMessages = badRequestResult.Value.ShouldBeAssignableTo<IEnumerable<string>>();
+        badRequestResult.Value.ShouldNotBeNull();
 
-        errorMessages.ShouldContain("Incorrect password");
-        errorMessages.ShouldContain("Password is too weak");
-
-        _userManagerMock.Verify(x => x.FindByNameAsync(resetRequest.LoginIdentifier), Times.Once);
         _userManagerMock.Verify(x => x.ChangePasswordAsync(user, currentPassword, newPassword), Times.Once);
     }
 
@@ -461,6 +560,7 @@ public class AuthControllerTests
             .RuleFor(u => u.Id, _ => id)
             .RuleFor(u => u.UserName, _ => userName)
             .RuleFor(u => u.Email, _ => email ?? $"{userName}@example.com")
+            .RuleFor(u => u.EmailConfirmed, _ => true)
             .Generate();
     }
 

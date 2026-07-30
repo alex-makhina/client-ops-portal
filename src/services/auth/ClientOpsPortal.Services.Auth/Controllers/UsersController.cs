@@ -94,9 +94,25 @@ public class UsersController : ControllerBase
     [HttpGet("random-password")]
     public IActionResult GenerateRandomPassword()
     {
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+";
+        const string lower = "abcdefghijklmnopqrstuvwxyz";
+        const string upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string digits = "0123456789";
+        const string special = "!@#$%^&*()-_=+";
+        const string all = lower + upper + digits + special;
+
         var random = new Random();
-        var password = new string(Enumerable.Range(0, 12).Select(_ => chars[random.Next(chars.Length)]).ToArray());
-        return Ok(password);
+        var password = new char[12];
+
+        password[0] = lower[random.Next(lower.Length)];
+        password[1] = upper[random.Next(upper.Length)];
+        password[2] = digits[random.Next(digits.Length)];
+        password[3] = special[random.Next(special.Length)];
+
+        for (int i = 4; i < password.Length; i++)
+        {
+            password[i] = all[random.Next(all.Length)];
+        }
+
+        return Ok(new string(password.OrderBy(_ => random.Next()).ToArray()));
     }
 }

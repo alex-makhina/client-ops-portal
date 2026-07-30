@@ -25,10 +25,12 @@
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
   </Folder>  
   <Folder Name="/src/services/auth/">
-      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
-      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj" />
-      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Services.Auth.Client.csproj" />
-    </Folder>
+    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Services.Auth.Client.csproj" />
+    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj" />
+    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.IntegrationTests/ClientOpsPortal.Services.Auth.IntegrationTests.csproj" Id="03ee375c-611a-49cb-8831-7b2480d2ead4" />
+    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.UnitTests/ClientOpsPortal.Services.Auth.UnitTests.csproj" Id="fb29eda4-6208-41eb-8f74-7343b47e0744" />
+    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
   </Folder>
