@@ -176,16 +176,19 @@ public class ContractServiceTests
 
     #region UpdateAsync Tests
 
+    #region UpdateAsync Tests
+
     [Fact]
     public async Task UpdateAsync_WhenValidDto_UpdatesContractAndReturnsDto()
     {
         // Arrange
         var contractId = Guid.NewGuid();
         var existingContract = CreateContractEntity(contractId);
+        existingContract.Subscriptions = new List<Subscription>(); // Пустой список для проверки
         var updateDto = CreateUpdateContractDto();
 
         _contractRepositoryMock
-            .Setup(r => r.GetByIdAsync(contractId, false, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(contractId, true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingContract);
 
         _contractRepositoryMock
@@ -212,7 +215,7 @@ public class ContractServiceTests
         var updateDto = CreateUpdateContractDto();
 
         _contractRepositoryMock
-            .Setup(r => r.GetByIdAsync(contractId, false, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(contractId, true, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Contract?)null);
 
         // Act & Assert
@@ -230,13 +233,14 @@ public class ContractServiceTests
         // Arrange
         var contractId = Guid.NewGuid();
         var existingContract = CreateContractEntity(contractId);
+        existingContract.Subscriptions = new List<Subscription>(); // Пустой список для проверки
         var updateDto = new UpdateContractDto
         {
             EndDate = DateTimeOffset.UtcNow.AddDays(30)
         };
 
         _contractRepositoryMock
-            .Setup(r => r.GetByIdAsync(contractId, false, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(contractId, true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingContract);
 
         _contractRepositoryMock
@@ -256,6 +260,75 @@ public class ContractServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task UpdateAsync_WhenContractHasActiveSubscriptions_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var contractId = Guid.NewGuid();
+        var existingContract = CreateContractEntity(contractId);
+        existingContract.Subscriptions = new List<Subscription>
+    {
+        new Subscription
+        {
+            Id = Guid.NewGuid(),
+            BeginDate = DateTimeOffset.UtcNow.AddDays(-10),
+            EndDate = null
+        }
+    };
+        var updateDto = CreateUpdateContractDto();
+
+        _contractRepositoryMock
+            .Setup(r => r.GetByIdAsync(contractId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingContract);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => _sut.UpdateAsync(contractId, updateDto));
+
+        exception.Message.ShouldContain("активные подписки");
+
+        _contractRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<Contract>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenContractHasOnlyExpiredSubscriptions_UpdatesSuccessfully()
+    {
+        // Arrange
+        var contractId = Guid.NewGuid();
+        var existingContract = CreateContractEntity(contractId);
+        existingContract.Subscriptions = new List<Subscription>
+    {
+        new Subscription
+        {
+            Id = Guid.NewGuid(),
+            BeginDate = DateTimeOffset.UtcNow.AddDays(-30),
+            EndDate = DateTimeOffset.UtcNow.AddDays(-1) // Истекшая подписка
+        }
+    };
+        var updateDto = CreateUpdateContractDto();
+
+        _contractRepositoryMock
+            .Setup(r => r.GetByIdAsync(contractId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingContract);
+
+        _contractRepositoryMock
+            .Setup(r => r.UpdateAsync(It.IsAny<Contract>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _sut.UpdateAsync(contractId, updateDto);
+
+        // Assert
+        result.ShouldNotBeNull();
+
+        _contractRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<Contract>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
     #endregion
 
     #region DeleteAsync Tests
