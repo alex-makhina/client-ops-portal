@@ -18,18 +18,18 @@ namespace ClientOpsPortal.Application.Services
 
         private static readonly Dictionary<string, string> RoleDisplayToBackend = new()
         {
-            { "Р С’Р Т‘Р СР С‘Р Р…Р С‘РЎРѓРЎвЂљРЎР‚Р В°РЎвЂљР С•РЎР‚", "Admin" },
-            { "Р РЋР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ Р С—Р С• РЎС“РЎРѓР В»РЎС“Р С–Р В°Р С", "ServiceManager" },
-            { "Р С’Р Р…Р В°Р В»Р С‘РЎвЂљР С‘Р С”", "DataAnalyst" },
-            { "Р РЋР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ Р С—Р С• РЎР‚Р В°Р В±Р С•РЎвЂљР Вµ РЎРѓ Р С”Р В»Р С‘Р ВµР Р…РЎвЂљР В°Р СР С‘", "Manager" }
+            { "Администратор", "Admin" },
+            { "Специалист по услугам", "ServiceManager" },
+            { "Аналитик", "DataAnalyst" },
+            { "Специалист по работе с клиентами", "Manager" }
         };
 
         private static readonly Dictionary<string, string> RoleBackendToDisplay = new()
         {
-            { "Admin", "Р С’Р Т‘Р СР С‘Р Р…Р С‘РЎРѓРЎвЂљРЎР‚Р В°РЎвЂљР С•РЎР‚" },
-            { "ServiceManager", "Р РЋР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ Р С—Р С• РЎС“РЎРѓР В»РЎС“Р С–Р В°Р С" },
-            { "DataAnalyst", "Р С’Р Р…Р В°Р В»Р С‘РЎвЂљР С‘Р С”" },
-            { "Manager", "Р РЋР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ Р С—Р С• РЎР‚Р В°Р В±Р С•РЎвЂљР Вµ РЎРѓ Р С”Р В»Р С‘Р ВµР Р…РЎвЂљР В°Р СР С‘" }
+            { "Admin", "Администратор" },
+            { "ServiceManager", "Специалист по услугам" },
+            { "DataAnalyst", "Аналитик" },
+            { "Manager", "Специалист по работе с клиентами" }
         };
 
         public EmployeeService(
@@ -58,7 +58,7 @@ namespace ClientOpsPortal.Application.Services
         {
             var existingEmployee = await GetEmployeeByStaffNumberAsync(createDto.StaffNumber, ct);
             if (existingEmployee != null)
-                throw new InvalidOperationException($"Р РЋР С•РЎвЂљРЎР‚РЎС“Р Т‘Р Р…Р С‘Р С” РЎРѓ РЎвЂљР В°Р В±Р ВµР В»РЎРЉР Р…РЎвЂ№Р С Р Р…Р С•Р СР ВµРЎР‚Р С•Р С {createDto.StaffNumber} РЎС“Р В¶Р Вµ РЎРѓРЎС“РЎвЂ°Р ВµРЎРѓРЎвЂљР Р†РЎС“Р ВµРЎвЂљ");
+                throw new InvalidOperationException($"Сотрудник с табельным номером {createDto.StaffNumber} уже существует");
 
             var userName = createDto.StaffNumber;
             var password = await _authClient.GenerateRandomPasswordAsync(ct);
@@ -88,7 +88,8 @@ namespace ClientOpsPortal.Application.Services
             if (!string.IsNullOrWhiteSpace(updateDto.StaffNumber) && employee.StaffNumber != updateDto.StaffNumber)
             {
                 var existing = await GetEmployeeByStaffNumberAsync(updateDto.StaffNumber, ct);
-                if (existing != null) throw new InvalidOperationException($"Р РЋР С•РЎвЂљРЎР‚РЎС“Р Т‘Р Р…Р С‘Р С” РЎРѓ РЎвЂљР В°Р В±Р ВµР В»РЎРЉР Р…РЎвЂ№Р С Р Р…Р С•Р СР ВµРЎР‚Р С•Р С {updateDto.StaffNumber} РЎС“Р В¶Р Вµ РЎРѓРЎС“РЎвЂ°Р ВµРЎРѓРЎвЂљР Р†РЎС“Р ВµРЎвЂљ");
+                if (existing != null)
+                    throw new InvalidOperationException($"Сотрудник с табельным номером {updateDto.StaffNumber} уже существует");
             }
             updateDto.UpdateEntity(employee);
             await _employeeRepository.UpdateAsync(employee, ct);
@@ -169,14 +170,18 @@ namespace ClientOpsPortal.Application.Services
         {
             return Task.FromResult<IReadOnlyCollection<string>>(new List<string>
             {
-                "Р С’Р Т‘Р СР С‘Р Р…Р С‘РЎРѓРЎвЂљРЎР‚Р В°РЎвЂљР С•РЎР‚", "Р РЋР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ Р С—Р С• РЎС“РЎРѓР В»РЎС“Р С–Р В°Р С", "Р С’Р Р…Р В°Р В»Р С‘РЎвЂљР С‘Р С”", "Р РЋР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ Р С—Р С• РЎР‚Р В°Р В±Р С•РЎвЂљР Вµ РЎРѓ Р С”Р В»Р С‘Р ВµР Р…РЎвЂљР В°Р СР С‘"
+                "Администратор",
+                "Специалист по услугам",
+                "Аналитик",
+                "Специалист по работе с клиентами"
             });
         }
 
         public async Task<EmployeeDto> CreateAdminUserAsync(CreateEmployeeDto createDto, CancellationToken ct = default)
         {
             var existing = (await _employeeRepository.GetWhereAsync(e => e.StaffNumber == createDto.StaffNumber, false, ct)).FirstOrDefault();
-            if (existing != null) throw new InvalidOperationException($"Р РЋР С•РЎвЂљРЎР‚РЎС“Р Т‘Р Р…Р С‘Р С” РЎРѓ РЎвЂљР В°Р В±Р ВµР В»РЎРЉР Р…РЎвЂ№Р С Р Р…Р С•Р СР ВµРЎР‚Р С•Р С {createDto.StaffNumber} РЎС“Р В¶Р Вµ РЎРѓРЎС“РЎвЂ°Р ВµРЎРѓРЎвЂљР Р†РЎС“Р ВµРЎвЂљ");
+            if (existing != null) 
+                throw new InvalidOperationException($"Сотрудник с табельным номером {createDto.StaffNumber} уже существует");
 
             var backendRole = RoleDisplayToBackend.GetValueOrDefault(createDto.Role, createDto.Role);
             var password = string.IsNullOrWhiteSpace(createDto.Password)
@@ -211,7 +216,8 @@ namespace ClientOpsPortal.Application.Services
             if (!string.IsNullOrWhiteSpace(updateDto.StaffNumber) && employee.StaffNumber != updateDto.StaffNumber)
             {
                 var existing = (await _employeeRepository.GetWhereAsync(e => e.StaffNumber == updateDto.StaffNumber, false, ct)).FirstOrDefault();
-                if (existing != null) throw new InvalidOperationException($"Р РЋР С•РЎвЂљРЎР‚РЎС“Р Т‘Р Р…Р С‘Р С” РЎРѓ РЎвЂљР В°Р В±Р ВµР В»РЎРЉР Р…РЎвЂ№Р С Р Р…Р С•Р СР ВµРЎР‚Р С•Р С {updateDto.StaffNumber} РЎС“Р В¶Р Вµ РЎРѓРЎС“РЎвЂ°Р ВµРЎРѓРЎвЂљР Р†РЎС“Р ВµРЎвЂљ");
+                if (existing != null) 
+                    throw new InvalidOperationException($"Сотрудник с табельным номером {updateDto.StaffNumber} уже существует");
             }
             updateDto.UpdateEntity(employee);
             await _employeeRepository.UpdateAsync(employee, ct);

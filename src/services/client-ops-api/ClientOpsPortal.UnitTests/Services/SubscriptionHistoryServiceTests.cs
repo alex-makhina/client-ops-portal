@@ -18,6 +18,7 @@ public class SubscriptionHistoryServiceTests
     private readonly Mock<IGenericRepository<SubscriptionHistory>> _historyRepositoryMock;
     private readonly Mock<IGenericRepository<SubscriptionHistoryStep>> _stepRepositoryMock;
     private readonly Mock<IGenericRepository<Subscription>> _subscriptionRepositoryMock;
+    private readonly Mock<IDirectoryCacheService> _cacheMock;
     private readonly SubscriptionHistoryService _sut;
 
     public SubscriptionHistoryServiceTests()
@@ -25,12 +26,38 @@ public class SubscriptionHistoryServiceTests
         _historyRepositoryMock = new Mock<IGenericRepository<SubscriptionHistory>>();
         _stepRepositoryMock = new Mock<IGenericRepository<SubscriptionHistoryStep>>();
         _subscriptionRepositoryMock = new Mock<IGenericRepository<Subscription>>();
+        _cacheMock = new Mock<IDirectoryCacheService>();
+
+        _cacheMock
+            .Setup(x => x.GetServiceAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) => new ClientOpsPortal.Services.Directory.Contracts.DTOs.ServiceDto
+            {
+                Id = id,
+                Name = $"Service {id:N}",
+                Description = $"Description for service {id:N}",
+                BeginDate = DateTimeOffset.UtcNow,
+                EndDate = null
+            });
+
+        _cacheMock
+            .Setup(x => x.GetTariffPlanAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) => new ClientOpsPortal.Services.Directory.Contracts.DTOs.TariffPlanDto
+            {
+                Id = id,
+                Name = $"Tariff {id:N}",
+                Description = $"Description for tariff {id:N}",
+                Price = 100,
+                ServiceId = Guid.NewGuid(),
+                BeginDate = DateTimeOffset.UtcNow,
+                EndDate = null
+            });
+
         _sut = new SubscriptionHistoryService(
             _historyRepositoryMock.Object,
             _stepRepositoryMock.Object,
-            _subscriptionRepositoryMock.Object);
+            _subscriptionRepositoryMock.Object,
+            _cacheMock.Object);
     }
-
     #region GetByIdAsync Tests
 
     [Fact]
@@ -191,11 +218,11 @@ public class SubscriptionHistoryServiceTests
         // Arrange
         var createDto = CreateCreateSubscriptionHistoryDto();
         createDto.Steps = new List<SubscriptionHistoryStep>
-    {
-        new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Pending, Message = "В ожидании отправки на активацию" },
-        new SubscriptionHistoryStep { Status = SubscriptionActionStatus.InProgress, Message = "В обработке" },
-        new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Completed, Message = "Выполнен" }
-    };
+        {
+            new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Pending, Message = "В ожидании отправки на активацию" },
+            new SubscriptionHistoryStep { Status = SubscriptionActionStatus.InProgress, Message = "В обработке" },
+            new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Completed, Message = "Выполнен" }
+        };
 
         _historyRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<SubscriptionHistory>(), It.IsAny<CancellationToken>()))
@@ -449,11 +476,11 @@ public class SubscriptionHistoryServiceTests
         var history = CreateSubscriptionHistoryEntity(Guid.NewGuid());
         history.SubscriptionId = subscriptionId;
         history.Steps = new List<SubscriptionHistoryStep>
-    {
-        new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Pending, Message = "В ожидании отправки на активацию" },
-        new SubscriptionHistoryStep { Status = SubscriptionActionStatus.InProgress, Message = "В обработке" },
-        new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Completed, Message = "Выполнен" }
-    };
+        {
+            new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Pending, Message = "В ожидании отправки на активацию" },
+            new SubscriptionHistoryStep { Status = SubscriptionActionStatus.InProgress, Message = "В обработке" },
+            new SubscriptionHistoryStep { Status = SubscriptionActionStatus.Completed, Message = "Выполнен" }
+        };
 
         _historyRepositoryMock
             .Setup(r => r.GetWhereAsync(
@@ -485,17 +512,150 @@ public class SubscriptionHistoryServiceTests
 
     #endregion
 
+    #region GetSubscriptionsHistoryByAbonentIdAsync Tests
+
+    [Fact]
+    public async Task GetSubscriptionsHistoryByAbonentIdAsync_WhenSubscriptionsExist_ReturnsFullHistoryDtos()
+    {
+        // Arrange
+        var abonentId = Guid.NewGuid();
+        var subscription1Id = Guid.NewGuid();
+        var subscription2Id = Guid.NewGuid();
+
+        var subscriptions = new List<Subscription>
+        {
+            new Subscription {
+                Id = subscription1Id,
+                Contract = new Contract {
+                    AbonentId = abonentId,
+                    ContractNumber = $"CONTRACT_{Guid.NewGuid():N}"
+                }
+            },
+            new Subscription {
+                Id = subscription2Id,
+                Contract = new Contract {
+                    AbonentId = abonentId,
+                    ContractNumber = $"CONTRACT_{Guid.NewGuid():N}"
+                }
+            }
+        };
+
+        // Создаем разные истории для каждой подписки
+        var historiesForSubscription1 = new List<SubscriptionHistory>
+    {
+        CreateSubscriptionHistoryEntity(Guid.NewGuid(), subscription1Id),
+        CreateSubscriptionHistoryEntity(Guid.NewGuid(), subscription1Id)
+    };
+
+        var historiesForSubscription2 = new List<SubscriptionHistory>
+    {
+        CreateSubscriptionHistoryEntity(Guid.NewGuid(), subscription2Id)
+    };
+
+        _subscriptionRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Subscription, bool>>>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(subscriptions);
+
+        // Настраиваем мок для каждой подписки отдельно
+        _historyRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.Is<Expression<Func<SubscriptionHistory, bool>>>(expr =>
+                    expr.Compile().Invoke(new SubscriptionHistory { SubscriptionId = subscription1Id })),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(historiesForSubscription1);
+
+        _historyRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.Is<Expression<Func<SubscriptionHistory, bool>>>(expr =>
+                    expr.Compile().Invoke(new SubscriptionHistory { SubscriptionId = subscription2Id })),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(historiesForSubscription2);
+
+        // Act
+        var result = await _sut.GetSubscriptionsHistoryByAbonentIdAsync(abonentId);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBe(historiesForSubscription1.Count + historiesForSubscription2.Count); // 3
+
+        _subscriptionRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Subscription, bool>>>(),
+                true,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<SubscriptionHistory, bool>>>(),
+                true,
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(subscriptions.Count));
+    }
+
+    [Fact]
+    public async Task GetSubscriptionsHistoryByAbonentIdAsync_WhenNoSubscriptions_ReturnsEmptyList()
+    {
+        // Arrange
+        var abonentId = Guid.NewGuid();
+
+        _subscriptionRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Subscription, bool>>>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Subscription>());
+
+        // Act
+        var result = await _sut.GetSubscriptionsHistoryByAbonentIdAsync(abonentId);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
+
+        _historyRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<SubscriptionHistory, bool>>>(),
+                true,
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    #endregion
+
     #region Helper Methods
 
-    private static SubscriptionHistory CreateSubscriptionHistoryEntity(Guid? id = null)
+    private static SubscriptionHistory CreateSubscriptionHistoryEntity(
+    Guid? id = null,
+    Guid? subscriptionId = null)
     {
         var faker = new AutoFaker<SubscriptionHistory>();
 
         if (id.HasValue)
             faker.RuleFor(h => h.Id, _ => id.Value);
 
+        if (subscriptionId.HasValue)
+            faker.RuleFor(h => h.SubscriptionId, _ => subscriptionId.Value);
+
         return faker
+            .RuleFor(h => h.SubscriptionId, _ => Guid.NewGuid())
+            .RuleFor(h => h.ActionType, _ => SubscriptionActionType.Open)
+            .RuleFor(h => h.Status, _ => SubscriptionActionStatus.Pending)
+            .RuleFor(h => h.TariffPlanId, _ => Guid.NewGuid())
+            .RuleFor(h => h.StartDate, _ => DateTimeOffset.UtcNow)
+            .RuleFor(h => h.CreatedAt, _ => DateTimeOffset.UtcNow)
             .RuleFor(h => h.Steps, _ => new List<SubscriptionHistoryStep>())
+            .RuleFor(h => h.Subscription, _ => new Subscription
+            {
+                Id = Guid.NewGuid(),
+                ServiceId = Guid.NewGuid(),
+                TariffPlanId = Guid.NewGuid()
+            })
             .Generate();
     }
 

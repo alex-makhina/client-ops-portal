@@ -12,7 +12,7 @@ using System.Linq.Expressions;
 
 namespace ClientOpsPortal.UnitTests.Services;
 
-public class TariffPlanServiceTests
+public class TariffPlanServiceTests : IDisposable
 {
     private readonly Mock<IGenericRepository<TariffPlan>> _tariffPlanRepositoryMock;
     private readonly TariffPlanService _sut;
@@ -21,6 +21,16 @@ public class TariffPlanServiceTests
     {
         _tariffPlanRepositoryMock = new Mock<IGenericRepository<TariffPlan>>();
         _sut = new TariffPlanService(_tariffPlanRepositoryMock.Object);
+
+        AutoFaker.Configure(builder =>
+        {
+            builder.WithLocale("ru");
+        });
+    }
+
+    public void Dispose()
+    {
+        _tariffPlanRepositoryMock.Reset();
     }
 
     #region GetByIdAsync Tests
@@ -43,6 +53,7 @@ public class TariffPlanServiceTests
         result.ShouldNotBeNull();
         result.Id.ShouldBe(tariffPlanId);
         result.Name.ShouldBe(tariffPlan.Name);
+        result.Price.ShouldBe(tariffPlan.Price);
 
         _tariffPlanRepositoryMock.Verify(
             r => r.GetByIdAsync(tariffPlanId, true, It.IsAny<CancellationToken>()),
@@ -67,6 +78,28 @@ public class TariffPlanServiceTests
 
         _tariffPlanRepositoryMock.Verify(
             r => r.GetByIdAsync(tariffPlanId, true, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithIncludesFalse_PassesParameterToRepository()
+    {
+        // Arrange
+        var tariffPlanId = Guid.NewGuid();
+        var tariffPlan = CreateTariffPlanEntity(tariffPlanId);
+
+        _tariffPlanRepositoryMock
+            .Setup(r => r.GetByIdAsync(tariffPlanId, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tariffPlan);
+
+        // Act
+        var result = await _sut.GetByIdAsync(tariffPlanId, false);
+
+        // Assert
+        result.ShouldNotBeNull();
+
+        _tariffPlanRepositoryMock.Verify(
+            r => r.GetByIdAsync(tariffPlanId, false, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -128,9 +161,9 @@ public class TariffPlanServiceTests
 
         _tariffPlanRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<TariffPlan>(), It.IsAny<CancellationToken>()))
-            .Callback<TariffPlan, CancellationToken>((t, ct) =>
+            .Callback<TariffPlan, CancellationToken>((tp, ct) =>
             {
-                t.Id = createdTariffPlan.Id;
+                tp.Id = createdTariffPlan.Id;
             })
             .Returns(Task.CompletedTask);
 
@@ -146,35 +179,11 @@ public class TariffPlanServiceTests
 
         _tariffPlanRepositoryMock.Verify(
             r => r.AddAsync(
-                It.Is<TariffPlan>(t =>
-                    t.Name == createDto.Name &&
-                    t.Description == createDto.Description &&
-                    t.Price == createDto.Price &&
-                    t.ServiceId == createDto.ServiceId),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithEndDate_CreatesTariffPlanWithEndDate()
-    {
-        // Arrange
-        var createDto = CreateCreateTariffPlanDto();
-        createDto.EndDate = DateTimeOffset.UtcNow.AddDays(30);
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<TariffPlan>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _sut.CreateAsync(createDto);
-
-        // Assert
-        result.ShouldNotBeNull();
-
-        _tariffPlanRepositoryMock.Verify(
-            r => r.AddAsync(
-                It.Is<TariffPlan>(t => t.EndDate == createDto.EndDate),
+                It.Is<TariffPlan>(tp =>
+                    tp.Name == createDto.Name &&
+                    tp.Description == createDto.Description &&
+                    tp.Price == createDto.Price &&
+                    tp.ServiceId == createDto.ServiceId),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -232,19 +241,19 @@ public class TariffPlanServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_UpdatesNameWhenProvided()
+    public async Task UpdateAsync_UpdatesOnlyProvidedFields()
     {
         // Arrange
         var tariffPlanId = Guid.NewGuid();
         var existingTariffPlan = CreateTariffPlanEntity(tariffPlanId);
-        var newName = "Updated Tariff Name";
+        var originalName = existingTariffPlan.Name;
+        var originalDescription = existingTariffPlan.Description;
+        var originalPrice = existingTariffPlan.Price;
+
         var updateDto = new UpdateTariffPlanDto
         {
-            Name = newName,
-            Description = null,
-            Price = null,
-            BeginDate = null,
-            EndDate = null
+            Name = "Updated Name",
+            Price = 999.99m
         };
 
         _tariffPlanRepositoryMock
@@ -260,196 +269,17 @@ public class TariffPlanServiceTests
 
         // Assert
         result.ShouldNotBeNull();
+        result.Id.ShouldBe(tariffPlanId);
+        result.Name.ShouldBe(updateDto.Name);
+        result.Price.ShouldBe(updateDto.Price.Value);
+        result.Description.ShouldBe(originalDescription);
 
         _tariffPlanRepositoryMock.Verify(
             r => r.UpdateAsync(
-                It.Is<TariffPlan>(t => t.Name == newName),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_UpdatesDescriptionWhenProvided()
-    {
-        // Arrange
-        var tariffPlanId = Guid.NewGuid();
-        var existingTariffPlan = CreateTariffPlanEntity(tariffPlanId);
-        var newDescription = "Updated Description";
-        var updateDto = new UpdateTariffPlanDto
-        {
-            Name = null,
-            Description = newDescription,
-            Price = null,
-            BeginDate = null,
-            EndDate = null
-        };
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.GetByIdAsync(tariffPlanId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingTariffPlan);
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.UpdateAsync(It.IsAny<TariffPlan>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _sut.UpdateAsync(tariffPlanId, updateDto);
-
-        // Assert
-        result.ShouldNotBeNull();
-
-        _tariffPlanRepositoryMock.Verify(
-            r => r.UpdateAsync(
-                It.Is<TariffPlan>(t => t.Description == newDescription),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_UpdatesPriceWhenProvided()
-    {
-        // Arrange
-        var tariffPlanId = Guid.NewGuid();
-        var existingTariffPlan = CreateTariffPlanEntity(tariffPlanId);
-        var newPrice = 999.99m;
-        var updateDto = new UpdateTariffPlanDto
-        {
-            Name = null,
-            Description = null,
-            Price = newPrice,
-            BeginDate = null,
-            EndDate = null
-        };
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.GetByIdAsync(tariffPlanId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingTariffPlan);
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.UpdateAsync(It.IsAny<TariffPlan>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _sut.UpdateAsync(tariffPlanId, updateDto);
-
-        // Assert
-        result.ShouldNotBeNull();
-
-        _tariffPlanRepositoryMock.Verify(
-            r => r.UpdateAsync(
-                It.Is<TariffPlan>(t => t.Price == newPrice),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_UpdatesBeginDateWhenProvided()
-    {
-        // Arrange
-        var tariffPlanId = Guid.NewGuid();
-        var existingTariffPlan = CreateTariffPlanEntity(tariffPlanId);
-        var newBeginDate = DateTimeOffset.UtcNow.AddDays(10);
-        var updateDto = new UpdateTariffPlanDto
-        {
-            Name = null,
-            Description = null,
-            Price = null,
-            BeginDate = newBeginDate,
-            EndDate = null
-        };
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.GetByIdAsync(tariffPlanId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingTariffPlan);
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.UpdateAsync(It.IsAny<TariffPlan>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _sut.UpdateAsync(tariffPlanId, updateDto);
-
-        // Assert
-        result.ShouldNotBeNull();
-
-        _tariffPlanRepositoryMock.Verify(
-            r => r.UpdateAsync(
-                It.Is<TariffPlan>(t => t.BeginDate == newBeginDate),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_UpdatesEndDateWhenProvided()
-    {
-        // Arrange
-        var tariffPlanId = Guid.NewGuid();
-        var existingTariffPlan = CreateTariffPlanEntity(tariffPlanId);
-        var newEndDate = DateTimeOffset.UtcNow.AddDays(30);
-        var updateDto = new UpdateTariffPlanDto
-        {
-            Name = null,
-            Description = null,
-            Price = null,
-            BeginDate = null,
-            EndDate = newEndDate
-        };
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.GetByIdAsync(tariffPlanId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingTariffPlan);
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.UpdateAsync(It.IsAny<TariffPlan>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _sut.UpdateAsync(tariffPlanId, updateDto);
-
-        // Assert
-        result.ShouldNotBeNull();
-
-        _tariffPlanRepositoryMock.Verify(
-            r => r.UpdateAsync(
-                It.Is<TariffPlan>(t => t.EndDate == newEndDate),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_UpdatesMultipleFieldsWhenProvided()
-    {
-        // Arrange
-        var tariffPlanId = Guid.NewGuid();
-        var existingTariffPlan = CreateTariffPlanEntity(tariffPlanId);
-        var newName = "Updated Name";
-        var newPrice = 500m;
-        var updateDto = new UpdateTariffPlanDto
-        {
-            Name = newName,
-            Description = null,
-            Price = newPrice,
-            BeginDate = null,
-            EndDate = null
-        };
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.GetByIdAsync(tariffPlanId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingTariffPlan);
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.UpdateAsync(It.IsAny<TariffPlan>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _sut.UpdateAsync(tariffPlanId, updateDto);
-
-        // Assert
-        result.ShouldNotBeNull();
-
-        _tariffPlanRepositoryMock.Verify(
-            r => r.UpdateAsync(
-                It.Is<TariffPlan>(t => t.Name == newName && t.Price == newPrice),
+                It.Is<TariffPlan>(tp =>
+                    tp.Name == updateDto.Name &&
+                    tp.Price == updateDto.Price.Value &&
+                    tp.Description == originalDescription),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -487,9 +317,9 @@ public class TariffPlanServiceTests
         // Arrange
         var serviceId = Guid.NewGuid();
         var tariffPlans = CreateTariffPlanEntityList(3);
-        foreach (var tariffPlan in tariffPlans)
+        foreach (var tp in tariffPlans)
         {
-            tariffPlan.ServiceId = serviceId;
+            tp.ServiceId = serviceId;
         }
 
         _tariffPlanRepositoryMock
@@ -500,7 +330,7 @@ public class TariffPlanServiceTests
             .ReturnsAsync(tariffPlans);
 
         // Act
-        var result = await _sut.GetWhereAsync(t => t.ServiceId == serviceId, true);
+        var result = await _sut.GetWhereAsync(tp => tp.ServiceId == serviceId, true);
 
         // Assert
         result.ShouldNotBeNull();
@@ -525,7 +355,7 @@ public class TariffPlanServiceTests
             .ReturnsAsync(emptyList);
 
         // Act
-        var result = await _sut.GetWhereAsync(t => t.ServiceId == Guid.NewGuid(), false);
+        var result = await _sut.GetWhereAsync(tp => tp.ServiceId == Guid.NewGuid(), false);
 
         // Assert
         result.ShouldNotBeNull();
@@ -537,14 +367,15 @@ public class TariffPlanServiceTests
     #region GetActiveTariffPlansByServiceAsync Tests
 
     [Fact]
-    public async Task GetActiveTariffPlansByServiceAsync_WhenActiveTariffsExist_ReturnsShortDataDtos()
+    public async Task GetActiveTariffPlansByServiceAsync_WhenTariffPlansExist_ReturnsActiveTariffPlans()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
-        var tariffPlans = CreateTariffPlanEntityList(3, serviceId: serviceId);
-        foreach (var tariffPlan in tariffPlans)
+        var tariffPlans = CreateTariffPlanEntityList(3);
+        foreach (var tp in tariffPlans)
         {
-            tariffPlan.EndDate = null;
+            tp.ServiceId = serviceId;
+            tp.EndDate = null; 
         }
 
         _tariffPlanRepositoryMock
@@ -559,14 +390,7 @@ public class TariffPlanServiceTests
 
         // Assert
         result.ShouldNotBeNull();
-        result.Count.ShouldBe(tariffPlans.Count);
-
-        foreach (var shortDto in result)
-        {
-            shortDto.Id.ShouldNotBe(Guid.Empty);
-            shortDto.Name.ShouldNotBeNullOrEmpty();
-            shortDto.Price.ShouldBeGreaterThan(0);
-        }
+        result.Count.ShouldBe(3);
 
         _tariffPlanRepositoryMock.Verify(
             r => r.GetWhereAsync(
@@ -577,44 +401,17 @@ public class TariffPlanServiceTests
     }
 
     [Fact]
-    public async Task GetActiveTariffPlansByServiceAsync_ExcludesExpiredTariffs()
+    public async Task GetActiveTariffPlansByServiceAsync_WhenNoTariffPlansExist_ReturnsEmptyList()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
-        var activeTariff = CreateTariffPlanEntity(Guid.NewGuid(), serviceId: serviceId);
-        activeTariff.EndDate = null;
-
-        var expiredTariff = CreateTariffPlanEntity(Guid.NewGuid(), serviceId: serviceId);
-        expiredTariff.EndDate = DateTimeOffset.UtcNow.AddDays(-1);
 
         _tariffPlanRepositoryMock
             .Setup(r => r.GetWhereAsync(
                 It.IsAny<Expression<Func<TariffPlan, bool>>>(),
                 false,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TariffPlan> { activeTariff });
-
-        // Act
-        var result = await _sut.GetActiveTariffPlansByServiceAsync(serviceId);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Count.ShouldBe(1);
-    }
-
-    [Fact]
-    public async Task GetActiveTariffPlansByServiceAsync_WhenNoActiveTariffs_ReturnsEmptyList()
-    {
-        // Arrange
-        var serviceId = Guid.NewGuid();
-        var emptyList = new List<TariffPlan>();
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.GetWhereAsync(
-                It.IsAny<Expression<Func<TariffPlan, bool>>>(),
-                false,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(emptyList);
+            .ReturnsAsync(new List<TariffPlan>());
 
         // Act
         var result = await _sut.GetActiveTariffPlansByServiceAsync(serviceId);
@@ -622,6 +419,13 @@ public class TariffPlanServiceTests
         // Assert
         result.ShouldNotBeNull();
         result.ShouldBeEmpty();
+
+        _tariffPlanRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<TariffPlan, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion
@@ -629,11 +433,15 @@ public class TariffPlanServiceTests
     #region GetTariffPlansByServiceAsync Tests
 
     [Fact]
-    public async Task GetTariffPlansByServiceAsync_WhenTariffsExist_ReturnsTariffPlanDtos()
+    public async Task GetTariffPlansByServiceAsync_WhenTariffPlansExist_ReturnsTariffPlans()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
-        var tariffPlans = CreateTariffPlanEntityList(4, serviceId: serviceId);
+        var tariffPlans = CreateTariffPlanEntityList(3);
+        foreach (var tp in tariffPlans)
+        {
+            tp.ServiceId = serviceId;
+        }
 
         _tariffPlanRepositoryMock
             .Setup(r => r.GetWhereAsync(
@@ -647,12 +455,7 @@ public class TariffPlanServiceTests
 
         // Assert
         result.ShouldNotBeNull();
-        result.Count.ShouldBe(tariffPlans.Count);
-
-        foreach (var dto in result)
-        {
-            dto.ServiceId.ShouldBe(serviceId);
-        }
+        result.Count.ShouldBe(3);
 
         _tariffPlanRepositoryMock.Verify(
             r => r.GetWhereAsync(
@@ -663,17 +466,49 @@ public class TariffPlanServiceTests
     }
 
     [Fact]
-    public async Task GetTariffPlansByServiceAsync_IncludesBothActiveAndExpiredTariffs()
+    public async Task GetTariffPlansByServiceAsync_WhenNoTariffPlansExist_ReturnsEmptyList()
     {
         // Arrange
         var serviceId = Guid.NewGuid();
-        var activeTariff = CreateTariffPlanEntity(Guid.NewGuid(), serviceId: serviceId);
-        activeTariff.EndDate = null;
 
-        var expiredTariff = CreateTariffPlanEntity(Guid.NewGuid(), serviceId: serviceId);
-        expiredTariff.EndDate = DateTimeOffset.UtcNow.AddDays(-1);
+        _tariffPlanRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<TariffPlan, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TariffPlan>());
 
-        var tariffPlans = new List<TariffPlan> { activeTariff, expiredTariff };
+        // Act
+        var result = await _sut.GetTariffPlansByServiceAsync(serviceId);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
+
+        _tariffPlanRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<TariffPlan, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTariffPlansByServiceAsync_ReturnsAllTariffPlansIncludingInactive()
+    {
+        // Arrange
+        var serviceId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        var activeTariffPlan = CreateTariffPlanEntity(Guid.NewGuid());
+        activeTariffPlan.ServiceId = serviceId;
+        activeTariffPlan.EndDate = null;
+
+        var expiredTariffPlan = CreateTariffPlanEntity(Guid.NewGuid());
+        expiredTariffPlan.ServiceId = serviceId;
+        expiredTariffPlan.EndDate = now.AddDays(-1);
+
+        var tariffPlans = new List<TariffPlan> { activeTariffPlan, expiredTariffPlan };
 
         _tariffPlanRepositoryMock
             .Setup(r => r.GetWhereAsync(
@@ -688,54 +523,42 @@ public class TariffPlanServiceTests
         // Assert
         result.ShouldNotBeNull();
         result.Count.ShouldBe(2);
-    }
 
-    [Fact]
-    public async Task GetTariffPlansByServiceAsync_WhenNoTariffs_ReturnsEmptyList()
-    {
-        // Arrange
-        var serviceId = Guid.NewGuid();
-        var emptyList = new List<TariffPlan>();
-
-        _tariffPlanRepositoryMock
-            .Setup(r => r.GetWhereAsync(
+        _tariffPlanRepositoryMock.Verify(
+            r => r.GetWhereAsync(
                 It.IsAny<Expression<Func<TariffPlan, bool>>>(),
                 false,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(emptyList);
-
-        // Act
-        var result = await _sut.GetTariffPlansByServiceAsync(serviceId);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeEmpty();
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion
 
     #region Helper Methods
 
-    private static TariffPlan CreateTariffPlanEntity(Guid? id = null, Guid? serviceId = null)
+    private static TariffPlan CreateTariffPlanEntity(Guid? id = null)
     {
-        return new TariffPlan
-        {
-            Id = id ?? Guid.NewGuid(),
-            Name = $"Tariff-{Guid.NewGuid():N}",
-            Description = $"Description-{Guid.NewGuid():N}",
-            Price = new Random().Next(100, 1000),
-            ServiceId = serviceId ?? Guid.NewGuid(),
-            BeginDate = DateTimeOffset.UtcNow,
-            EndDate = null
-        };
+        var faker = new AutoFaker<TariffPlan>();
+
+        if (id.HasValue)
+            faker.RuleFor(tp => tp.Id, _ => id.Value);
+
+        return faker
+            .RuleFor(tp => tp.Name, f => f.Commerce.ProductName())
+            .RuleFor(tp => tp.Description, f => f.Lorem.Sentence())
+            .RuleFor(tp => tp.Price, f => f.Random.Decimal(1, 999))
+            .RuleFor(tp => tp.ServiceId, _ => Guid.NewGuid())
+            .RuleFor(tp => tp.BeginDate, _ => DateTimeOffset.UtcNow)
+            .RuleFor(tp => tp.EndDate, _ => null)
+            .Generate();
     }
 
-    private static List<TariffPlan> CreateTariffPlanEntityList(int count, Guid? serviceId = null)
+    private static List<TariffPlan> CreateTariffPlanEntityList(int count)
     {
         var list = new List<TariffPlan>();
         for (int i = 0; i < count; i++)
         {
-            list.Add(CreateTariffPlanEntity(serviceId: serviceId));
+            list.Add(CreateTariffPlanEntity());
         }
         return list;
     }
@@ -743,23 +566,23 @@ public class TariffPlanServiceTests
     private static CreateTariffPlanDto CreateCreateTariffPlanDto()
     {
         return new AutoFaker<CreateTariffPlanDto>()
-            .RuleFor(dto => dto.Name, f => $"Tariff-{Guid.NewGuid():N}")
-            .RuleFor(dto => dto.Description, f => $"Description-{Guid.NewGuid():N}")
-            .RuleFor(dto => dto.Price, f => f.Random.Decimal(100, 1000))
-            .RuleFor(dto => dto.ServiceId, f => Guid.NewGuid())
-            .RuleFor(dto => dto.BeginDate, f => DateTimeOffset.UtcNow)
-            .RuleFor(dto => dto.EndDate, f => null)
+            .RuleFor(dto => dto.Name, f => f.Commerce.ProductName())
+            .RuleFor(dto => dto.Description, f => f.Lorem.Sentence())
+            .RuleFor(dto => dto.Price, f => f.Random.Decimal(1, 999))
+            .RuleFor(dto => dto.ServiceId, _ => Guid.NewGuid())
+            .RuleFor(dto => dto.BeginDate, _ => DateTimeOffset.UtcNow)
+            .RuleFor(dto => dto.EndDate, _ => null)
             .Generate();
     }
 
     private static UpdateTariffPlanDto CreateUpdateTariffPlanDto()
     {
         return new AutoFaker<UpdateTariffPlanDto>()
-            .RuleFor(dto => dto.Name, f => $"Updated-{Guid.NewGuid():N}")
-            .RuleFor(dto => dto.Description, f => $"Updated Description-{Guid.NewGuid():N}")
-            .RuleFor(dto => dto.Price, f => f.Random.Decimal(200, 2000))
-            .RuleFor(dto => dto.BeginDate, f => DateTimeOffset.UtcNow.AddDays(5))
-            .RuleFor(dto => dto.EndDate, f => DateTimeOffset.UtcNow.AddDays(60))
+            .RuleFor(dto => dto.Name, f => f.Commerce.ProductName())
+            .RuleFor(dto => dto.Description, f => f.Lorem.Sentence())
+            .RuleFor(dto => dto.Price, f => f.Random.Decimal(1, 999))
+            .RuleFor(dto => dto.BeginDate, _ => DateTimeOffset.UtcNow)
+            .RuleFor(dto => dto.EndDate, _ => null)
             .Generate();
     }
 

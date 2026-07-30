@@ -1,4 +1,5 @@
 ﻿using AutoBogus;
+using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.DTOs.Reports;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
@@ -6,6 +7,7 @@ using ClientOpsPortal.Application.Services;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Domain.Models.Reports;
+using DirectoryDto = ClientOpsPortal.Services.Directory.Contracts.DTOs;
 using Moq;
 using Shouldly;
 using System.Globalization;
@@ -16,12 +18,40 @@ namespace ClientOpsPortal.UnitTests.Services;
 public class ReportsServiceTests
 {
     private readonly Mock<IReportsRepository> _repositoryMock;
+    private readonly Mock<IDirectoryCacheService> _cacheMock;
     private readonly ReportsService _sut;
 
     public ReportsServiceTests()
     {
         _repositoryMock = new Mock<IReportsRepository>();
-        _sut = new ReportsService(_repositoryMock.Object);
+        _cacheMock = new Mock<IDirectoryCacheService>();
+
+        // Настройка мока с правильными типами DTO
+        _cacheMock
+            .Setup(x => x.GetServiceAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) => new DirectoryDto.ServiceDto
+            {
+                Id = id,
+                Name = $"Service {id:N}",
+                Description = $"Description for service {id:N}",
+                BeginDate = DateTimeOffset.UtcNow,
+                EndDate = null
+            });
+
+        _cacheMock
+            .Setup(x => x.GetTariffPlanAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) => new DirectoryDto.TariffPlanDto
+            {
+                Id = id,
+                Name = $"Tariff {id:N}",
+                Description = $"Description for tariff {id:N}",
+                Price = 100,
+                ServiceId = Guid.NewGuid(),
+                BeginDate = DateTimeOffset.UtcNow,
+                EndDate = null
+            });
+
+        _sut = new ReportsService(_repositoryMock.Object, _cacheMock.Object);
     }
 
     #region GetServicesStatusAsync Tests
@@ -481,7 +511,7 @@ public class ReportsServiceTests
         // Assert
         result.ShouldNotBeNullOrEmpty();
         result.ShouldContain("15.01.2024 14:30:00");
-    } 
+    }
 
     [Fact]
     public async Task ExportToCsvAsync_WithSpecialCharacters_EscapesQuotes()
