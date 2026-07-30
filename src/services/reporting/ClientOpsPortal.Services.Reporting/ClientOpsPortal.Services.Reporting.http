@@ -1,0 +1,6 @@
+@ClientOpsPortal.Services.Reporting_HostAddress = http://localhost:5121
+
+GET {{ClientOpsPortal.Services.Reporting_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
