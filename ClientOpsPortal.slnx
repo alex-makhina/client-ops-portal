@@ -22,6 +22,11 @@
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
   </Folder>  
+  <Folder Name="/src/services/auth/">
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj" />
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Services.Auth.Client.csproj" />
+    </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
   </Folder>

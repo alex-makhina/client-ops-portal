@@ -85,6 +85,7 @@ services:
       ConnectionStrings__AppConnection: Host=db;Port=5432;Database=ClientOpsPortalDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       ConnectionStrings__AppAuthConnection: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       ServicesDirectory__BaseUrl: http://services-directory:8080
+      AuthService__BaseUrl: http://auth:8080
     networks:
       - cop-network
     depends_on:
@@ -130,6 +131,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+
+  auth:
+    build:
+      context: .
+      dockerfile: src/services/auth/Dockerfile
+    container_name: client_ops_portal_auth
+    restart: unless-stopped
+    ports:
+      - "${AUTH_PORT:-5110}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__AuthDb: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-dev_pass_123}
+      Jwt__Issuer: ClientOpsPortal
+      Jwt__Audience: ClientOpsPortalClient
+      Jwt__SecretKey: supersecretkeysupersecretkeysupersecretkeysupersecretkey
+      Jwt__ExpiryMinutes: 60
+    networks:
+      - cop-network
+    depends_on:
+      db_auth:
+        condition: service_healthy
 
   web:
     build:

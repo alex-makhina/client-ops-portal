@@ -10,7 +10,6 @@ namespace ClientOpsPortal.Infrastructure.Data
     public static class HostExtension
     {
         public static IHost EnsureAppDatabase(this IHost host) => host.EnsureDatabase<ClientOpsPortalDbContext>();
-        public static IHost EnsureAppAuthDatabase(this IHost host) => host.EnsureDatabase<AuthDbContext>();
 
         public static async Task<IHost> SeedDatabaseAsync(this IHost host)
         {
@@ -24,19 +23,10 @@ namespace ClientOpsPortal.Infrastructure.Data
         {
             using var scope = host.Services.CreateScope();
             using var appContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
-            var logger = scope.ServiceProvider
-                .GetRequiredService<ILoggerFactory>()
-                .CreateLogger("EnsureDatabase");
-
-            var connectionString = appContext.Database.GetConnectionString();
-            logger.LogInformation($"Use connectionString: '{connectionString}'");
-
+            var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("EnsureDatabase");
+            logger.LogInformation($"Use connectionString: '{appContext.Database.GetConnectionString()}'");
             var created = appContext.Database.EnsureCreated();
-            if (created)
-                logger.LogInformation("Database created/initialized");
-            else
-                logger.LogInformation("Database already exists, skipping creation");
-
+            logger.LogInformation(created ? "Database created" : "Database already exists");
             return host;
         }
     }
