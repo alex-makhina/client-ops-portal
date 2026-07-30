@@ -106,6 +106,10 @@ public class AbonentsControllerTests
         // Arrange
         var abonentId = Guid.NewGuid();
         var expectedAbonent = CreateAbonentDto(abonentId);
+        var userId = Guid.NewGuid();
+
+        // Настройка текущего пользователя
+        SetupUserRole("Manager", userId);
 
         _abonentServiceMock
             .Setup(s => s.GetByIdAsync(abonentId, true, It.IsAny<CancellationToken>()))
@@ -131,6 +135,10 @@ public class AbonentsControllerTests
     {
         // Arrange
         var abonentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        // Настройка текущего пользователя
+        SetupUserRole("Manager", userId);
 
         _abonentServiceMock
             .Setup(s => s.GetByIdAsync(abonentId, true, It.IsAny<CancellationToken>()))
@@ -156,6 +164,10 @@ public class AbonentsControllerTests
         // Arrange
         var abonentId = Guid.NewGuid();
         var expectedAbonent = CreateAbonentDto(abonentId);
+        var userId = Guid.NewGuid();
+
+        // Настройка текущего пользователя
+        SetupUserRole("Manager", userId);
 
         _abonentServiceMock
             .Setup(s => s.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))

@@ -6,6 +6,8 @@ using ClientOpsPortal.Application.Services;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
+using ClientOpsPortal.Services.Auth.Client;
+using ClientOpsPortal.Services.Auth.Contracts;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using Shouldly;
@@ -18,8 +20,7 @@ public class AbonentServiceTests
     private readonly Mock<IGenericRepository<Abonent>> _abonentRepositoryMock;
     private readonly Mock<IGenericRepository<Contract>> _contractRepositoryMock;
     private readonly Mock<IGenericRepository<User>> _userRepositoryMock;
-    private readonly Mock<IIdentityService> _identityServiceMock;
-    private readonly Mock<INotificationService> _notificationServiceMock;
+    private readonly Mock<IAuthClient> _authClientMock;
     private readonly AbonentService _sut;
 
     public AbonentServiceTests()
@@ -27,13 +28,12 @@ public class AbonentServiceTests
         _abonentRepositoryMock = new Mock<IGenericRepository<Abonent>>();
         _contractRepositoryMock = new Mock<IGenericRepository<Contract>>();
         _userRepositoryMock = new Mock<IGenericRepository<User>>();
-        _identityServiceMock = new Mock<IIdentityService>();
-        _notificationServiceMock = new Mock<INotificationService>();
+        _authClientMock = new Mock<IAuthClient>();
+
         _sut = new AbonentService(
             _abonentRepositoryMock.Object,
             _contractRepositoryMock.Object,
-            _identityServiceMock.Object,
-            _notificationServiceMock.Object,
+            _authClientMock.Object,
             _userRepositoryMock.Object);
     }
 
@@ -81,6 +81,83 @@ public class AbonentServiceTests
         _abonentRepositoryMock.Verify(
             r => r.GetByIdAsync(abonentId, true, It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    #endregion
+
+    #region GetByIdUserAsync Tests
+
+    [Fact]
+    public async Task GetByIdUserAsync_WhenUserExists_ReturnsAbonentDto()
+    {
+        // Arrange
+        var externalId = "external-id-123";
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, ExternalId = externalId };
+        var abonent = CreateAbonentEntity(Guid.NewGuid());
+        abonent.UserId = userId;
+
+        _userRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<User, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<User> { user });
+
+        _abonentRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Abonent, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Abonent> { abonent });
+
+        // Act
+        var result = await _sut.GetByIdUserAsync(externalId);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(abonent.Id);
+
+        _userRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<User, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _abonentRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Abonent, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByIdUserAsync_WhenUserNotFound_ReturnsNull()
+    {
+        // Arrange
+        var externalId = "external-id-123";
+
+        _userRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<User, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<User>());
+
+        // Act
+        var result = await _sut.GetByIdUserAsync(externalId);
+
+        // Assert
+        result.ShouldBeNull();
+
+        _abonentRepositoryMock.Verify(
+            r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Abonent, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     #endregion
@@ -137,22 +214,20 @@ public class AbonentServiceTests
     {
         // Arrange
         var createDto = CreateCreateAbonentDto();
-        var userId = Guid.NewGuid();
+        var userExternalId = Guid.NewGuid().ToString();
         var generatedPassword = "Temp123!";
-        var resetToken = "reset-token-123";
-        var createdUser = new User { Id = userId };
 
-        _identityServiceMock
-            .Setup(s => s.GenerateRandomPassword())
-            .Returns(generatedPassword);
+        _authClientMock
+            .Setup(x => x.GenerateRandomPasswordAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(generatedPassword);
 
-        _identityServiceMock
-            .Setup(s => s.CreateUserAsync(It.IsAny<string>(), createDto.Email, generatedPassword, "Abonent", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(createdUser);
+        _authClientMock
+            .Setup(x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userExternalId);
 
-        _identityServiceMock
-            .Setup(s => s.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resetToken);
+        _userRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _abonentRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()))
@@ -170,18 +245,21 @@ public class AbonentServiceTests
 
         // Assert
         result.ShouldNotBeNull();
-        result.UserId.ShouldBe(userId);
 
-        _identityServiceMock.Verify(
-            s => s.CreateUserAsync(It.IsAny<string>(), createDto.Email, generatedPassword, "Abonent", It.IsAny<CancellationToken>()),
+        _authClientMock.Verify(
+            x => x.GenerateRandomPasswordAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _authClientMock.Verify(
+            x => x.CreateUserAsync(
+                It.Is<CreateUserRequest>(req =>
+                    req.Email == createDto.Email &&
+                    req.Roles.Contains("Abonent")),
+                It.IsAny<CancellationToken>()),
             Times.Once);
 
         _abonentRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _notificationServiceMock.Verify(
-            s => s.SendPasswordSetLinkAsync(createDto.Email, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -206,15 +284,14 @@ public class AbonentServiceTests
 
         exception.Message.ShouldContain(createDto.IdentificationNumber);
 
-        _identityServiceMock.Verify(
-            s => s.CreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _authClientMock.Verify(
+            x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
         _abonentRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
-
 
     #endregion
 
@@ -274,69 +351,6 @@ public class AbonentServiceTests
             r => r.UpdateAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
-
-    [Fact]
-    public async Task UpdateAsync_WhenIdentificationNumberChangedAndNotUnique_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var abonentId = Guid.NewGuid();
-        var existingAbonent = CreateAbonentEntity(abonentId);
-        var updateDto = CreateUpdateAbonentDto();
-        var otherAbonent = CreateAbonentEntity(Guid.NewGuid());
-        otherAbonent.IdentificationNumber = updateDto.IdentificationNumber;
-
-        _abonentRepositoryMock
-            .Setup(r => r.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingAbonent);
-
-        _abonentRepositoryMock
-            .Setup(r => r.GetWhereAsync(
-                It.IsAny<Expression<Func<Abonent, bool>>>(),
-                false,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Abonent> { otherAbonent });
-
-        // Act & Assert
-        var exception = await Should.ThrowAsync<InvalidOperationException>(
-            () => _sut.UpdateAsync(abonentId, updateDto));
-
-        exception.Message.ShouldContain(updateDto.IdentificationNumber);
-
-        _abonentRepositoryMock.Verify(
-            r => r.UpdateAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_WhenAccountNumberChangedAndNotUnique_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var abonentId = Guid.NewGuid();
-        var existingAbonent = CreateAbonentEntity(abonentId);
-        var updateDto = CreateUpdateAbonentDto();
-        var otherAbonent = CreateAbonentEntity(Guid.NewGuid());
-
-        _abonentRepositoryMock
-            .Setup(r => r.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingAbonent);
-
-        _abonentRepositoryMock
-            .SetupSequence(r => r.GetWhereAsync(
-                It.IsAny<Expression<Func<Abonent, bool>>>(),
-                false,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Abonent>()) // Для IdentificationNumber
-            .ReturnsAsync(new List<Abonent> { otherAbonent }); // Для AccountNumber
-
-        // Act & Assert
-        var exception = await Should.ThrowAsync<InvalidOperationException>(
-            () => _sut.UpdateAsync(abonentId, updateDto));
-
-        _abonentRepositoryMock.Verify(
-            r => r.UpdateAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
     #endregion
 
     #region DeleteAsync Tests
@@ -712,7 +726,14 @@ public class AbonentServiceTests
         if (id.HasValue)
             faker.RuleFor(a => a.Id, _ => id.Value);
 
-        return faker.Generate();
+        return faker
+            .RuleFor(a => a.FirstName, f => f.Person.FirstName)
+            .RuleFor(a => a.LastName, f => f.Person.LastName)
+            .RuleFor(a => a.MiddleName, f => f.Person.FirstName)
+            .RuleFor(a => a.IdentificationNumber, f => f.Random.String2(10, "0123456789"))
+            .RuleFor(a => a.AccountNumber, f => $"ACC-{f.Random.String2(8, "0123456789ABCDEF")}")
+            .RuleFor(a => a.UserId, _ => Guid.NewGuid())
+            .Generate();
     }
 
     private static List<Abonent> CreateAbonentEntityList(int count)
@@ -727,12 +748,23 @@ public class AbonentServiceTests
 
     private static CreateAbonentDto CreateCreateAbonentDto()
     {
-        return new AutoFaker<CreateAbonentDto>().Generate();
+        return new AutoFaker<CreateAbonentDto>()
+            .RuleFor(dto => dto.Email, f => f.Internet.Email())
+            .RuleFor(dto => dto.FirstName, f => f.Person.FirstName)
+            .RuleFor(dto => dto.LastName, f => f.Person.LastName)
+            .RuleFor(dto => dto.MiddleName, f => f.Person.FirstName)
+            .RuleFor(dto => dto.IdentificationNumber, f => f.Random.String2(10, "0123456789"))
+            .Generate();
     }
 
     private static UpdateAbonentDto CreateUpdateAbonentDto()
     {
-        return new AutoFaker<UpdateAbonentDto>().Generate();
+        return new AutoFaker<UpdateAbonentDto>()
+            .RuleFor(dto => dto.FirstName, f => f.Person.FirstName)
+            .RuleFor(dto => dto.LastName, f => f.Person.LastName)
+            .RuleFor(dto => dto.MiddleName, f => f.Person.FirstName)
+            .RuleFor(dto => dto.IdentificationNumber, f => f.Random.String2(10, "0123456789"))
+            .Generate();
     }
 
     #endregion

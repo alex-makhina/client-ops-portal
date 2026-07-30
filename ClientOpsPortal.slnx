@@ -16,6 +16,7 @@
     <Project Path="src/services/client-ops-api/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
     <Project Path="src/services/client-ops-api/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
     <Project Path="src/services/client-ops-api/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
+    <Project Path="src/services/client-ops-api/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" Id="698fa648-143a-462e-bb20-9b27fcbe3b4a" />
   </Folder>
   <Folder Name="/src/services/services-directory/">
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
@@ -30,8 +31,5 @@
     <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.IntegrationTests/ClientOpsPortal.Services.Auth.IntegrationTests.csproj" Id="03ee375c-611a-49cb-8831-7b2480d2ead4" />
     <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.UnitTests/ClientOpsPortal.Services.Auth.UnitTests.csproj" Id="fb29eda4-6208-41eb-8f74-7343b47e0744" />
     <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
   </Folder>
 </Solution>

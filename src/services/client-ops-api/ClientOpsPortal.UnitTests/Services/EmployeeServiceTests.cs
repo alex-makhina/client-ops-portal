@@ -1,4 +1,5 @@
 ﻿using AutoBogus;
+using Bogus;
 using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
@@ -6,7 +7,8 @@ using ClientOpsPortal.Application.Services;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
-using Microsoft.AspNetCore.Identity;
+using ClientOpsPortal.Services.Auth.Client;
+using ClientOpsPortal.Services.Auth.Contracts;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
@@ -17,21 +19,32 @@ public class EmployeeServiceTests
 {
     private readonly Mock<IGenericRepository<Employee>> _employeeRepositoryMock;
     private readonly Mock<IGenericRepository<User>> _userRepositoryMock;
-    private readonly Mock<IIdentityService> _identityServiceMock;
-    private readonly Mock<INotificationService> _notificationServiceMock;
+    private readonly Mock<IAuthClient> _authClientMock;
     private readonly EmployeeService _sut;
 
     public EmployeeServiceTests()
     {
         _employeeRepositoryMock = new Mock<IGenericRepository<Employee>>();
         _userRepositoryMock = new Mock<IGenericRepository<User>>();
-        _identityServiceMock = new Mock<IIdentityService>();
-        _notificationServiceMock = new Mock<INotificationService>();
+        _authClientMock = new Mock<IAuthClient>();
+
+        AutoFaker.Configure(builder =>
+        {
+            builder.WithLocale("ru");
+        });
+
+        _authClientMock
+            .Setup(x => x.GenerateRandomPasswordAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Temp123!");
+
+        _authClientMock
+            .Setup(x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid().ToString());
+
         _sut = new EmployeeService(
             _employeeRepositoryMock.Object,
             _userRepositoryMock.Object,
-            _identityServiceMock.Object,
-            _notificationServiceMock.Object);
+            _authClientMock.Object);
     }
 
     #region GetByIdAsync Tests
@@ -135,10 +148,8 @@ public class EmployeeServiceTests
     {
         // Arrange
         var createDto = CreateCreateEmployeeDto();
-        var userId = Guid.NewGuid();
+        var userId = Guid.NewGuid().ToString();
         var generatedPassword = "Temp123!";
-        var resetToken = "reset-token-123";
-        var createdUser = new User { Id = userId };
 
         _employeeRepositoryMock
             .Setup(r => r.GetWhereAsync(
@@ -147,17 +158,22 @@ public class EmployeeServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Employee>());
 
-        _identityServiceMock
-            .Setup(s => s.GenerateRandomPassword())
-            .Returns(generatedPassword);
+        _authClientMock
+            .Setup(s => s.GenerateRandomPasswordAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(generatedPassword);
 
-        _identityServiceMock
-            .Setup(s => s.CreateUserAsync(createDto.StaffNumber, createDto.Email, generatedPassword, "Employee", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(createdUser);
+        _authClientMock
+            .Setup(s => s.CreateUserAsync(
+                It.Is<CreateUserRequest>(r =>
+                    r.UserName == createDto.StaffNumber &&
+                    r.Email == createDto.Email &&
+                    r.Password == generatedPassword),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userId);
 
-        _identityServiceMock
-            .Setup(s => s.GeneratePasswordResetTokenAsync(createDto.StaffNumber, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resetToken);
+        _userRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _employeeRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()))
@@ -169,18 +185,21 @@ public class EmployeeServiceTests
         // Assert
         result.ShouldNotBeNull();
         result.StaffNumber.ShouldBe(createDto.StaffNumber);
-        result.UserId.ShouldBe(userId);
 
-        _identityServiceMock.Verify(
-            s => s.CreateUserAsync(createDto.StaffNumber, createDto.Email, generatedPassword, "Employee", It.IsAny<CancellationToken>()),
+        _authClientMock.Verify(
+            s => s.CreateUserAsync(
+                It.Is<CreateUserRequest>(r =>
+                    r.UserName == createDto.StaffNumber &&
+                    r.Email == createDto.Email),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _userRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         _employeeRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _notificationServiceMock.Verify(
-            s => s.SendPasswordSetLinkAsync(createDto.Email, createDto.StaffNumber, It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -205,8 +224,12 @@ public class EmployeeServiceTests
 
         exception.Message.ShouldContain(createDto.StaffNumber);
 
-        _identityServiceMock.Verify(
-            s => s.CreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _authClientMock.Verify(
+            s => s.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _userRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
         _employeeRepositoryMock.Verify(
@@ -625,6 +648,176 @@ public class EmployeeServiceTests
 
     #endregion
 
+    #region GetAllUsersAsync Tests
+
+    [Fact]
+    public async Task GetAllUsersAsync_WhenEmployeesExist_ReturnsUserListItems()
+    {
+        // Arrange
+        var employees = CreateEmployeeEntityList(3);
+        foreach (var employee in employees)
+        {
+            employee.User = new User { Id = Guid.NewGuid(), ExternalId = Guid.NewGuid().ToString() };
+        }
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Employee, bool>>>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(employees);
+
+        _authClientMock
+            .Setup(x => x.GetUserByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken ct) => new UserResponse
+            {
+                Id = id,
+                UserName = $"user_{id}",
+                Email = $"user_{id}@test.com",
+                Roles = new List<string> { "Manager" }
+            });
+
+        // Act
+        var result = await _sut.GetAllUsersAsync();
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBe(employees.Count);
+
+        _employeeRepositoryMock.Verify(
+            r => r.GetWhereAsync(It.IsAny<Expression<Func<Employee, bool>>>(), true, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllUsersAsync_WhenAuthClientThrowsException_SkipsUser()
+    {
+        // Arrange
+        var employees = CreateEmployeeEntityList(3);
+        foreach (var employee in employees)
+        {
+            employee.User = new User { Id = Guid.NewGuid(), ExternalId = Guid.NewGuid().ToString() };
+        }
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Employee, bool>>>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(employees);
+
+        _authClientMock
+            .Setup(x => x.GetUserByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Auth service error"));
+
+        // Act
+        var result = await _sut.GetAllUsersAsync();
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
+
+        _authClientMock.Verify(
+            x => x.GetUserByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(employees.Count));
+    }
+    #endregion
+
+    #region ToggleUserStatusAsync Tests
+
+    [Fact]
+    public async Task ToggleUserStatusAsync_WhenEmployeeActive_TogglesToInactive()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+        var employee = CreateEmployeeEntity(employeeId);
+        employee.IsActive = true;
+        employee.User = new User { Id = Guid.NewGuid(), ExternalId = Guid.NewGuid().ToString() };
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetByIdAsync(employeeId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(employee);
+
+        _employeeRepositoryMock
+            .Setup(r => r.UpdateAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _authClientMock
+            .Setup(x => x.BlockUserAsync(employee.User.ExternalId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.ToggleUserStatusAsync(employeeId);
+
+        // Assert
+        employee.IsActive.ShouldBeFalse();
+
+        _authClientMock.Verify(
+            x => x.BlockUserAsync(employee.User.ExternalId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _authClientMock.Verify(
+            x => x.UnblockUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ToggleUserStatusAsync_WhenEmployeeInactive_TogglesToActive()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+        var employee = CreateEmployeeEntity(employeeId);
+        employee.IsActive = false;
+        employee.User = new User { Id = Guid.NewGuid(), ExternalId = Guid.NewGuid().ToString() };
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetByIdAsync(employeeId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(employee);
+
+        _employeeRepositoryMock
+            .Setup(r => r.UpdateAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _authClientMock
+            .Setup(x => x.UnblockUserAsync(employee.User.ExternalId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.ToggleUserStatusAsync(employeeId);
+
+        // Assert
+        employee.IsActive.ShouldBeTrue();
+
+        _authClientMock.Verify(
+            x => x.UnblockUserAsync(employee.User.ExternalId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _authClientMock.Verify(
+            x => x.BlockUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ToggleUserStatusAsync_WhenEmployeeNotFound_ThrowsEntityNotFoundException()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetByIdAsync(employeeId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Employee?)null);
+
+        // Act & Assert
+        await Should.ThrowAsync<EntityNotFoundException>(
+            () => _sut.ToggleUserStatusAsync(employeeId));
+
+        _employeeRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static Employee CreateEmployeeEntity(Guid? id = null)
@@ -634,7 +827,15 @@ public class EmployeeServiceTests
         if (id.HasValue)
             faker.RuleFor(e => e.Id, _ => id.Value);
 
-        return faker.Generate();
+        return faker
+            .RuleFor(e => e.StaffNumber, _ => $"EMP-{DateTime.Now:yyyy}-{Guid.NewGuid():N}".Substring(0, 15))
+            .RuleFor(e => e.FirstName, _ => $"FirstName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(e => e.LastName, _ => $"LastName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(e => e.Post, _ => "Менеджер")
+            .RuleFor(e => e.Department, _ => "IT")
+            .RuleFor(e => e.IsActive, _ => true)
+            .RuleFor(e => e.User, _ => null)
+            .Generate();
     }
 
     private static List<Employee> CreateEmployeeEntityList(int count)
@@ -649,12 +850,29 @@ public class EmployeeServiceTests
 
     private static CreateEmployeeDto CreateCreateEmployeeDto()
     {
-        return new AutoFaker<CreateEmployeeDto>().Generate();
+        var faker = new AutoFaker<CreateEmployeeDto>();
+
+        return faker
+            .RuleFor(dto => dto.StaffNumber, _ => $"EMP-{DateTime.Now:yyyy}-{Guid.NewGuid():N}".Substring(0, 15))
+            .RuleFor(dto => dto.Email, _ => $"{Guid.NewGuid():N}@test.com")
+            .RuleFor(dto => dto.FirstName, _ => $"FirstName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(dto => dto.LastName, _ => $"LastName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(dto => dto.Post, _ => "Менеджер")
+            .RuleFor(dto => dto.Department, _ => "IT")
+            .Generate();
     }
 
     private static UpdateEmployeeDto CreateUpdateEmployeeDto()
     {
-        return new AutoFaker<UpdateEmployeeDto>().Generate();
+        var faker = new AutoFaker<UpdateEmployeeDto>();
+
+        return faker
+            .RuleFor(dto => dto.StaffNumber, _ => $"EMP-{DateTime.Now:yyyy}-{Guid.NewGuid():N}".Substring(0, 15))
+            .RuleFor(dto => dto.FirstName, _ => $"FirstName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(dto => dto.LastName, _ => $"LastName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(dto => dto.Post, _ => "Менеджер")
+            .RuleFor(dto => dto.Department, _ => "IT")
+            .Generate();
     }
 
     #endregion
