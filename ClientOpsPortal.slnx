@@ -20,6 +20,8 @@
   <Folder Name="/src/services/services-directory/">
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
+    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.IntegrationTests/ClientOpsPortal.Services.Directory.IntegrationTests.csproj" Id="a9530ca2-453c-42a6-8c02-497a34b5620c" />
+    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.UnitTests/ClientOpsPortal.Services.Directory.UnitTests.csproj" Id="3afe8a97-6a0c-4c31-8c35-8d4bc662342f" />
     <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
   </Folder>  
   <Folder Name="/src/services/auth/">
