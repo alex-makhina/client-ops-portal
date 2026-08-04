@@ -1,40 +1,39 @@
 <Solution>
-  <Folder Name="/src/" />
-  <Folder Name="/src/apps/" />
-  <Folder Name="/src/apps/personal-account/">
-    <Project Path="src/apps/personal-account/clientopsportal.personalaccount/clientopsportal.personalaccount.esproj">
-      <Build />
-      <Deploy />
-    </Project>
+  <Folder Name="/src/services/">
+    <Folder Name="/src/services/client-ops-api/">
+      <Project Path="src/services/client-ops-api/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
+      <Project Path="src/services/client-ops-api/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
+      <Project Path="src/services/client-ops-api/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
+      <Project Path="src/services/client-ops-api/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
+    </Folder>
+    <Folder Name="/src/services/services-directory/">
+      <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
+      <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
+      <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
+    </Folder>
+    <Folder Name="/src/services/auth/">
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj" />
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Services.Auth.Client.csproj" />
+    </Folder>
+    <Folder Name="/src/services/notifications/">
+      <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications/ClientOpsPortal.Services.Notifications.csproj" />
+      <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications.Contracts/ClientOpsPortal.Services.Notifications.Contracts.csproj" />
+      <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications.Client/ClientOpsPortal.Services.Notifications.Client.csproj" />
+    </Folder>
   </Folder>
-  <Folder Name="/src/apps/admin-portal/">
-    <Project Path="src/apps/admin-portal/ClientOpsPortal.Web/ClientOpsPortal.Web.csproj" />
+  <Folder Name="/src/apps/">
+    <Folder Name="/src/apps/admin-portal/">
+      <Project Path="src/apps/admin-portal/ClientOpsPortal.Web/ClientOpsPortal.Web.csproj" />
+    </Folder>
+    <Folder Name="/src/apps/personal-account/">
+      <Project Path="src/apps/personal-account/clientopsportal.personalaccount/clientopsportal.personalaccount.esproj">
+        <Build />
+        <Deploy />
+      </Project>
+    </Folder>
   </Folder>
-  <Folder Name="/src/services/" />
-  <Folder Name="/src/services/auth/" Id="473ef3c4-73fa-6715-aa3c-7c7929374eed">
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Services.Auth.Client.csproj" />
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj" />
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.IntegrationTests/ClientOpsPortal.Services.Auth.IntegrationTests.csproj" Id="03ee375c-611a-49cb-8831-7b2480d2ead4" />
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.UnitTests/ClientOpsPortal.Services.Auth.UnitTests.csproj" Id="fb29eda4-6208-41eb-8f74-7343b47e0744" />
+  <Folder Name="/tests/">
+    <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
   </Folder>
-  <Folder Name="/src/services/client-ops-api/">
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" Id="698fa648-143a-462e-bb20-9b27fcbe3b4a" />
-  </Folder>
-  <Folder Name="/src/services/reporting/">
-    <Project Path="src/services/reporting/ClientOpsPortal.Reporting/ClientOpsPortal.Services.Reporting.Client/ClientOpsPortal.Services.Reporting.Client.csproj" Id="a6f7b719-4a4f-4cb0-b100-f95edd0e72c6" />
-    <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ClientOpsPortal.Services.Reporting.Contracts.csproj" Id="06024acd-7e0c-4e27-894a-12866b0aafcc" />
-    <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting/ClientOpsPortal.Services.Reporting.csproj" Id="3496e7b2-004b-4e1c-a8a1-66953a72ff40" />
-  </Folder>
-  <Folder Name="/src/services/services-directory/">
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.IntegrationTests/ClientOpsPortal.Services.Directory.IntegrationTests.csproj" Id="a9530ca2-453c-42a6-8c02-497a34b5620c" />
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.UnitTests/ClientOpsPortal.Services.Directory.UnitTests.csproj" Id="3afe8a97-6a0c-4c31-8c35-8d4bc662342f" />
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
-  </Folder>  
 </Solution>

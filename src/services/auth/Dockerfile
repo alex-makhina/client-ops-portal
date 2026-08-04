@@ -3,11 +3,15 @@ WORKDIR /app
 
 COPY src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj ClientOpsPortal.Services.Auth.Contracts/
 COPY src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj ClientOpsPortal.Services.Auth/
+COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Client/ClientOpsPortal.Services.Notifications.Client.csproj ../../notifications/ClientOpsPortal.Services.Notifications.Client/
+COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Contracts/ClientOpsPortal.Services.Notifications.Contracts.csproj ../../notifications/ClientOpsPortal.Services.Notifications.Contracts/
 
 RUN dotnet restore ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj
 
 COPY src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ ClientOpsPortal.Services.Auth.Contracts/
 COPY src/services/auth/ClientOpsPortal.Services.Auth/ ClientOpsPortal.Services.Auth/
+COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Client/ ../../notifications/ClientOpsPortal.Services.Notifications.Client/
+COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Contracts/ ../../notifications/ClientOpsPortal.Services.Notifications.Contracts/
 
 WORKDIR /app/ClientOpsPortal.Services.Auth
 RUN dotnet publish -c Release -o /out

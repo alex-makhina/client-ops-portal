@@ -57,7 +57,7 @@ public class UsersController : ControllerBase
         foreach (var role in request.Roles)
             if (await _roleManager.RoleExistsAsync(role))
                 await _userManager.AddToRoleAsync(user, role);
-        return Ok(user.Id.ToString());
+        return Ok(new CreateUserResponse { UserId = user.Id.ToString() });
     }
 
     [HttpPut("{id}/role")]

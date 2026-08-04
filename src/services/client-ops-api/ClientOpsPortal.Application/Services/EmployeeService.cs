@@ -6,6 +6,8 @@ using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
+using ClientOpsPortal.Services.Notifications.Client;
+using ClientOpsPortal.Services.Notifications.Contracts;
 using System.Linq.Expressions;
 
 namespace ClientOpsPortal.Application.Services
@@ -15,6 +17,7 @@ namespace ClientOpsPortal.Application.Services
         private readonly IGenericRepository<Employee> _employeeRepository;
         private readonly IGenericRepository<User> _userRepository;
         private readonly IAuthClient _authClient;
+        private readonly INotificationPublisher _notificationPublisher;
 
         private static readonly Dictionary<string, string> RoleDisplayToBackend = new()
         {
@@ -35,11 +38,13 @@ namespace ClientOpsPortal.Application.Services
         public EmployeeService(
             IGenericRepository<Employee> employeeRepository,
             IGenericRepository<User> userRepository,
-            IAuthClient authClient)
+            IAuthClient authClient,
+            INotificationPublisher notificationPublisher)
         {
             _employeeRepository = employeeRepository;
             _userRepository = userRepository;
             _authClient = authClient;
+            _notificationPublisher = notificationPublisher;
         }
 
         public async Task<EmployeeDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -76,6 +81,24 @@ namespace ClientOpsPortal.Application.Services
             var employee = createDto.ToEntity();
             employee.UserId = user.Id;
             await _employeeRepository.AddAsync(employee, ct);
+
+            // Publish "set password" notification via RabbitMQ
+            try
+            {
+                var resetToken = await _authClient.GeneratePasswordResetTokenAsync(userName, ct);
+                var resetLink = $"http://localhost:5022/set-password?userId={userId}&token={Uri.EscapeDataString(resetToken)}";
+                await _notificationPublisher.PublishAsync(new NotificationMessage
+                {
+                    Type = NotificationType.PasswordSetLink,
+                    RecipientEmail = createDto.Email,
+                    Login = userName,
+                    ResetLink = resetLink
+                }, ct);
+            }
+            catch
+            {
+                // notification failure must not fail employee creation
+            }
 
             return employee.ToEmployeeDto();
         }
@@ -202,6 +225,24 @@ namespace ClientOpsPortal.Application.Services
             var employee = createDto.ToEntity();
             employee.UserId = user.Id;
             await _employeeRepository.AddAsync(employee, ct);
+
+            // Publish "set password" notification via RabbitMQ
+            try
+            {
+                var resetToken = await _authClient.GeneratePasswordResetTokenAsync(createDto.Login, ct);
+                var resetLink = $"http://localhost:5022/set-password?userId={userId}&token={Uri.EscapeDataString(resetToken)}";
+                await _notificationPublisher.PublishAsync(new NotificationMessage
+                {
+                    Type = NotificationType.PasswordSetLink,
+                    RecipientEmail = createDto.Email,
+                    Login = createDto.Login,
+                    ResetLink = resetLink
+                }, ct);
+            }
+            catch
+            {
+                // notification failure must not fail employee creation
+            }
 
             var dto = employee.ToEmployeeDto();
             dto.Login = createDto.Login;

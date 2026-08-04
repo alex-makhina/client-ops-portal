@@ -6,6 +6,8 @@ using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
+using ClientOpsPortal.Services.Notifications.Client;
+using ClientOpsPortal.Services.Notifications.Contracts;
 using System.Linq.Expressions;
 using ClientOpsPortal.Application.DTOs.Common;
 
@@ -17,17 +19,20 @@ namespace ClientOpsPortal.Application.Services
         private readonly IGenericRepository<Contract> _contractRepository;
         private readonly IAuthClient _authClient;
         private readonly IGenericRepository<User> _userRepository;
+        private readonly INotificationPublisher _notificationPublisher;
 
         public AbonentService(
             IGenericRepository<Abonent> abonentRepository,
             IGenericRepository<Contract> contractRepository,
             IAuthClient authClient,
-            IGenericRepository<User> userRepository)
+            IGenericRepository<User> userRepository,
+            INotificationPublisher notificationPublisher)
         {
             _abonentRepository = abonentRepository;
             _contractRepository = contractRepository;
             _authClient = authClient;
             _userRepository = userRepository;
+            _notificationPublisher = notificationPublisher;
         }
 
         public async Task<AbonentDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -54,7 +59,7 @@ namespace ClientOpsPortal.Application.Services
         public async Task<AbonentDto> CreateAsync(CreateAbonentDto createDto, CancellationToken ct = default)
         {
             if (!await IsAbonentIdentificationNumberUniqueAsync(createDto.IdentificationNumber, null, ct))
-                throw new InvalidOperationException($"РђР±РѕРЅРµРЅС‚ СЃ РёРЅРґРµРЅС‚РёС„РёРєР°С†РёРѕРЅРЅС‹Рј РЅРѕРјРµСЂРѕРј '{createDto.IdentificationNumber}' СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
+                throw new InvalidOperationException($"Абонент с индентификационным номером '{createDto.IdentificationNumber}' уже существует");
 
             var accountNumber = GenerateAccountNumber();
             var userName = accountNumber;
@@ -74,6 +79,25 @@ namespace ClientOpsPortal.Application.Services
             abonent.AccountNumber = accountNumber;
             abonent.UserId = user.Id;
             await _abonentRepository.AddAsync(abonent, ct);
+
+            // Publish "set password" notification via RabbitMQ
+            try
+            {
+                var resetToken = await _authClient.GeneratePasswordResetTokenAsync(userName, ct);
+                var resetLink = $"http://localhost:62000/set-password?userId={userId}&token={Uri.EscapeDataString(resetToken)}";
+                await _notificationPublisher.PublishAsync(new NotificationMessage
+                {
+                    Type = NotificationType.PasswordSetLink,
+                    RecipientEmail = createDto.Email,
+                    Login = userName,
+                    ResetLink = resetLink
+                }, ct);
+            }
+            catch
+            {
+                // notification failure must not fail abonent creation
+            }
+
             return abonent.ToAbonentDto();
         }
 

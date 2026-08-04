@@ -9,4 +9,7 @@
     <ProjectReference Include="..\..\auth\ClientOpsPortal.Services.Auth.Client\ClientOpsPortal.Services.Auth.Client.csproj" />
     <ProjectReference Include="..\..\services-directory\ClientOpsPortal.Services.Directory.Contracts\ClientOpsPortal.Services.Directory.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\notifications\ClientOpsPortal.Services.Notifications.Client\ClientOpsPortal.Services.Notifications.Client.csproj" />
+  </ItemGroup>
 </Project>

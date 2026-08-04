@@ -1,6 +1,8 @@
 using ClientOpsPortal.Services.Auth.Contracts;
 using ClientOpsPortal.Services.Auth.Domain;
 using ClientOpsPortal.Services.Auth.Settings;
+using ClientOpsPortal.Services.Notifications.Client;
+using ClientOpsPortal.Services.Notifications.Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -17,6 +19,7 @@ public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOptions<JwtSettings> _jwtSettings;
+    private readonly INotificationPublisher _notificationPublisher;
 
     public AuthController(UserManager<ApplicationUser> userManager, IOptions<JwtSettings> jwtSettings)
     {
@@ -47,6 +50,25 @@ public class AuthController : ControllerBase
 
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        var user = await _userManager.FindByNameAsync(request.LoginIdentifier);
+        if (user == null) return NotFound("User not found");
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var resetLink = $"http://localhost:62000/set-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
+        await _notificationPublisher.PublishAsync(new NotificationMessage
+        {
+            Type = NotificationType.PasswordResetLink,
+            RecipientEmail = user.Email ?? string.Empty,
+            Login = request.LoginIdentifier,
+            ResetLink = resetLink
+        });
+
+        return Ok(new { message = "Password reset link has been sent to your email." });
+    }
+
+
+    [HttpPost("reset-token")]
+    public async Task<IActionResult> GenerateResetToken([FromBody] ForgotPasswordRequest request)
     {
         var user = await _userManager.FindByNameAsync(request.LoginIdentifier);
         if (user == null) return NotFound("User not found");
