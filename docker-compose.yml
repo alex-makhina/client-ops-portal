@@ -103,6 +103,10 @@ services:
       ConnectionStrings__AppConnection: Host=db;Port=5432;Database=ClientOpsPortalDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       ConnectionStrings__AppAuthConnection: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       ServicesDirectory__BaseUrl: http://services-directory:8080
+      RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
       AuthService__BaseUrl: http://auth:8080
     networks:
       - cop-network
@@ -165,6 +169,10 @@ services:
       Jwt__Audience: ClientOpsPortalClient
       Jwt__SecretKey: supersecretkeysupersecretkeysupersecretkeysupersecretkey
       Jwt__ExpiryMinutes: 60
+      RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
     networks:
       - cop-network
     depends_on:
@@ -188,6 +196,50 @@ services:
       reporting-db:
         condition: service_healthy
         
+
+  rabbitmq:
+    image: rabbitmq:${RABBITMQ_VERSION:-3-management}
+    container_name: client_ops_portal_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - cop-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  notifications:
+    build:
+      context: .
+      dockerfile: src/services/notifications/Dockerfile
+    container_name: client_ops_portal_notifications
+    restart: unless-stopped
+    ports:
+      - "${NOTIFICATIONS_PORT:-5120}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
+      EmailSettings__SmtpHost: ${SMTP_HOST:-}
+      EmailSettings__SmtpPort: ${SMTP_PORT:-587}
+      EmailSettings__FromEmail: ${SMTP_FROM:-no-reply@clientopsportal.com}
+      EmailSettings__FromName: ClientOpsPortal
+    networks:
+      - cop-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
   web:
     build:
       context: .
@@ -225,8 +277,8 @@ volumes:
   postgres_auth_data:
   postgres_directory_data:
   postgres_reporting_data:
-  redis_data:  
-
+  redis_data:
+  rabbitmq_data:
 networks:
   cop-network:
     driver: bridge

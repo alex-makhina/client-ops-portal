@@ -12,6 +12,7 @@ using System.Text;
 using ClientOpsPortal.Application.Settings;
 using ClientOpsPortal.Services.Directory.Client;
 using ClientOpsPortal.Services.Auth.Client;
+using ClientOpsPortal.Services.Notifications.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,8 @@ builder.Services.AddSingleton<IDirectoryCacheService, DirectoryCacheService>();
 var authServiceUrl = builder.Configuration.GetValue<string>("AuthService:BaseUrl")
     ?? "http://localhost:5110";
 builder.Services.AddAuthClient(authServiceUrl);
+
+builder.Services.AddNotificationPublisher(builder.Configuration);
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 

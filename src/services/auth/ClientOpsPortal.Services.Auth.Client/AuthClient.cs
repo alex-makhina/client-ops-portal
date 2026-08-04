@@ -22,7 +22,8 @@ public class AuthClient : IAuthClient
     {
         var r = await _http.PostAsJsonAsync("api/v1/users", request, ct);
         r.EnsureSuccessStatusCode();
-        return (await r.Content.ReadFromJsonAsync<string>(JsonOptions, ct))!;
+        var response = await r.Content.ReadFromJsonAsync<CreateUserResponse>(JsonOptions, ct);
+        return response!.UserId;
     }
 
     public async Task<UserResponse> GetUserByIdAsync(string userId, CancellationToken ct = default)
@@ -51,7 +52,7 @@ public class AuthClient : IAuthClient
 
     public async Task<string> GeneratePasswordResetTokenAsync(string loginIdentifier, CancellationToken ct = default)
     {
-        var r = await _http.PostAsJsonAsync("api/v1/auth/forgot-password", new ForgotPasswordRequest { LoginIdentifier = loginIdentifier }, ct);
+        var r = await _http.PostAsJsonAsync("api/v1/auth/reset-token", new ForgotPasswordRequest { LoginIdentifier = loginIdentifier }, ct);
         r.EnsureSuccessStatusCode();
         return (await r.Content.ReadFromJsonAsync<ForgotPasswordResponse>(JsonOptions, ct))?.TemporaryPassword ?? string.Empty;
     }
@@ -61,5 +62,16 @@ public class AuthClient : IAuthClient
         var r = await _http.GetAsync("api/v1/users/random-password", ct);
         r.EnsureSuccessStatusCode();
         return await r.Content.ReadAsStringAsync(ct);
+    }
+    public async Task SetPasswordAsync(SetPasswordRequest request, CancellationToken ct = default)
+    {
+        var r = await _http.PostAsJsonAsync("api/v1/auth/set-password", request, ct);
+        r.EnsureSuccessStatusCode();
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
+    {
+        var r = await _http.PostAsJsonAsync("api/v1/auth/reset-password", request, ct);
+        r.EnsureSuccessStatusCode();
     }
 }
