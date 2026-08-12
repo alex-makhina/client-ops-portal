@@ -3,6 +3,7 @@
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/login", forceLoad: true);
+        var loginUri = Navigation.ToAbsoluteUri("authentication/login").ToString();
+        Navigation.NavigateTo(loginUri, forceLoad: true);
     }
 }

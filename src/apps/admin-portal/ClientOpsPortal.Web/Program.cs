@@ -5,9 +5,8 @@ using ClientOpsPortal.Web.Features.ClientCard.Services;
 using ClientOpsPortal.Web.Features.ServiceManagement.Services;
 using ClientOpsPortal.Web.Features.UserManagement.Services;
 using ClientOpsPortal.Web.Shared.Infrastructure;
-using ClientOpsPortal.Web.Shared.Providers;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Radzen;
 using ClientOpsPortal.Web.Features.Shared.Notification;
@@ -18,19 +17,22 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddRadzenComponents();
-builder.Services.AddScoped<ITokenStore, TokenStore>();
-builder.Services.AddScoped<CustomAuthStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 
-builder.Services.AddAuthorizationCore();
-builder.Services.AddTransient<TokenHttpMessageHandler>();
+builder.Services.AddOidcAuthentication(options =>
+{
+    builder.Configuration.Bind("Oidc", options.ProviderOptions);
+    options.UserOptions.RoleClaim = "role";
+    options.UserOptions.NameClaim = "name";
+});
+
+builder.Services.AddTransient<AccessTokenHttpMessageHandler>();
 
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
 builder.Services.AddHttpClient("Api", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl!);
 })
-.AddHttpMessageHandler<TokenHttpMessageHandler>();
+.AddHttpMessageHandler<AccessTokenHttpMessageHandler>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();

@@ -1,0 +1,141 @@
+﻿@using ClientOpsPortal.Web.Features.Reports.Models
+@using ClientOpsPortal.Web.Features.Reports.Services
+@using ClientOpsPortal.Web.Features.Reports.Components.Shared
+
+@inject IReportService ReportService
+@inject DialogService DialogService
+
+<div class="report-section">
+    <div class="report-header">
+        <h4>Активные подписки</h4>
+        <div class="report-actions">
+            <ExportButton ExportFunction="ExportReportData"
+                          FileName="active-subscriptions.csv"
+                          SuccessMessage="Отчет успешно экспортирован"
+                          ErrorMessage="Не удалось экспортировать отчет" />
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Загрузка данных...</p>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            <span>⚠️</span>
+            @errorMessage
+        </div>
+    }
+    else if (result?.Items.Count == 0)
+    {
+        <div class="empty-state">
+            <span class="empty-icon">📋</span>
+            <p>Нет активных подписок</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Абонент</th>
+                        <th>Лицевой счет</th>
+                        <th>Договор</th>
+                        <th>Услуга</th>
+                        <th>Тариф</th>
+                        <th>Цена</th>
+                        <th>Начало</th>
+                        <th>Окончание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in result!.Items)
+                    {
+                        <tr>
+                            <td>@item.AbonentFullName</td>
+                            <td>@item.AccountNumber</td>
+                            <td>@item.ContractNumber</td>
+                            <td>@item.ServiceName</td>
+                            <td>@item.TariffPlanName</td>
+                            <td>@item.TariffPrice.ToString("C2")</td>
+                            <td>@item.BeginDate.ToString("dd.MM.yyyy")</td>
+                            <td>@(item.EndDate?.ToString("dd.MM.yyyy") ?? "Бессрочно")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="6"><strong>Итого активных подписок: @result.TotalCount</strong></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        @if (result.TotalPages > 1)
+        {
+            <div class="pagination-container">
+                <button class="btn btn-sm btn-secondary" @onclick="() => GoToPage(1)" disabled="@(!result.HasPrevious)">⏮</button>
+                <button class="btn btn-sm btn-secondary" @onclick="() => GoToPage(result.Page - 1)" disabled="@(!result.HasPrevious)"> ◀ </button>
+                <span class="pagination-info">Страница @result.Page из @result.TotalPages</span>
+                <button class="btn btn-sm btn-secondary" @onclick="() => GoToPage(result.Page + 1)" disabled="@(!result.HasNext)"> ▶ </button>
+                <button class="btn btn-sm btn-secondary" @onclick="() => GoToPage(result.TotalPages)" disabled="@(!result.HasNext)">⏭</button>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private ReportPaginationResult<ActiveSubscriptionReportItem>? result;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            result = await ReportService.GetActiveSubscriptionsAsync(1, 50);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (result == null) return;
+        if (page < 1 || page > result.TotalPages) return;
+
+        isLoading = true;
+        try
+        {
+            result = await ReportService.GetActiveSubscriptionsAsync(page, 50);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<byte[]> ExportReportData()
+    {
+        return await ReportService.ExportReportAsync("active-subscriptions");
+    }
+}

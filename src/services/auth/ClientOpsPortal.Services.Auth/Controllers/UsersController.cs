@@ -1,11 +1,14 @@
 using ClientOpsPortal.Services.Auth.Contracts;
 using ClientOpsPortal.Services.Auth.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Validation.AspNetCore;
 
 namespace ClientOpsPortal.Services.Auth.Controllers;
 
 [ApiController]
+[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("api/v1/[controller]")]
 public class UsersController : ControllerBase
 {
@@ -18,6 +21,7 @@ public class UsersController : ControllerBase
         _roleManager = roleManager;
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -35,6 +39,7 @@ public class UsersController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -51,15 +56,22 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
     {
+        var isAdmin = User.IsInRole("Admin");
+        var requestedRoles = request.Roles ?? [];
+
+        if (!isAdmin && !requestedRoles.All(r => r == "Abonent"))
+            return Forbid();
+
         var user = new ApplicationUser { UserName = request.UserName, Email = request.Email, EmailConfirmed = true };
         var result = await _userManager.CreateAsync(user, request.Password);
         if (!result.Succeeded) return BadRequest(result.Errors);
-        foreach (var role in request.Roles)
+        foreach (var role in requestedRoles)
             if (await _roleManager.RoleExistsAsync(role))
                 await _userManager.AddToRoleAsync(user, role);
         return Ok(new CreateUserResponse { UserId = user.Id.ToString() });
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id}/role")]
     public async Task<IActionResult> SetRole(Guid id, [FromBody] SetUserRoleRequest request)
     {
@@ -72,6 +84,7 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{id}/block")]
     public async Task<IActionResult> Block(Guid id)
     {
@@ -81,6 +94,7 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{id}/unblock")]
     public async Task<IActionResult> Unblock(Guid id)
     {
@@ -91,6 +105,7 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet("random-password")]
     public IActionResult GenerateRandomPassword()
     {

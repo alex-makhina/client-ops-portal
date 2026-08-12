@@ -11,28 +11,33 @@
     </Project>
   </Folder>
   <Folder Name="/src/services/" />
-  <Folder Name="/src/services/client-ops-api/">
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
-    <Project Path="src/services/client-ops-api/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
+  <Folder Name="/src/services/crm/">
+      <Project Path="src/services/crm/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
+      <Project Path="src/services/crm/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
+      <Project Path="src/services/crm/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
+      <Project Path="src/services/crm/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/services/services-directory/">
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
-    <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
+      <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj" />
+      <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj" />
+      <Project Path="src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj" />
   </Folder>
   <Folder Name="/src/services/auth/">
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj" />
-    <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Services.Auth.Client.csproj" />
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth/ClientOpsPortal.Services.Auth.csproj" />
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj" />
+      <Project Path="src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Services.Auth.Client.csproj" />
   </Folder>
   <Folder Name="/src/services/notifications/">
-    <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications/ClientOpsPortal.Services.Notifications.csproj" />
-    <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications.Contracts/ClientOpsPortal.Services.Notifications.Contracts.csproj" />
-    <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications.Client/ClientOpsPortal.Services.Notifications.Client.csproj" />
+      <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications/ClientOpsPortal.Services.Notifications.csproj" />
+      <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications.Contracts/ClientOpsPortal.Services.Notifications.Contracts.csproj" />
+      <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications.Client/ClientOpsPortal.Services.Notifications.Client.csproj" />
   </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
+  <Folder Name="/src/services/reporting/">
+      <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting/ClientOpsPortal.Services.Reporting.csproj" />
+      <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ClientOpsPortal.Services.Reporting.Contracts.csproj" />
+      <Project Path="src/services/reporting/ClientOpsPortal.Reporting/ClientOpsPortal.Services.Reporting.Client/ClientOpsPortal.Services.Reporting.Client.csproj" />
+  </Folder>
+  <Folder Name="/src/services/api-gateway/">
+      <Project Path="src/services/api-gateway/ClientOpsPortal.ApiGateway/ClientOpsPortal.ApiGateway.csproj" />
   </Folder>
 </Solution>

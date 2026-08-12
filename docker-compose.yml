@@ -11,7 +11,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_auth_data:/var/lib/postgresql
+      - postgres_auth_data:/var/lib/postgresql/data
     networks:
       - cop-network
     healthcheck:
@@ -31,7 +31,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - cop-network
     healthcheck:
@@ -49,7 +49,27 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_directory_data:/var/lib/postgresql
+      - postgres_directory_data:/var/lib/postgresql/data
+    networks:
+      - cop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  crm-db:
+    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    container_name: client_ops_portal_crm_db
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_crm_data:/var/lib/postgresql/data
     networks:
       - cop-network
     healthcheck:
@@ -67,7 +87,7 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_reporting_data:/var/lib/postgresql
+      - postgres_reporting_data:/var/lib/postgresql/data
     networks:
       - cop-network
     healthcheck:
@@ -75,7 +95,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      
+
   adminer:
     image: adminer:${ADMINER_VERSION:-5.4.2}
     container_name: client_ops_portal_adminer
@@ -90,30 +110,31 @@ services:
       db:
         condition: service_healthy
 
-  api:
+  crm:
     build:
       context: .
-      dockerfile: src/services/client-ops-api/Dockerfile
-    container_name: client_ops_portal_api
+      dockerfile: src/services/crm/Dockerfile
+    container_name: client_ops_portal_crm
     restart: unless-stopped
     ports:
-      - "${API_PORT:-5079}:8080"
+      - "${CRM_PORT:-5080}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ConnectionStrings__AppConnection: Host=db;Port=5432;Database=ClientOpsPortalDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
-      ConnectionStrings__AppAuthConnection: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      ConnectionStrings__AppConnection: Host=crm-db;Port=5432;Database=ClientOpsPortalCrmDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       ServicesDirectory__BaseUrl: http://services-directory:8080
       RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
       RabbitMq__Port: 5672
       RabbitMq__Username: ${RABBITMQ_USER:-guest}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
       AuthService__BaseUrl: http://auth:8080
+      AuthService__PublicUrl: http://localhost:5110
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
-      db:
-        condition: service_healthy
-      db_auth:
+      crm-db:
         condition: service_healthy
       services-directory:
         condition: service_started
@@ -130,6 +151,9 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__DirectoryDb: Host=directory-db;Port=5432;Database=ClientOpsPortalDirectoryDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       Redis__Configuration: ${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
@@ -137,6 +161,26 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+
+  reporting:
+    build:
+      context: .
+      dockerfile: src/services/reporting/Dockerfile
+    container_name: client_ops_portal_reporting
+    restart: unless-stopped
+    ports:
+      - "${REPORTING_PORT:-5130}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__ReportingDb: Host=reporting-db;Port=5432;Database=ClientOpsPortalReportsDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
+    networks:
+      - cop-network
+    depends_on:
+      reporting-db:
+        condition: service_healthy
 
   redis:
     image: redis:${REDIS_VERSION:-7-alpine}
@@ -164,38 +208,41 @@ services:
       - "${AUTH_PORT:-5110}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ConnectionStrings__AuthDb: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-dev_pass_123}
-      Jwt__Issuer: ClientOpsPortal
-      Jwt__Audience: ClientOpsPortalClient
-      Jwt__SecretKey: supersecretkeysupersecretkeysupersecretkeysupersecretkey
-      Jwt__ExpiryMinutes: 60
+      ConnectionStrings__AuthDb: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      Jwt__KeyPath: /app/keys/jwt-signing.pem
       RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
       RabbitMq__Port: 5672
       RabbitMq__Username: ${RABBITMQ_USER:-guest}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - auth-keys:/app/keys
     networks:
       - cop-network
     depends_on:
       db_auth:
         condition: service_healthy
 
-  reporting:
+  api-gateway:
     build:
       context: .
-      dockerfile: src/services/reporting/Dockerfile
-    container_name: client_ops_portal_reporting
+      dockerfile: src/services/api-gateway/Dockerfile
+    container_name: client_ops_portal_gateway
     restart: unless-stopped
     ports:
-      - "${REPORTING_PORT:-5200}:8080"
+      - "${GATEWAY_PORT:-5000}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ConnectionStrings__ReportingDb: Host=reporting-db;Port=5432;Database=ClientOpsPortalReportingDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
-      reporting-db:
-        condition: service_healthy
-        
+      - crm
+      - auth
+      - services-directory
+      - reporting
+      - notifications
 
   rabbitmq:
     image: rabbitmq:${RABBITMQ_VERSION:-3-management}
@@ -235,11 +282,15 @@ services:
       EmailSettings__SmtpPort: ${SMTP_PORT:-587}
       EmailSettings__FromEmail: ${SMTP_FROM:-no-reply@clientopsportal.com}
       EmailSettings__FromName: ClientOpsPortal
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
       rabbitmq:
         condition: service_healthy
+
   web:
     build:
       context: .
@@ -249,38 +300,39 @@ services:
     ports:
       - "${BLAZOR_PORT:-5022}:80"
     environment:
-      API_BASE_URL: ${API_BASE_URL:-http://localhost:5079}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:5000}
     networks:
       - cop-network
     depends_on:
-      - api
+      - api-gateway
 
   personal-account:
     build:
       context: .
       dockerfile: src/apps/personal-account/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:5079/api/v1}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api/v1}
     container_name: client_ops_portal_pa
     restart: unless-stopped
     ports:
       - "${REACT_PORT:-62000}:80"
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:5079/api/v1}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api/v1}
     networks:
       - cop-network
     depends_on:
-      - api
+      - api-gateway
 
 volumes:
   postgres_data:
   postgres_auth_data:
   postgres_directory_data:
+  postgres_crm_data:
   postgres_reporting_data:
   redis_data:
   rabbitmq_data:
+  auth-keys:
+
 networks:
   cop-network:
     driver: bridge
-
-

@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAbonentDashboard } from '../hooks/useAbonentDashboard';
@@ -7,10 +6,10 @@ import { useCreateContract, useTerminateContract } from '../hooks/useContract';
 import { useConnectSubscription, useChangeTariff, useCancelSubscription, useServices, useTariffPlans } from '../hooks/useSubscriptionActions';
 import { contractCreateSchema, type ContractCreateFormData } from '../schemas/contract.schema';
 import { SubscriptionRow } from '../components/SubscriptionRow';
+import { userManager } from '../auth/oidc';
 import './PersonalAccount.css';
 
 export const PersonalAccountPage: React.FC = () => {
-    const navigate = useNavigate();
     const { abonent, contracts, subscriptions, isLoading, isError, error } = useAbonentDashboard();
 
     const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
@@ -34,7 +33,7 @@ export const PersonalAccountPage: React.FC = () => {
 
     const handleLogout = () => {
         localStorage.clear();
-        navigate('/login', { replace: true });
+        userManager.signoutRedirect();
     };
 
     const toggleExpand = (id: string) => {

@@ -48,6 +48,7 @@
 @code {
     private void GoToLogin()
     {
-        Navigation.NavigateTo("/login");
+        var loginUri = Navigation.ToAbsoluteUri("authentication/login").ToString();
+        Navigation.NavigateTo(loginUri, forceLoad: true);
     }
 }
