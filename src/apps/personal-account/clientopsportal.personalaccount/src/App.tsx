@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from './pages/LoginPage';
 import { PersonalAccountPage } from './pages/PersonalAccountPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { useEffect, useRef, useState } from 'react';
@@ -58,7 +57,6 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/login" element={<LoginPage />} />
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
                 <Route

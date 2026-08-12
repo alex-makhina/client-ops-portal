@@ -11,7 +11,7 @@ export const AuthCallbackPage: React.FC = () => {
             .then(async () => {
                 const user = await userManager.getUser();
                 if (!user) {
-                    navigate('/login', { replace: true });
+                    userManager.signinRedirect();
                     return;
                 }
 
@@ -39,8 +39,12 @@ export const AuthCallbackPage: React.FC = () => {
             <div className="dashboard-wrapper">
                 <div className="error-message" style={{ maxWidth: 420, margin: '80px auto', padding: 24, background: 'rgba(255,255,255,0.1)', borderRadius: 12 }}>
                     {error}
-                    <a href="/login" style={{ display: 'block', marginTop: 16, color: '#fff', textDecoration: 'underline' }}>
-                        Вернуться ко входу
+                    <a
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); userManager.signinRedirect(); }}
+                        style={{ display: 'block', marginTop: 16, color: '#fff', textDecoration: 'underline' }}
+                    >
+                        Войти снова
                     </a>
                 </div>
             </div>
