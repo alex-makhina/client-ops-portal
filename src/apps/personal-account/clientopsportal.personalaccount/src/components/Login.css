@@ -8,6 +8,20 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
+.login-redirect {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+}
+
+.login-redirect .loading-spinner {
+    margin: 0 auto;
+}
+
 .set-password-card {
     background: white;
     border-radius: 20px;

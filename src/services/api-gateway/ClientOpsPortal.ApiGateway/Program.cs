@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,19 +16,32 @@ builder.Services.AddCors(options =>
     });
 });
 
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "ClientOpsPortal";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "ClientOpsPortalClient";
-var jwtKey = builder.Configuration["Jwt:SecretKey"] ?? "supersecretkeysupersecretkeysupersecretkeysupersecretkey";
+var jwksUrl = builder.Configuration["Jwt:JwksUrl"] ?? "http://localhost:5110/.well-known/jwks";
+var issuer = builder.Configuration["Jwt:Issuer"] ?? "http://localhost:5110";
+var audience = builder.Configuration["Jwt:Audience"] ?? "ClientOpsPortalClient";
+var jwksClient = new HttpClient();
+Task<SecurityKey[]> keysTask = null!;
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true, ValidateAudience = true,
-            ValidateLifetime = true, ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer, ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateLifetime = true,
+            IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
+            {
+                if (keysTask is null)
+                {
+                    keysTask = jwksClient.GetStringAsync(jwksUrl)
+                        .ContinueWith(t => (SecurityKey[])JsonWebKeySet.Create(t.Result).Keys.Cast<SecurityKey>().ToArray());
+                }
+
+                return keysTask.GetAwaiter().GetResult();
+            }
         };
     });
 

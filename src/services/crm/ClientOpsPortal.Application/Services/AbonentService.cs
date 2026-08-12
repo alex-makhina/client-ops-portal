@@ -10,6 +10,7 @@ using ClientOpsPortal.Services.Notifications.Client;
 using ClientOpsPortal.Services.Notifications.Contracts;
 using System.Linq.Expressions;
 using ClientOpsPortal.Application.DTOs.Common;
+using Microsoft.Extensions.Configuration;
 
 namespace ClientOpsPortal.Application.Services
 {
@@ -20,19 +21,22 @@ namespace ClientOpsPortal.Application.Services
         private readonly IAuthClient _authClient;
         private readonly IGenericRepository<User> _userRepository;
         private readonly INotificationPublisher _notificationPublisher;
+        private readonly string _authPublicUrl;
 
         public AbonentService(
             IGenericRepository<Abonent> abonentRepository,
             IGenericRepository<Contract> contractRepository,
             IAuthClient authClient,
             IGenericRepository<User> userRepository,
-            INotificationPublisher notificationPublisher)
+            INotificationPublisher notificationPublisher,
+            IConfiguration configuration)
         {
             _abonentRepository = abonentRepository;
             _contractRepository = contractRepository;
             _authClient = authClient;
             _userRepository = userRepository;
             _notificationPublisher = notificationPublisher;
+            _authPublicUrl = configuration.GetValue<string>("AuthService:PublicUrl") ?? "http://localhost:5110";
         }
 
         public async Task<AbonentDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -84,7 +88,7 @@ namespace ClientOpsPortal.Application.Services
             try
             {
                 var resetToken = await _authClient.GeneratePasswordResetTokenAsync(userName, ct);
-                var resetLink = $"http://localhost:62000/set-password?userId={userId}&token={Uri.EscapeDataString(resetToken)}";
+                var resetLink = $"{_authPublicUrl}/ResetPassword?userId={userId}&token={Uri.EscapeDataString(resetToken)}&returnUrl={Uri.EscapeDataString("http://localhost:62000/")}";
                 await _notificationPublisher.PublishAsync(new NotificationMessage
                 {
                     Type = NotificationType.PasswordSetLink,

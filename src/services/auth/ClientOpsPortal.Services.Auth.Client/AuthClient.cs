@@ -1,5 +1,7 @@
 using ClientOpsPortal.Services.Auth.Contracts;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace ClientOpsPortal.Services.Auth.Client;
@@ -13,9 +15,31 @@ public class AuthClient : IAuthClient
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
-        var r = await _http.PostAsJsonAsync("api/v1/auth/login", request, ct);
+        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["grant_type"] = "password",
+            ["username"] = request.Login,
+            ["password"] = request.Password,
+            ["client_id"] = "admin-portal",
+            ["scope"] = "openid profile roles api"
+        });
+
+        var r = await _http.PostAsync("connect/token", content, ct);
         r.EnsureSuccessStatusCode();
-        return (await r.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions, ct))!;
+
+        var tokenResponse = await r.Content.ReadFromJsonAsync<TokenResponse>(JsonOptions, ct)
+            ?? throw new InvalidOperationException("Token response is null");
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(tokenResponse.AccessToken);
+
+        return new AuthResponse
+        {
+            Token = tokenResponse.AccessToken,
+            Roles = jwt.Claims.Where(c => c.Type is ClaimTypes.Role or "role").Select(c => c.Value).ToList(),
+            UserId = jwt.Claims.FirstOrDefault(c => c.Type is ClaimTypes.NameIdentifier or "sub")?.Value ?? string.Empty,
+            UserName = jwt.Claims.FirstOrDefault(c => c.Type is ClaimTypes.Name or "name")?.Value ?? string.Empty
+        };
     }
 
     public async Task<string> CreateUserAsync(CreateUserRequest request, CancellationToken ct = default)
@@ -62,16 +86,5 @@ public class AuthClient : IAuthClient
         var r = await _http.GetAsync("api/v1/users/random-password", ct);
         r.EnsureSuccessStatusCode();
         return await r.Content.ReadAsStringAsync(ct);
-    }
-    public async Task SetPasswordAsync(SetPasswordRequest request, CancellationToken ct = default)
-    {
-        var r = await _http.PostAsJsonAsync("api/v1/auth/set-password", request, ct);
-        r.EnsureSuccessStatusCode();
-    }
-
-    public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
-    {
-        var r = await _http.PostAsJsonAsync("api/v1/auth/reset-password", request, ct);
-        r.EnsureSuccessStatusCode();
     }
 }

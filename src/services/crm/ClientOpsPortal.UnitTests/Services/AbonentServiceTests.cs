@@ -9,6 +9,7 @@ using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
@@ -30,11 +31,17 @@ public class AbonentServiceTests
         _userRepositoryMock = new Mock<IGenericRepository<User>>();
         _authClientMock = new Mock<IAuthClient>();
 
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c.GetSection(It.IsAny<string>())).Returns(new Mock<IConfigurationSection>().Object);
+        configMock.Setup(c => c["AuthService:PublicUrl"]).Returns("http://localhost:5110");
+
         _sut = new AbonentService(
             _abonentRepositoryMock.Object,
             _contractRepositoryMock.Object,
             _authClientMock.Object,
-            _userRepositoryMock.Object);
+            _userRepositoryMock.Object,
+            Mock.Of<ClientOpsPortal.Services.Notifications.Client.INotificationPublisher>(),
+            configMock.Object);
     }
 
     #region GetByIdAsync Tests

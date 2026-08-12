@@ -9,6 +9,7 @@ using ClientOpsPortal.Services.Auth.Contracts;
 using ClientOpsPortal.Services.Notifications.Client;
 using ClientOpsPortal.Services.Notifications.Contracts;
 using System.Linq.Expressions;
+using Microsoft.Extensions.Configuration;
 
 namespace ClientOpsPortal.Application.Services
 {
@@ -18,6 +19,7 @@ namespace ClientOpsPortal.Application.Services
         private readonly IGenericRepository<User> _userRepository;
         private readonly IAuthClient _authClient;
         private readonly INotificationPublisher _notificationPublisher;
+        private readonly string _authPublicUrl;
 
         private static readonly Dictionary<string, string> RoleDisplayToBackend = new()
         {
@@ -39,12 +41,14 @@ namespace ClientOpsPortal.Application.Services
             IGenericRepository<Employee> employeeRepository,
             IGenericRepository<User> userRepository,
             IAuthClient authClient,
-            INotificationPublisher notificationPublisher)
+            INotificationPublisher notificationPublisher,
+            IConfiguration configuration)
         {
             _employeeRepository = employeeRepository;
             _userRepository = userRepository;
             _authClient = authClient;
             _notificationPublisher = notificationPublisher;
+            _authPublicUrl = configuration.GetValue<string>("AuthService:PublicUrl") ?? "http://localhost:5110";
         }
 
         public async Task<EmployeeDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -86,7 +90,7 @@ namespace ClientOpsPortal.Application.Services
             try
             {
                 var resetToken = await _authClient.GeneratePasswordResetTokenAsync(userName, ct);
-                var resetLink = $"http://localhost:5022/set-password?userId={userId}&token={Uri.EscapeDataString(resetToken)}";
+                var resetLink = $"{_authPublicUrl}/ResetPassword?userId={userId}&token={Uri.EscapeDataString(resetToken)}&returnUrl={Uri.EscapeDataString("http://localhost:5022/")}";
                 await _notificationPublisher.PublishAsync(new NotificationMessage
                 {
                     Type = NotificationType.PasswordSetLink,
@@ -230,7 +234,7 @@ namespace ClientOpsPortal.Application.Services
             try
             {
                 var resetToken = await _authClient.GeneratePasswordResetTokenAsync(createDto.Login, ct);
-                var resetLink = $"http://localhost:5022/set-password?userId={userId}&token={Uri.EscapeDataString(resetToken)}";
+                var resetLink = $"{_authPublicUrl}/ResetPassword?userId={userId}&token={Uri.EscapeDataString(resetToken)}&returnUrl={Uri.EscapeDataString("http://localhost:5022/")}";
                 await _notificationPublisher.PublishAsync(new NotificationMessage
                 {
                     Type = NotificationType.PasswordSetLink,

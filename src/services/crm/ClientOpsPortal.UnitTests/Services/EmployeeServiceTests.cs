@@ -9,6 +9,7 @@ using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
@@ -41,10 +42,16 @@ public class EmployeeServiceTests
             .Setup(x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid().ToString());
 
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c.GetSection(It.IsAny<string>())).Returns(new Mock<IConfigurationSection>().Object);
+        configMock.Setup(c => c["AuthService:PublicUrl"]).Returns("http://localhost:5110");
+
         _sut = new EmployeeService(
             _employeeRepositoryMock.Object,
             _userRepositoryMock.Object,
-            _authClientMock.Object);
+            _authClientMock.Object,
+            Mock.Of<ClientOpsPortal.Services.Notifications.Client.INotificationPublisher>(),
+            configMock.Object);
     }
 
     #region GetByIdAsync Tests

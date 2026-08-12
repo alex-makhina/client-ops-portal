@@ -127,6 +127,10 @@ services:
       RabbitMq__Username: ${RABBITMQ_USER:-guest}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
       AuthService__BaseUrl: http://auth:8080
+      AuthService__PublicUrl: http://localhost:5110
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
@@ -147,6 +151,9 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__DirectoryDb: Host=directory-db;Port=5432;Database=ClientOpsPortalDirectoryDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       Redis__Configuration: ${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
@@ -166,6 +173,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__ReportingDb: Host=reporting-db;Port=5432;Database=ClientOpsPortalReportsDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
@@ -199,14 +209,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__AuthDb: Host=db_auth;Port=5432;Database=ClientOpsPortalAuthDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
-      Jwt__Issuer: ClientOpsPortal
-      Jwt__Audience: ClientOpsPortalClient
-      Jwt__SecretKey: supersecretkeysupersecretkeysupersecretkeysupersecretkey
-      Jwt__ExpiryMinutes: 60
+      Jwt__KeyPath: /app/keys/jwt-signing.pem
       RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
       RabbitMq__Port: 5672
       RabbitMq__Username: ${RABBITMQ_USER:-guest}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - auth-keys:/app/keys
     networks:
       - cop-network
     depends_on:
@@ -223,6 +232,9 @@ services:
       - "${GATEWAY_PORT:-5000}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
@@ -270,6 +282,9 @@ services:
       EmailSettings__SmtpPort: ${SMTP_PORT:-587}
       EmailSettings__FromEmail: ${SMTP_FROM:-no-reply@clientopsportal.com}
       EmailSettings__FromName: ClientOpsPortal
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
     networks:
       - cop-network
     depends_on:
@@ -316,6 +331,7 @@ volumes:
   postgres_reporting_data:
   redis_data:
   rabbitmq_data:
+  auth-keys:
 
 networks:
   cop-network:

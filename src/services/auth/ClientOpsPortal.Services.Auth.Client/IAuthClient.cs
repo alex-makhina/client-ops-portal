@@ -13,6 +13,4 @@ public interface IAuthClient
     Task UnblockUserAsync(string userId, CancellationToken ct = default);
     Task<string> GeneratePasswordResetTokenAsync(string loginIdentifier, CancellationToken ct = default);
     Task<string> GenerateRandomPasswordAsync(CancellationToken ct = default);
-    Task SetPasswordAsync(SetPasswordRequest request, CancellationToken ct = default);
-    Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);
 }
