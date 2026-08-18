@@ -1,24 +1,22 @@
+/* src/pages/PersonalAccount.css */
+
 :root {
-    --gradient-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --card-bg: #ffffff;
+    /* Основной фон приложения */
+    --bg-app: #f3f4f6;
+    --bg-card: #ffffff;
+    /* Градиент бренда (только для акцентов) */
+    --gradient-brand: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Текст */
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #94a3b8;
+    /* Границы и отступы */
     --border: #e2e8f0;
-    --border-light: #f8fafc;
-
-    --btn-primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --btn-primary-hover: #5a67d8;
-    --btn-secondary-bg: #f1f5f9;
-    --btn-secondary-hover: #e2e8f0;
-    --btn-secondary-text: #475569;
-    --btn-danger-bg: #fef2f2;
-    --btn-danger-text: #dc2626;
-    --btn-danger-hover-bg: #dc2626;
-    --btn-danger-hover-text: #ffffff;
-    --radius: 16px;
-    --radius-sm: 10px;
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+    /* Тени */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-hover: 0 4px 6px rgba(0, 0, 0, 0.05);
     --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -26,257 +24,195 @@
     box-sizing: border-box;
 }
 
+/* === 1. Обёртка (Светлый фон, на всю ширину) === */
 .dashboard-wrapper {
     min-height: 100vh;
-    background: var(--gradient-bg);
-    padding: 40px 20px;
+    background: var(--bg-app);
     font-family: var(--font-main);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-}
-
-.dashboard-container {
-    width: 100%;
-    max-width: 980px;
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 32px;
-    animation: slideUp 0.4s ease-out;
+    color: var(--text-primary);
     display: flex;
     flex-direction: column;
-    gap: 24px;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* === 2. Шапка (Фиолетовая, на всю ширину) === */
+.dashboard-header-bg {
+    background: var(--gradient-brand);
+    padding: 0 20px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
-.dashboard-header {
+.header-content {
+    width: min(95vw, 1600px);
+    margin: 0 auto;
+    height: 70px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
+    padding: 0 clamp(16px, 3vw, 20px);
 }
 
 .dashboard-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
     margin: 0;
-    color: var(--text-primary);
+    color: #ffffff;
+    letter-spacing: -0.01em;
 }
 
-.btn-primary {
-    padding: 10px 20px;
-    background: var(--btn-primary-bg);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-}
-
-    .btn-primary:hover:not(:disabled) {
-        transform: translateY(-1px);
-        background: var(--btn-primary-hover);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-.btn-secondary {
+/* Кнопка выхода на фиолетовом фоне */
+.btn-logout {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 18px;
-    background: var(--btn-secondary-bg);
-    color: var(--btn-secondary-text);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
     border-radius: var(--radius-sm);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
+    backdrop-filter: blur(4px);
     transition: all 0.2s;
 }
 
-    .btn-secondary:hover:not(:disabled) {
-        background: var(--btn-secondary-hover);
-        border-color: #cbd5e1;
-        transform: translateY(-1px);
+    .btn-logout:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.4);
     }
 
-    .btn-secondary:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .btn-secondary svg {
+    .btn-logout svg {
         width: 16px;
         height: 16px;
     }
 
-.btn-danger {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: var(--btn-danger-bg);
-    color: var(--btn-danger-text);
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
+/* === 3. Контейнер контента — fluid + двухколоночный на больших экранах === */
+.dashboard-container {
+    width: min(95vw, 1600px);
+    margin: 0 auto;
+    padding: 0 clamp(16px, 3vw, 40px) 40px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
 }
 
-    .btn-danger:hover:not(:disabled) {
-        background: var(--btn-danger-hover-bg);
-        color: var(--btn-danger-hover-text);
-        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
-        transform: translateY(-1px);
+/* Двухколоночная сетка на широких экранах */
+@media (min-width: 1200px) {
+    .dashboard-container {
+        grid-template-columns: 320px 1fr;
+        align-items: start;
     }
 
-    .btn-danger:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .btn-danger svg {
-        width: 14px;
-        height: 14px;
-    }
-
-.sub-action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: var(--btn-secondary-bg);
-    color: var(--btn-secondary-text);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-    .sub-action-btn:hover:not(.danger) {
-        background: var(--btn-primary-bg);
-        color: #fff;
-        border-color: transparent;
-        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-    }
-
-    .sub-action-btn.danger {
-        background: var(--btn-danger-bg);
-        color: var(--btn-danger-text);
-        border: none;
-    }
-
-        .sub-action-btn.danger:hover {
-            background: var(--btn-danger-hover-bg);
-            color: var(--btn-danger-hover-text);
-            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+        /* Профиль закрепляется в левой колонке */
+        .dashboard-container > .section-card:first-child {
+            grid-column: 1;
+            position: sticky;
+            top: 24px;
+            height: fit-content;
+            z-index: 10;
         }
 
-    .sub-action-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
-    }
+        /* Договоры занимают правую колонку */
+        .dashboard-container > .section-card:last-child {
+            grid-column: 2;
+        }
+}
 
-    .sub-action-btn svg {
-        width: 14px;
-        height: 14px;
+/* === 4. Карточки секций === */
+.section-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    padding: clamp(16px, 2.5vw, 24px);
+    border: 1px solid var(--border);
+    transition: box-shadow 0.2s;
+}
+
+    .section-card:hover {
+        box-shadow: var(--shadow-hover);
     }
 
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
 }
 
 .section-title {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     margin: 0;
     color: var(--text-primary);
 }
 
+/* === 5. Профиль — компактный список === */
 .profile-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1px;
-    background: var(--border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .profile-item {
-    background: #fff;
-    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
 }
 
+    .profile-item:last-child {
+        border-bottom: none;
+    }
+
 .profile-label {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 4px;
+    flex-shrink: 0;
+    width: 130px;
 }
 
 .profile-value {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-primary);
+    text-align: right;
+    word-break: break-word;
 }
 
+/* === 6. Договоры и Подписки === */
 .contract-list {
     display: flex;
     flex-direction: column;
     gap: 1px;
-    background: var(--border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
+    background: transparent;
 }
 
 .contract-row {
     background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
 }
 
     .contract-row:hover {
-        background: var(--border-light);
+        border-color: #cbd5e1;
     }
 
 .contract-main {
     display: grid;
     grid-template-columns: 1fr auto;
-    padding: 14px 20px;
+    padding: 16px clamp(16px, 2vw, 24px);
     cursor: pointer;
     align-items: center;
+    gap: 12px;
 }
 
 .contract-info {
@@ -284,30 +220,35 @@
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .contract-number {
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
 }
 
 .contract-date {
     font-size: 13px;
     color: var(--text-muted);
+    white-space: nowrap;
 }
 
 .contract-meta {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .subs-badge {
     font-size: 12px;
     color: var(--text-secondary);
-    background: var(--border-light);
+    background: #f1f5f9;
     padding: 4px 10px;
     border-radius: 12px;
+    white-space: nowrap;
 }
 
 .expand-icon {
@@ -321,7 +262,6 @@
 }
 
 .contract-subs {
-    border-top: 1px solid var(--border);
     background: #fcfcfd;
     padding: 4px 0;
     animation: slideDown 0.2s ease-out;
@@ -342,7 +282,7 @@
 .sub-row {
     display: grid;
     grid-template-columns: 2fr 1.5fr 1.5fr auto;
-    padding: 10px 20px 10px 40px;
+    padding: 12px clamp(16px, 2vw, 24px) 12px clamp(32px, 4vw, 48px);
     align-items: center;
     font-size: 13px;
     color: var(--text-secondary);
@@ -378,58 +318,170 @@
     }
 
 .empty-subs {
-    padding: 16px 40px;
+    padding: 24px 40px;
     color: var(--text-muted);
     font-size: 13px;
     font-style: italic;
+    text-align: center;
 }
 
-.badge {
+/* === 7. Кнопки === */
+/* Primary: Градиентные */
+.btn-primary {
+    padding: 10px 20px;
+    background: var(--gradient-brand);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    white-space: nowrap;
+}
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+/* Secondary: Серые */
+.btn-secondary {
     display: inline-flex;
     align-items: center;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.badge-active {
-    background: #f0fdf4;
-    color: #166534;
-}
-
-.badge-terminated {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-.form-input {
-    width: 100%;
-    padding: 9px 12px;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #fff;
+    color: var(--text-secondary);
     border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+    .btn-secondary:hover:not(:disabled) {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary.full-width {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-secondary svg {
+        width: 14px;
+        height: 14px;
+    }
+
+/* Danger: Красные */
+.btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid transparent;
     border-radius: 8px;
     font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+    .btn-danger:hover:not(:disabled) {
+        background: #dc2626;
+        color: #fff;
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+    }
+
+    .btn-danger:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-danger svg {
+        width: 14px;
+        height: 14px;
+    }
+
+/* Action Buttons (Sub rows) */
+.sub-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .sub-action-btn:hover:not(.danger) {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .sub-action-btn.danger {
+        color: #64748b;
+    }
+
+        .sub-action-btn.danger:hover {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+    .sub-action-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+/* === 8. Формы === */
+.form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
     background: #fff;
+    transition: all 0.2s;
 }
 
     .form-input:focus {
         outline: none;
-        border-color: var(--btn-primary-bg);
+        border-color: #667eea;
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
 .action-panel {
     background: #fff;
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px;
+    border-radius: var(--radius);
+    padding: 20px;
     margin-top: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .action-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
     align-items: end;
 }
 
@@ -446,16 +498,72 @@
     display: flex;
     gap: 8px;
     justify-content: flex-end;
-    margin-top: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+/* Бейджи статусов */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.badge-active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-terminated {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* === 9. Адаптивность === */
+@media (max-width: 1199px) {
+    .dashboard-container {
+        grid-template-columns: 1fr;
+    }
+
+        .dashboard-container > .section-card:first-child {
+            position: static;
+            grid-column: auto;
+        }
+
+        .dashboard-container > .section-card:last-child {
+            grid-column: auto;
+        }
 }
 
 @media (max-width: 768px) {
     .dashboard-wrapper {
-        padding: 20px 12px;
+        padding: 0;
+    }
+
+    .header-content {
+        padding: 0 16px;
+        height: 60px;
+    }
+
+    .dashboard-title {
+        font-size: 18px;
+    }
+
+    .btn-logout {
+        padding: 6px 12px;
+        font-size: 13px;
     }
 
     .dashboard-container {
-        padding: 20px 16px;
+        padding: 0 16px 32px;
+        gap: 20px;
+    }
+
+    .section-card {
+        padding: 16px;
     }
 
     .contract-main {
@@ -470,7 +578,8 @@
 
     .sub-row {
         grid-template-columns: 1fr;
-        padding: 12px 16px 12px 28px;
+        padding: 12px 16px 12px 24px;
+        gap: 6px;
     }
 
     .sub-cell {
@@ -497,12 +606,31 @@
             }
 
     .profile-grid {
+        gap: 4px;
+    }
+
+    .profile-item {
+        padding: 6px 0;
+    }
+
+    .profile-label {
+        width: 110px;
+        font-size: 11px;
+    }
+
+    .profile-value {
+        font-size: 13px;
+    }
+
+    .action-row {
         grid-template-columns: 1fr;
     }
 
-    .btn-secondary.full-width {
-        width: 100%;
-        justify-content: center;
-        text-align: center;
+    .action-btn-group {
+        justify-content: stretch;
     }
+
+        .action-btn-group > * {
+            flex: 1;
+        }
 }
