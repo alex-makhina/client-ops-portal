@@ -1,38 +1,33 @@
-﻿using ClientOpsPortal.Application.DTOs;
-using ClientOpsPortal.Application.Interfaces;
-using ClientOpsPortal.Domain.Entities;
-using ClientOpsPortal.Domain.Enums;
-using ClientOpsPortal.Domain.Exceptions;
-using ClientOpsPortal.Domain.Interfaces.Services;
-using Microsoft.AspNetCore.Authorization;
+﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Exceptions;
+using ClientOpsPortal.Services.SubscriptionHistory.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ClientOpsPortal.Api.Controllers
+namespace ClientOpsPortal.Services.Subscription.Controllers
 {
-    [Authorize]
-    public class SubscriptionHistoriesController : BaseController
+    [ApiController]
+    [Route("api/v1/[controller]")]
+    public class SubscriptionHistoriesController : ControllerBase
     {
-        private readonly ISubscriptionHistoryService _historyService;
+        private readonly SubscriptionHistoryService _historyService;
 
         public SubscriptionHistoriesController(
-            ISubscriptionHistoryService historyService,
-            ICurrentUserService currentUserService)
-            : base(currentUserService)
+            SubscriptionHistoryService historyService)
         {
             _historyService = historyService;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] bool withIncludes = false, CancellationToken ct = default)
+        public async Task<IActionResult> GetAll(CancellationToken ct = default)
         {
-            var histories = await _historyService.GetAllAsync(withIncludes, ct);
+            var histories = await _historyService.GetAllSubscriptionHistoryAsync(ct);
             return Ok(histories);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id, [FromQuery] bool withIncludes = true, CancellationToken ct = default)
+        [HttpGet("{id}", Name = "GetHistoryById")]
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct = default)
         {
-            var history = await _historyService.GetByIdAsync(id, withIncludes, ct);
+            var history = await _historyService.GetSubscriptionHistoryByIdAsync(id, ct);
             if (history == null)
                 return NotFound($"История с ID {id} не найдена");
             return Ok(history);
@@ -41,7 +36,7 @@ namespace ClientOpsPortal.Api.Controllers
         [HttpGet("by-subscription/{subscriptionId}")]
         public async Task<IActionResult> GetBySubscription(Guid subscriptionId, CancellationToken ct = default)
         {
-            var histories = await _historyService.GetWhereAsync(h => h.SubscriptionId == subscriptionId, true, ct);
+            var histories = await _historyService.GetSubscriptionHistoryWhereAsync(h => h.SubscriptionId == subscriptionId, ct);
             return Ok(histories);
         }
 
@@ -57,8 +52,8 @@ namespace ClientOpsPortal.Api.Controllers
         {
             try
             {
-                var history = await _historyService.CreateAsync(createDto, ct);
-                return CreatedAtAction(nameof(GetById), new { id = history.Id }, history);
+                var history = await _historyService.CreateSubscriptionHistoryAsync(createDto, ct);
+                return CreatedAtRoute("GetHistoryById", new { id = history.Id }, history);
             }
             catch (Exception ex)
             {
@@ -71,7 +66,7 @@ namespace ClientOpsPortal.Api.Controllers
         {
             try
             {
-                var history = await _historyService.UpdateAsync(id, updateDto, ct);
+                var history = await _historyService.UpdateSubscriptionHistoryAsync(id, updateDto, ct);
                 return Ok(history);
             }
             catch (EntityNotFoundException)
@@ -85,7 +80,7 @@ namespace ClientOpsPortal.Api.Controllers
         {
             try
             {
-                await _historyService.DeleteAsync(id, ct);
+                await _historyService.DeleteSubscriptionHistoryAsync(id, ct);
                 return NoContent();
             }
             catch (EntityNotFoundException)

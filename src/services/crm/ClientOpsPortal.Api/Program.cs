@@ -1,16 +1,17 @@
 using ClientOpsPortal.Api.Services;
+using ClientOpsPortal.Application;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Services;
 using ClientOpsPortal.Domain.Interfaces.Services;
 using ClientOpsPortal.Infrastructure;
+using ClientOpsPortal.Infrastructure.Clients;
 using ClientOpsPortal.Infrastructure.Data;
-using ClientOpsPortal.Application;
-using Scalar.AspNetCore;
+using ClientOpsPortal.Services.Auth.Client;
+using ClientOpsPortal.Services.Directory.Client;
+using ClientOpsPortal.Services.Notifications.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using ClientOpsPortal.Services.Directory.Client;
-using ClientOpsPortal.Services.Auth.Client;
-using ClientOpsPortal.Services.Notifications.Client;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,13 @@ var authServiceUrl = builder.Configuration.GetValue<string>("AuthService:BaseUrl
 builder.Services.AddAuthClient(authServiceUrl);
 
 builder.Services.AddNotificationPublisher(builder.Configuration);
+
+builder.Services.AddHttpClient<ISubscriptionHistoryClient, SubscriptionHistoryClient>(client =>
+{
+    var baseUrl = builder.Configuration["Services:SubscriptionHistory:BaseUrl"] ?? "http://subscription-history:8080/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 var jwksUrl = builder.Configuration["Jwt:JwksUrl"]
     ?? "http://localhost:5110/.well-known/jwks";

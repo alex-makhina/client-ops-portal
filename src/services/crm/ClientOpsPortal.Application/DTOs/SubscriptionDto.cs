@@ -1,4 +1,5 @@
 ﻿using ClientOpsPortal.Application.DTOs.Common;
+using ClientOpsPortal.Domain.Enums;
 
 namespace ClientOpsPortal.Application.DTOs
 {
@@ -29,5 +30,20 @@ namespace ClientOpsPortal.Application.DTOs
     {
         public Guid? TariffPlanId { get; set; }
         public DateTimeOffset? EndDate { get; set; }
+    }
+
+    public class SubscriptionHistoryEventDto
+    {
+        public Guid SubscriptionId { get; set; }
+        public SubscriptionActionType ActionType { get; set; }
+        public SubscriptionActionStatus Status { get; set; }
+        public Guid TariffPlanId { get; set; }
+        public string TariffPlanName { get; set; } = string.Empty;
+        public string ServiceName { get; set; } = string.Empty;
+        public string ContractNumber { get; set; } = string.Empty;
+        public Guid AbonentId { get; set; }
+        public DateTimeOffset StartDate { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public string? CreatedBy { get; set; }
     }
 }
