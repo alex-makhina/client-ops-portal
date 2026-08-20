@@ -11,7 +11,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_auth_data:/var/lib/postgresql/data
+      - postgres_auth_data:/var/lib/postgresql
     networks:
       - cop-network
     healthcheck:
@@ -31,7 +31,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - cop-network
     healthcheck:
@@ -49,7 +49,7 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_directory_data:/var/lib/postgresql/data
+      - postgres_directory_data:/var/lib/postgresql
     networks:
       - cop-network
     healthcheck:
@@ -69,7 +69,7 @@ services:
     ports:
       - "5435:5432"
     volumes:
-      - postgres_crm_data:/var/lib/postgresql/data
+      - postgres_crm_data:/var/lib/postgresql
     networks:
       - cop-network
     healthcheck:
@@ -87,7 +87,7 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_reporting_data:/var/lib/postgresql/data
+      - postgres_reporting_data:/var/lib/postgresql
     networks:
       - cop-network
     healthcheck:
