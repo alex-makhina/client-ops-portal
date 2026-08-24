@@ -1,7 +1,9 @@
+using ClientOpsPortal.Services.Reporting.Consumers;
 using ClientOpsPortal.Services.Reporting.Data;
 using ClientOpsPortal.Services.Reporting.Services;
-using Microsoft.EntityFrameworkCore;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
@@ -48,6 +50,36 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<AbonentEventConsumer>();
+    x.AddConsumer<ContractEventConsumer>();
+    x.AddConsumer<EmployeeEventConsumer>();
+    x.AddConsumer<TariffPlanEventConsumer>();
+    x.AddConsumer<ServiceEventConsumer>();
+    x.AddConsumer<SubscriptionEventConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        var host = builder.Configuration["RabbitMq:Host"] ?? "rabbitmq";
+        var username = builder.Configuration["RabbitMq:Username"] ?? "guest";
+        var password = builder.Configuration["RabbitMq:Password"] ?? "guest";
+
+        cfg.Host(host, h =>
+        {
+            h.Username(username);
+            h.Password(password);
+        });
+
+        cfg.ReceiveEndpoint("reporting-abonent-queue", e => e.ConfigureConsumer<AbonentEventConsumer>(context));
+        cfg.ReceiveEndpoint("reporting-contract-queue", e => e.ConfigureConsumer<ContractEventConsumer>(context));
+        cfg.ReceiveEndpoint("reporting-employee-queue", e => e.ConfigureConsumer<EmployeeEventConsumer>(context));
+        cfg.ReceiveEndpoint("reporting-service-queue", e => e.ConfigureConsumer<ServiceEventConsumer>(context));
+        cfg.ReceiveEndpoint("reporting-tariffplan-queue", e => e.ConfigureConsumer<TariffPlanEventConsumer>(context));
+        cfg.ReceiveEndpoint("reporting-subscription-queue", e => e.ConfigureConsumer<SubscriptionEventConsumer>(context));
+    });
+});
 
 var app = builder.Build();
 

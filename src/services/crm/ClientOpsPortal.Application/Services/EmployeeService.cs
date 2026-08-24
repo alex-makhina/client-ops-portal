@@ -10,6 +10,8 @@ using ClientOpsPortal.Services.Notifications.Client;
 using ClientOpsPortal.Services.Notifications.Contracts;
 using System.Linq.Expressions;
 using Microsoft.Extensions.Configuration;
+using ClientOpsPortal.Services.Reporting.Contracts.Events;
+using MassTransit;
 
 namespace ClientOpsPortal.Application.Services
 {
@@ -19,6 +21,7 @@ namespace ClientOpsPortal.Application.Services
         private readonly IGenericRepository<User> _userRepository;
         private readonly IAuthClient _authClient;
         private readonly INotificationPublisher _notificationPublisher;
+        private readonly IPublishEndpoint _publishEndpoint;
         private readonly string _authPublicUrl;
 
         private static readonly Dictionary<string, string> RoleDisplayToBackend = new()
@@ -42,12 +45,14 @@ namespace ClientOpsPortal.Application.Services
             IGenericRepository<User> userRepository,
             IAuthClient authClient,
             INotificationPublisher notificationPublisher,
+            IPublishEndpoint publishEndpoint,
             IConfiguration configuration)
         {
             _employeeRepository = employeeRepository;
             _userRepository = userRepository;
             _authClient = authClient;
             _notificationPublisher = notificationPublisher;
+            _publishEndpoint = publishEndpoint;
             _authPublicUrl = configuration.GetValue<string>("AuthService:PublicUrl") ?? "http://localhost:5110";
         }
 
@@ -84,7 +89,7 @@ namespace ClientOpsPortal.Application.Services
 
             var employee = createDto.ToEntity();
             employee.UserId = user.Id;
-            await _employeeRepository.AddAsync(employee, ct);
+            await _employeeRepository.AddAsync(employee, ct);            
 
             // Publish "set password" notification via RabbitMQ
             try
@@ -104,6 +109,12 @@ namespace ClientOpsPortal.Application.Services
                 // notification failure must not fail employee creation
             }
 
+            await _publishEndpoint.Publish(new EmployeeCreatedEvent(
+                employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
+                employee.UserId, employee.Post, employee.Department, employee.IsActive,
+                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+            ), ct);
+
             return employee.ToEmployeeDto();
         }
 
@@ -120,10 +131,22 @@ namespace ClientOpsPortal.Application.Services
             }
             updateDto.UpdateEntity(employee);
             await _employeeRepository.UpdateAsync(employee, ct);
+
+            await _publishEndpoint.Publish(new EmployeeUpdatedEvent(
+                employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
+                employee.UserId, employee.Post, employee.Department, employee.IsActive,
+                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+            ), ct);
+
             return employee.ToEmployeeDto();
         }
 
-        public async Task DeleteAsync(Guid id, CancellationToken ct = default) => await _employeeRepository.DeleteAsync(id, ct);
+        public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+        {
+            await _employeeRepository.DeleteAsync(id, ct);
+
+            await _publishEndpoint.Publish(new EmployeeDeletedEvent(id, DateTimeOffset.UtcNow), ct);
+        }
 
         public async Task<IReadOnlyCollection<EmployeeDto>> GetWhereAsync(Expression<Func<Employee, bool>> predicate, bool withIncludes = false, CancellationToken ct = default)
         {
@@ -186,6 +209,13 @@ namespace ClientOpsPortal.Application.Services
             if (employee == null) throw new EntityNotFoundException(typeof(Employee), employeeId);
             employee.IsActive = !employee.IsActive;
             await _employeeRepository.UpdateAsync(employee, ct);
+
+            await _publishEndpoint.Publish(new EmployeeUpdatedEvent(
+               employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
+               employee.UserId, employee.Post, employee.Department, employee.IsActive,
+               employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+            ), ct);
+
             if (employee.User != null)
             {
                 if (employee.IsActive) await _authClient.UnblockUserAsync(employee.User.ExternalId, ct);
@@ -248,6 +278,12 @@ namespace ClientOpsPortal.Application.Services
                 // notification failure must not fail employee creation
             }
 
+            await _publishEndpoint.Publish(new EmployeeCreatedEvent(
+                employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
+                employee.UserId, employee.Post, employee.Department, employee.IsActive,
+                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+            ), ct);
+
             var dto = employee.ToEmployeeDto();
             dto.Login = createDto.Login;
             dto.Role = createDto.Role;
@@ -271,6 +307,13 @@ namespace ClientOpsPortal.Application.Services
                 var backendRole = RoleDisplayToBackend.GetValueOrDefault(updateDto.Role, updateDto.Role);
                 await _authClient.SetUserRoleAsync(new SetUserRoleRequest { UserId = employee.User.ExternalId, Role = backendRole }, ct);
             }
+
+            await _publishEndpoint.Publish(new EmployeeUpdatedEvent(
+                employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
+                employee.UserId, employee.Post, employee.Department, employee.IsActive,
+                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+            ), ct);
+
             var dto = employee.ToEmployeeDto();
             dto.Role = updateDto.Role;
             return dto;

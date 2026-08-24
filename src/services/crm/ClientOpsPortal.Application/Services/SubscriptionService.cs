@@ -1,11 +1,12 @@
 using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
-using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Enums;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
+using ClientOpsPortal.Services.Reporting.Contracts.Events;
+using MassTransit;
 using System.Linq.Expressions;
 
 namespace ClientOpsPortal.Application.Services
@@ -15,15 +16,18 @@ namespace ClientOpsPortal.Application.Services
         private readonly IGenericRepository<Subscription> _subscriptionRepository;
         private readonly IGenericRepository<SubscriptionHistory> _historyRepository;
         private readonly IDirectoryCacheService _cache;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         public SubscriptionService(
             IGenericRepository<Subscription> subscriptionRepository,
             IGenericRepository<SubscriptionHistory> historyRepository,
-            IDirectoryCacheService cache)
+            IDirectoryCacheService cache,
+            IPublishEndpoint publishEndpoint)
         {
             _subscriptionRepository = subscriptionRepository;
             _historyRepository = historyRepository;
             _cache = cache;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<SubscriptionDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -48,6 +52,14 @@ namespace ClientOpsPortal.Application.Services
             await _subscriptionRepository.AddAsync(subscription, ct);
             await _historyRepository.AddAsync(history, ct);
             await EnrichAsync(subscription, ct);
+
+            await _publishEndpoint.Publish(new SubscriptionCreatedEvent(
+                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
+                subscription.BeginDate, subscription.EndDate,
+                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             return subscription.ToSubscriptionDto();
         }
 
@@ -59,12 +71,22 @@ namespace ClientOpsPortal.Application.Services
             updateDto.UpdateEntity(subscription);
             await _subscriptionRepository.UpdateAsync(subscription, ct);
             await EnrichAsync(subscription, ct);
+
+            await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
+                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
+                subscription.BeginDate, subscription.EndDate,
+                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             return subscription.ToSubscriptionDto();
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken ct = default)
         {
             await _subscriptionRepository.DeleteAsync(id, ct);
+
+            await _publishEndpoint.Publish(new SubscriptionDeletedEvent(id, DateTimeOffset.UtcNow), ct);
         }
 
         public async Task<IReadOnlyCollection<SubscriptionDto>> GetWhereAsync(Expression<Func<Subscription, bool>> predicate, bool withIncludes = false, CancellationToken ct = default)
@@ -103,7 +125,16 @@ namespace ClientOpsPortal.Application.Services
 
             await _subscriptionRepository.UpdateAsync(subscription, ct);
             await _historyRepository.AddAsync(history, ct);
+
+            await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
+                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
+                subscription.BeginDate, subscription.EndDate,
+                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             await EnrichAsync(subscription, ct);
+
             return subscription.ToSubscriptionDto();
         }
 
@@ -118,7 +149,16 @@ namespace ClientOpsPortal.Application.Services
 
             await _subscriptionRepository.UpdateAsync(subscription, ct);
             await _historyRepository.AddAsync(history, ct);
+
+            await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
+                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
+                subscription.BeginDate, subscription.EndDate,
+                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             await EnrichAsync(subscription, ct);
+
             return subscription.ToSubscriptionDto();
         }
 

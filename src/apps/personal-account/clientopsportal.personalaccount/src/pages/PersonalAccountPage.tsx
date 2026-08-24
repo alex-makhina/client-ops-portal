@@ -12,20 +12,17 @@ import './PersonalAccount.css';
 export const PersonalAccountPage: React.FC = () => {
     const { abonent, contracts, subscriptions, isLoading, isError, error } = useAbonentDashboard();
 
-    // Состояния UI
     const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [activeAction, setActiveAction] = useState<{ type: 'connect' | 'changeTariff' | null; contractId?: string; subId?: string }>({ type: null });
     const [selectedServiceId, setSelectedServiceId] = useState<string>('');
 
-    // Хуки мутаций
     const { mutate: createContractMutate, isPending: isCreatingContract } = useCreateContract();
     const { mutate: terminateMutate, isPending: isTerminatingContract } = useTerminateContract();
     const { mutate: connectMutate, isPending: isConnecting } = useConnectSubscription();
     const { mutate: changeTariffMutate, isPending: isChangingTariff } = useChangeTariff();
     const { mutate: cancelMutate, isPending: isCancelling } = useCancelSubscription();
 
-    // Справочники
     const { data: services } = useServices();
     const { data: tariffPlans } = useTariffPlans(selectedServiceId || undefined);
 
@@ -118,7 +115,6 @@ export const PersonalAccountPage: React.FC = () => {
 
     return (
         <div className="dashboard-wrapper">
-            {/* 1. Фиолетовая шапка на всю ширину */}
             <div className="dashboard-header-bg">
                 <div className="header-content">
                     <h1 className="dashboard-title">Личный кабинет</h1>
@@ -132,10 +128,8 @@ export const PersonalAccountPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* 2. Основной контент */}
             <div className="dashboard-container">
 
-                {/* Секция: Данные абонента (левая колонка на десктопе) */}
                 <div className="section-card">
                     <div className="section-header">
                         <h2 className="section-title">Данные абонента</h2>
@@ -160,7 +154,6 @@ export const PersonalAccountPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Секция: Договоры (правая колонка на десктопе) */}
                 <div className="section-card">
                     <div className="section-header">
                         <h2 className="section-title">Договоры и услуги</h2>
@@ -171,7 +164,6 @@ export const PersonalAccountPage: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Форма создания */}
                     {showCreateForm && (
                         <div className="action-panel" style={{ marginBottom: 24 }}>
                             <h4 style={{ margin: '0 0 16px', fontSize: 15, color: 'var(--text-primary)' }}>Новый договор</h4>
@@ -229,7 +221,7 @@ export const PersonalAccountPage: React.FC = () => {
 
                                     {isExpanded && (
                                         <div className="contract-subs">
-                                            {/* Форма подключения */}
+
                                             {isConnectingToThis && (
                                                 <form onSubmit={handleConnectSubmit} className="action-panel" style={{ margin: '8px 12px 12px' }}>
                                                     <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>Подключение новой услуги</h4>
@@ -264,7 +256,6 @@ export const PersonalAccountPage: React.FC = () => {
                                                 </form>
                                             )}
 
-                                            {/* Заголовок списка + Кнопка */}
                                             {!isConnectingToThis && (
                                                 <div style={{
                                                     display: 'flex',
@@ -292,7 +283,6 @@ export const PersonalAccountPage: React.FC = () => {
                                                 </div>
                                             )}
 
-                                            {/* Список подписок */}
                                             {contract.subs.length > 0 ? (
                                                 contract.subs.map((sub, idx) => (
                                                     <SubscriptionRow

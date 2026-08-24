@@ -2,6 +2,8 @@ using ClientOpsPortal.Services.Directory.Contracts.DTOs;
 using ClientOpsPortal.Services.Directory.Contracts.Exceptions;
 using ClientOpsPortal.Services.Directory.Contracts.Models;
 using ClientOpsPortal.Services.Directory.Data;
+using ClientOpsPortal.Services.Reporting.Contracts.Events;
+using MassTransit;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -14,6 +16,7 @@ namespace ClientOpsPortal.Services.Directory.Services
         private readonly GenericRepository<TariffPlan> _tariffPlanRepository;
         private readonly IDistributedCache _cache;
         private readonly ServiceCacheOptions _options;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -30,12 +33,14 @@ namespace ClientOpsPortal.Services.Directory.Services
             ServiceRepository serviceRepository,
             GenericRepository<TariffPlan> tariffPlanRepository,
             IDistributedCache cache,
-            IOptions<ServiceCacheOptions> options)
+            IOptions<ServiceCacheOptions> options,
+            IPublishEndpoint publishEndpoint)
         {
             _serviceRepository = serviceRepository;
             _tariffPlanRepository = tariffPlanRepository;
             _cache = cache;
             _options = options.Value;
+            _publishEndpoint = publishEndpoint;
         }
 
         // === Services ===
@@ -100,6 +105,18 @@ namespace ClientOpsPortal.Services.Directory.Services
 
             var service = ToEntity(createDto);
             await _serviceRepository.AddAsync(service, ct);
+
+            var tariffSnapshots = service.TariffPlans.Select(tp => new TariffPlanSnapshot(
+                tp.Id, tp.Name, tp.Description, tp.Price, tp.ServiceId, tp.BeginDate, tp.EndDate
+            )).ToList();
+
+            await _publishEndpoint.Publish(new ServiceCreatedEvent(
+                service.Id, service.Name, service.Description, service.BeginDate, service.EndDate,
+                service.CreatedAt, service.CreatedBy, service.UpdatedAt, service.UpdatedBy,
+                tariffSnapshots,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             await InvalidateServiceCachesAsync(ct);
 
             return ToServiceDto(service);
@@ -127,13 +144,32 @@ namespace ClientOpsPortal.Services.Directory.Services
             if (updateDto.TariffPlans != null)
                 await UpdateTariffPlansAsync(id, updateDto.TariffPlans, ct);
 
+            var updatedService = await _serviceRepository.GetByIdAsync(id, true, ct)
+                ?? throw new EntityNotFoundException(nameof(Service), id);
+
+            var tariffSnapshots = updatedService.TariffPlans.Select(tp => new TariffPlanSnapshot(
+                tp.Id, tp.Name, tp.Description, tp.Price, tp.ServiceId, tp.BeginDate, tp.EndDate
+            )).ToList();
+
+            await _publishEndpoint.Publish(new ServiceUpdatedEvent(
+                updatedService.Id, updatedService.Name, updatedService.Description,
+                updatedService.BeginDate, updatedService.EndDate, updatedService.CreatedAt,
+                updatedService.CreatedBy, updatedService.UpdatedAt, updatedService.UpdatedBy,
+                tariffSnapshots,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             await InvalidateServiceCachesAsync(ct);
+
             return ToServiceDto(service);
         }
 
         public async Task DeleteServiceAsync(Guid id, CancellationToken ct)
         {
             await _serviceRepository.DeleteAsync(id, ct);
+
+            await _publishEndpoint.Publish(new ServiceDeletedEvent(id, DateTimeOffset.UtcNow), ct);
+            
             await InvalidateServiceCachesAsync(ct);
         }
 
@@ -187,6 +223,12 @@ namespace ClientOpsPortal.Services.Directory.Services
         {
             var tariff = ToEntity(createDto);
             await _tariffPlanRepository.AddAsync(tariff, ct);
+
+            await _publishEndpoint.Publish(new TariffPlanCreatedEvent(
+                tariff.Id, tariff.Name, tariff.Description, tariff.Price, tariff.ServiceId,
+                tariff.BeginDate, tariff.EndDate, DateTimeOffset.UtcNow
+            ), ct);
+
             await InvalidateTariffCachesAsync(tariff.ServiceId, ct);
             return ToTariffPlanDto(tariff);
         }
@@ -198,6 +240,12 @@ namespace ClientOpsPortal.Services.Directory.Services
 
             UpdateEntityPartial(updateDto, tariff);
             await _tariffPlanRepository.UpdateAsync(tariff, ct);
+
+            await _publishEndpoint.Publish(new TariffPlanUpdatedEvent(
+                tariff.Id, tariff.Name, tariff.Description, tariff.Price, tariff.ServiceId,
+                tariff.BeginDate, tariff.EndDate, DateTimeOffset.UtcNow
+            ), ct);
+
             await InvalidateTariffCachesAsync(tariff.ServiceId, ct);
 
             return ToTariffPlanDto(tariff);
@@ -207,6 +255,9 @@ namespace ClientOpsPortal.Services.Directory.Services
         {
             var tariff = await _tariffPlanRepository.GetByIdAsync(id, false, ct);
             await _tariffPlanRepository.DeleteAsync(id, ct);
+
+            await _publishEndpoint.Publish(new TariffPlanDeletedEvent(id, DateTimeOffset.UtcNow), ct);
+
             if (tariff != null)
                 await InvalidateTariffCachesAsync(tariff.ServiceId, ct);
         }

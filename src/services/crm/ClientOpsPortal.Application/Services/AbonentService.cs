@@ -1,4 +1,5 @@
 using ClientOpsPortal.Application.DTOs;
+using ClientOpsPortal.Application.DTOs.Common;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
 using ClientOpsPortal.Domain.Entities;
@@ -8,9 +9,10 @@ using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
 using ClientOpsPortal.Services.Notifications.Client;
 using ClientOpsPortal.Services.Notifications.Contracts;
-using System.Linq.Expressions;
-using ClientOpsPortal.Application.DTOs.Common;
+using ClientOpsPortal.Services.Reporting.Contracts.Events;
+using MassTransit;
 using Microsoft.Extensions.Configuration;
+using System.Linq.Expressions;
 
 namespace ClientOpsPortal.Application.Services
 {
@@ -21,6 +23,7 @@ namespace ClientOpsPortal.Application.Services
         private readonly IAuthClient _authClient;
         private readonly IGenericRepository<User> _userRepository;
         private readonly INotificationPublisher _notificationPublisher;
+        private readonly IPublishEndpoint _publishEndpoint;
         private readonly string _authPublicUrl;
 
         public AbonentService(
@@ -29,6 +32,7 @@ namespace ClientOpsPortal.Application.Services
             IAuthClient authClient,
             IGenericRepository<User> userRepository,
             INotificationPublisher notificationPublisher,
+            IPublishEndpoint publishEndpoint,
             IConfiguration configuration)
         {
             _abonentRepository = abonentRepository;
@@ -36,6 +40,7 @@ namespace ClientOpsPortal.Application.Services
             _authClient = authClient;
             _userRepository = userRepository;
             _notificationPublisher = notificationPublisher;
+            _publishEndpoint = publishEndpoint;
             _authPublicUrl = configuration.GetValue<string>("AuthService:PublicUrl") ?? "http://localhost:5110";
         }
 
@@ -102,6 +107,22 @@ namespace ClientOpsPortal.Application.Services
                 // notification failure must not fail abonent creation
             }
 
+            await _publishEndpoint.Publish(new AbonentCreatedEvent(
+                abonent.Id,
+                abonent.IdentificationNumber,
+                abonent.FirstName,
+                abonent.LastName,
+                abonent.MiddleName,
+                abonent.FullName,
+                abonent.UserId,
+                abonent.AccountNumber,
+                abonent.CreatedAt,
+                abonent.CreatedBy,
+                abonent.UpdatedAt,
+                abonent.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             return abonent.ToAbonentDto();
         }
 
@@ -111,18 +132,36 @@ namespace ClientOpsPortal.Application.Services
             if (abonent == null) throw new EntityNotFoundException(typeof(Abonent), id);
             updateDto.UpdateEntity(abonent);
             await _abonentRepository.UpdateAsync(abonent, ct);
+            await _publishEndpoint.Publish(new AbonentUpdatedEvent(
+                abonent.Id,
+                abonent.IdentificationNumber,
+                abonent.FirstName,
+                abonent.LastName,
+                abonent.MiddleName,
+                abonent.FullName,
+                abonent.UserId,
+                abonent.AccountNumber,
+                abonent.CreatedAt,
+                abonent.CreatedBy,
+                abonent.UpdatedAt,
+                abonent.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             return abonent.ToAbonentDto();
         }
 
-        public async Task DeleteAsync(Guid id, CancellationToken ct = default) => await _abonentRepository.DeleteAsync(id, ct);
+        public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+        {
+            await _abonentRepository.DeleteAsync(id, ct);
+            await _publishEndpoint.Publish(new AbonentDeletedEvent(id, DateTimeOffset.UtcNow), ct);
+        }
 
         public async Task<IReadOnlyCollection<AbonentDto>> GetWhereAsync(Expression<Func<Abonent, bool>> predicate, bool withIncludes = false, CancellationToken ct = default)
         {
             var abonents = await _abonentRepository.GetWhereAsync(predicate, withIncludes, ct);
             return abonents.Select(a => a.ToAbonentDto()).ToList();
         }
-
-        
 
         private static string GenerateAccountNumber()
         {
