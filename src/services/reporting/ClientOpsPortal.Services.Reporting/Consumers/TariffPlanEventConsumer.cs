@@ -4,6 +4,7 @@ using MassTransit;
 
 namespace ClientOpsPortal.Services.Reporting.Consumers;
 
+[EntityName("reporting-tariffplan-queue")]
 public class TariffPlanEventConsumer : IConsumer<TariffPlanCreatedEvent>,
                                        IConsumer<TariffPlanUpdatedEvent>,
                                        IConsumer<TariffPlanDeletedEvent>

@@ -4,6 +4,7 @@ using MassTransit;
 
 namespace ClientOpsPortal.Services.Reporting.Consumers;
 
+[EntityName("reporting-employee-queue")]
 public class EmployeeEventConsumer : IConsumer<EmployeeCreatedEvent>,
                                      IConsumer<EmployeeUpdatedEvent>,
                                      IConsumer<EmployeeDeletedEvent>

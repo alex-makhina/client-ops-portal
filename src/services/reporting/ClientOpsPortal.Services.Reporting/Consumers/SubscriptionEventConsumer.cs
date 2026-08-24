@@ -4,6 +4,7 @@ using MassTransit;
 
 namespace ClientOpsPortal.Services.Reporting.Consumers;
 
+[EntityName("reporting-subscription-queue")]
 public class SubscriptionEventConsumer : IConsumer<SubscriptionCreatedEvent>,
                                          IConsumer<SubscriptionUpdatedEvent>,
                                          IConsumer<SubscriptionDeletedEvent>
