@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ClientOpsPortal.Services.Reporting.Contracts.Models
+﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Models
 {
     public class Employee : AuditableEntity
     {
@@ -14,7 +10,5 @@ namespace ClientOpsPortal.Services.Reporting.Contracts.Models
         public required string Post { get; set; }
         public string? Department { get; set; }
         public bool IsActive { get; set; } = true;
-
-        public User? User { get; set; }
     }
 }

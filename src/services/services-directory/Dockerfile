@@ -3,11 +3,13 @@ WORKDIR /app
 
 COPY src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ClientOpsPortal.Services.Directory.Contracts.csproj ClientOpsPortal.Services.Directory.Contracts/
 COPY src/services/services-directory/ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj ClientOpsPortal.Services.Directory/
+COPY src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ClientOpsPortal.Services.Reporting.Contracts.csproj ../../reporting/ClientOpsPortal.Services.Reporting.Contracts/
 
 RUN dotnet restore ClientOpsPortal.Services.Directory/ClientOpsPortal.Services.Directory.csproj
 
 COPY src/services/services-directory/ClientOpsPortal.Services.Directory.Contracts/ ClientOpsPortal.Services.Directory.Contracts/
 COPY src/services/services-directory/ClientOpsPortal.Services.Directory/ ClientOpsPortal.Services.Directory/
+COPY src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ ../../reporting/ClientOpsPortal.Services.Reporting.Contracts/
 
 WORKDIR /app/ClientOpsPortal.Services.Directory
 RUN dotnet publish -c Release -o /out

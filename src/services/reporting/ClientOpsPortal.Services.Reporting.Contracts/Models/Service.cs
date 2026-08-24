@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ClientOpsPortal.Services.Reporting.Contracts.Models
+﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Models
 {
     public class Service : AuditableEntity
     {

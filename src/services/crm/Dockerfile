@@ -13,6 +13,7 @@ COPY src/services/auth/ClientOpsPortal.Services.Auth.Client/ClientOpsPortal.Serv
 COPY src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ClientOpsPortal.Services.Auth.Contracts.csproj ../../auth/ClientOpsPortal.Services.Auth.Contracts/
 COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Client/ClientOpsPortal.Services.Notifications.Client.csproj ../../notifications/ClientOpsPortal.Services.Notifications.Client/
 COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Contracts/ClientOpsPortal.Services.Notifications.Contracts.csproj ../../notifications/ClientOpsPortal.Services.Notifications.Contracts/
+COPY src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ClientOpsPortal.Services.Reporting.Contracts.csproj ../../reporting/ClientOpsPortal.Services.Reporting.Contracts/
 
 RUN dotnet restore ClientOpsPortal.Api/ClientOpsPortal.Api.csproj
 
@@ -27,6 +28,7 @@ COPY src/services/auth/ClientOpsPortal.Services.Auth.Client/ ../../auth/ClientOp
 COPY src/services/auth/ClientOpsPortal.Services.Auth.Contracts/ ../../auth/ClientOpsPortal.Services.Auth.Contracts/
 COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Client/ ../../notifications/ClientOpsPortal.Services.Notifications.Client/
 COPY src/services/notifications/ClientOpsPortal.Services.Notifications.Contracts/ ../../notifications/ClientOpsPortal.Services.Notifications.Contracts/
+COPY src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ ../../reporting/ClientOpsPortal.Services.Reporting.Contracts/
 
 WORKDIR /app/ClientOpsPortal.Api
 RUN dotnet publish -c Release -o /out

@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
@@ -17,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\reporting\ClientOpsPortal.Services.Reporting.Contracts\ClientOpsPortal.Services.Reporting.Contracts.csproj" />
     <ProjectReference Include="..\ClientOpsPortal.Services.Directory.Contracts\ClientOpsPortal.Services.Directory.Contracts.csproj" />
   </ItemGroup>
 

@@ -4,6 +4,7 @@ using ClientOpsPortal.Infrastructure.Data.Interceptors;
 using ClientOpsPortal.Infrastructure.Data.Repositories;
 using ClientOpsPortal.Infrastructure.Data.Seed;
 using ClientOpsPortal.Infrastructure.Data.Seed.App;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,27 @@ namespace ClientOpsPortal.Infrastructure
                 .AddClasses(classes => classes.Where(c => c.Name.EndsWith("Repository") && !c.IsAbstract))
                 .AsImplementedInterfaces()
                 .WithScopedLifetime());
+
+            return services;
+        }
+
+        public static IServiceCollection AddMessageBus(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddMassTransit(x =>
+            {
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    var host = configuration["RabbitMq:Host"] ?? "rabbitmq";
+                    var username = configuration["RabbitMq:Username"] ?? "guest";
+                    var password = configuration["RabbitMq:Password"] ?? "guest";
+
+                    cfg.Host(host, h =>
+                    {
+                        h.Username(username);
+                        h.Password(password);
+                    });
+                });
+            });
 
             return services;
         }

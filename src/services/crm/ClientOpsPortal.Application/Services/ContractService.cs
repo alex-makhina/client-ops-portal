@@ -4,6 +4,8 @@ using ClientOpsPortal.Application.Mappings;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
+using ClientOpsPortal.Services.Reporting.Contracts.Events;
+using MassTransit;
 using System.Linq.Expressions;
 
 namespace ClientOpsPortal.Application.Services
@@ -11,10 +13,14 @@ namespace ClientOpsPortal.Application.Services
     public class ContractService : IContractService
     {
         private readonly IGenericRepository<Contract> _contractRepository;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public ContractService(IGenericRepository<Contract> contractRepository)
+        public ContractService(
+            IGenericRepository<Contract> contractRepository,
+            IPublishEndpoint publishEndpoint)
         {
             _contractRepository = contractRepository;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<ContractDataDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -33,6 +39,20 @@ namespace ClientOpsPortal.Application.Services
         {
             var contract = createDto.ToEntity();
             await _contractRepository.AddAsync(contract, ct);
+
+            await _publishEndpoint.Publish(new ContractCreatedEvent(
+                contract.Id,
+                contract.ContractNumber,
+                contract.AbonentId,
+                contract.BeginDate,
+                contract.EndDate,
+                contract.CreatedAt,
+                contract.CreatedBy,
+                contract.UpdatedAt,
+                contract.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
+
             return contract.ToContractDto();
         }
 
@@ -49,12 +69,27 @@ namespace ClientOpsPortal.Application.Services
 
             updateDto.UpdateEntity(contract);
             await _contractRepository.UpdateAsync(contract, ct);
+
+            await _publishEndpoint.Publish(new ContractUpdatedEvent(
+                contract.Id,
+                contract.ContractNumber,
+                contract.AbonentId,
+                contract.BeginDate,
+                contract.EndDate,
+                contract.CreatedAt,
+                contract.CreatedBy,
+                contract.UpdatedAt,
+                contract.UpdatedBy,
+                DateTimeOffset.UtcNow
+            ), ct);
             return contract.ToContractDto();
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken ct = default)
         {
             await _contractRepository.DeleteAsync(id, ct);
+
+            await _publishEndpoint.Publish(new ContractDeletedEvent(id, DateTimeOffset.UtcNow), ct);
         }
 
         public async Task<IReadOnlyCollection<ContractDataDto>> GetWhereAsync(Expression<Func<Contract, bool>> predicate, bool withIncludes = false, CancellationToken ct = default)

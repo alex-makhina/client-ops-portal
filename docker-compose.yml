@@ -1,7 +1,7 @@
 services:
 
   db_auth:
-    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    image: postgres:${POSTGRES_VERSION:-17-alpine}
     container_name: client_ops_portal_auth_db
     restart: unless-stopped
     shm_size: 128mb
@@ -18,10 +18,10 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   db:
-    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    image: postgres:${POSTGRES_VERSION:-17-alpine}
     container_name: client_ops_portal_db
     restart: unless-stopped
     shm_size: 128mb
@@ -38,10 +38,10 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   directory-db:
-    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    image: postgres:${POSTGRES_VERSION:-17-alpine}
     container_name: client_ops_portal_directory_db
     restart: unless-stopped
     shm_size: 128mb
@@ -56,10 +56,10 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   crm-db:
-    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    image: postgres:${POSTGRES_VERSION:-17-alpine}
     container_name: client_ops_portal_crm_db
     restart: unless-stopped
     shm_size: 128mb
@@ -76,10 +76,10 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   reporting-db:
-    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    image: postgres:${POSTGRES_VERSION:-17-alpine}
     container_name: client_ops_portal_reporting_db
     restart: unless-stopped
     shm_size: 128mb
@@ -94,7 +94,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   adminer:
     image: adminer:${ADMINER_VERSION:-5.4.2}
@@ -173,6 +173,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__ReportingDb: Host=reporting-db;Port=5432;Database=ClientOpsPortalReportsDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
+      RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
       Jwt__JwksUrl: http://auth:8080/.well-known/jwks
       Jwt__Issuer: http://localhost:5110/
       Jwt__Audience: ClientOpsPortalClient

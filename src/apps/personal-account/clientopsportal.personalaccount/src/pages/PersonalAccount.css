@@ -1,20 +1,13 @@
-/* src/pages/PersonalAccount.css */
-
 :root {
-    /* Основной фон приложения */
     --bg-app: #f3f4f6;
     --bg-card: #ffffff;
-    /* Градиент бренда (только для акцентов) */
     --gradient-brand: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    /* Текст */
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #94a3b8;
-    /* Границы и отступы */
     --border: #e2e8f0;
     --radius: 12px;
     --radius-sm: 8px;
-    /* Тени */
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
     --shadow-hover: 0 4px 6px rgba(0, 0, 0, 0.05);
     --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -24,7 +17,6 @@
     box-sizing: border-box;
 }
 
-/* === 1. Обёртка (Светлый фон, на всю ширину) === */
 .dashboard-wrapper {
     min-height: 100vh;
     background: var(--bg-app);
@@ -34,7 +26,6 @@
     flex-direction: column;
 }
 
-/* === 2. Шапка (Фиолетовая, на всю ширину) === */
 .dashboard-header-bg {
     background: var(--gradient-brand);
     padding: 0 20px;
@@ -60,7 +51,6 @@
     letter-spacing: -0.01em;
 }
 
-/* Кнопка выхода на фиолетовом фоне */
 .btn-logout {
     display: inline-flex;
     align-items: center;
@@ -87,7 +77,6 @@
         height: 16px;
     }
 
-/* === 3. Контейнер контента — fluid + двухколоночный на больших экранах === */
 .dashboard-container {
     width: min(95vw, 1600px);
     margin: 0 auto;
@@ -97,14 +86,12 @@
     gap: 24px;
 }
 
-/* Двухколоночная сетка на широких экранах */
 @media (min-width: 1200px) {
     .dashboard-container {
         grid-template-columns: 320px 1fr;
         align-items: start;
     }
 
-        /* Профиль закрепляется в левой колонке */
         .dashboard-container > .section-card:first-child {
             grid-column: 1;
             position: sticky;
@@ -113,13 +100,11 @@
             z-index: 10;
         }
 
-        /* Договоры занимают правую колонку */
         .dashboard-container > .section-card:last-child {
             grid-column: 2;
         }
 }
 
-/* === 4. Карточки секций === */
 .section-card {
     background: var(--bg-card);
     border-radius: var(--radius);
@@ -149,7 +134,6 @@
     color: var(--text-primary);
 }
 
-/* === 5. Профиль — компактный список === */
 .profile-grid {
     display: flex;
     flex-direction: column;
@@ -185,7 +169,6 @@
     word-break: break-word;
 }
 
-/* === 6. Договоры и Подписки === */
 .contract-list {
     display: flex;
     flex-direction: column;
@@ -325,8 +308,6 @@
     text-align: center;
 }
 
-/* === 7. Кнопки === */
-/* Primary: Градиентные */
 .btn-primary {
     padding: 10px 20px;
     background: var(--gradient-brand);
@@ -351,7 +332,6 @@
         cursor: not-allowed;
     }
 
-/* Secondary: Серые */
 .btn-secondary {
     display: inline-flex;
     align-items: center;
@@ -384,7 +364,6 @@
         height: 14px;
     }
 
-/* Danger: Красные */
 .btn-danger {
     display: inline-flex;
     align-items: center;
@@ -417,7 +396,6 @@
         height: 14px;
     }
 
-/* Action Buttons (Sub rows) */
 .sub-action-btn {
     display: inline-flex;
     align-items: center;
@@ -452,7 +430,6 @@
         height: 14px;
     }
 
-/* === 8. Формы === */
 .form-input {
     width: 100%;
     padding: 10px 12px;
@@ -502,7 +479,6 @@
     flex-wrap: wrap;
 }
 
-/* Бейджи статусов */
 .badge {
     display: inline-flex;
     align-items: center;
@@ -522,7 +498,6 @@
     color: #64748b;
 }
 
-/* === 9. Адаптивность === */
 @media (max-width: 1199px) {
     .dashboard-container {
         grid-template-columns: 1fr;

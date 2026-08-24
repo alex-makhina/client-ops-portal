@@ -13,7 +13,5 @@ namespace ClientOpsPortal.Services.Reporting.Contracts.Models
         public string FullName => $"{LastName} {FirstName} {MiddleName}".Trim();
         public Guid UserId { get; set; }
         public required string AccountNumber { get; set; }
-
-        public User? User { get; set; }
     }
 }
