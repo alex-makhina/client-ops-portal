@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ClientOpsPortal.Services.Reporting.Services
 {
-    public class ReportsService
+    public class ReportsService : IReportsService
     {
         private readonly ReportsRepository _repository;
 

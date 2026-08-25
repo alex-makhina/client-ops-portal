@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClientOpsPortal.Services.Reporting.Consumers;
 
+[EntityName("reporting-service-queue")]
 public class ServiceEventConsumer : IConsumer<ServiceCreatedEvent>,
                                     IConsumer<ServiceUpdatedEvent>,
                                     IConsumer<ServiceDeletedEvent>

@@ -4,6 +4,7 @@ using MassTransit;
 
 namespace ClientOpsPortal.Services.Reporting.Consumers;
 
+[EntityName("reporting-contract-queue")]
 public class ContractEventConsumer : IConsumer<ContractCreatedEvent>,
                                      IConsumer<ContractUpdatedEvent>,
                                      IConsumer<ContractDeletedEvent>
