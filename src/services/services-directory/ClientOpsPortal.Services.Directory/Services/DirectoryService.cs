@@ -1,10 +1,11 @@
 using ClientOpsPortal.Services.Directory.Contracts.DTOs;
 using ClientOpsPortal.Services.Directory.Contracts.Exceptions;
-using ClientOpsPortal.Services.Directory.Contracts.Models;
 using ClientOpsPortal.Services.Directory.Data;
+using ClientOpsPortal.Services.Directory.Data.Entities;
 using ClientOpsPortal.Services.Reporting.Contracts.Events;
 using MassTransit;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
@@ -17,6 +18,7 @@ namespace ClientOpsPortal.Services.Directory.Services
         private readonly IDistributedCache _cache;
         private readonly ServiceCacheOptions _options;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly ILogger<DirectoryService> _logger;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -34,13 +36,15 @@ namespace ClientOpsPortal.Services.Directory.Services
             GenericRepository<TariffPlan> tariffPlanRepository,
             IDistributedCache cache,
             IOptions<ServiceCacheOptions> options,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint,
+            ILogger<DirectoryService> logger)
         {
             _serviceRepository = serviceRepository;
             _tariffPlanRepository = tariffPlanRepository;
             _cache = cache;
             _options = options.Value;
             _publishEndpoint = publishEndpoint;
+            _logger = logger;
         }
 
         // === Services ===
@@ -48,6 +52,7 @@ namespace ClientOpsPortal.Services.Directory.Services
         public async Task<IReadOnlyCollection<ServiceDto>> GetAllServicesAsync(bool withIncludes, CancellationToken ct)
         {
             var services = await _serviceRepository.GetAllAsync(withIncludes, ct);
+            _logger.LogDebug("Retrieved {ServiceCount} services (withIncludes: {WithIncludes})", services.Count, withIncludes);
             return services.Select(ToServiceDto).ToList();
         }
 
@@ -56,14 +61,21 @@ namespace ClientOpsPortal.Services.Directory.Services
             var cacheKey = ServiceByIdKey(id);
             var cached = await _cache.GetStringAsync(cacheKey, ct);
             if (cached != null)
+            {
+                _logger.LogDebug("Service cache hit for {ServiceId} (key {CacheKey})", id, cacheKey);
                 return JsonSerializer.Deserialize<ServiceDto>(cached, JsonOptions);
+            }
 
             var service = await _serviceRepository.GetByIdAsync(id, withIncludes, ct);
             if (service == null)
+            {
+                _logger.LogWarning("Service {ServiceId} not found", id);
                 return null;
+            }
 
             var dto = ToServiceDto(service);
             await CacheAsync(cacheKey, dto, _options.ServiceByIdMinutes, ct);
+            _logger.LogDebug("Service cache miss for {ServiceId}, cached under {CacheKey}", id, cacheKey);
             return dto;
         }
 
@@ -72,14 +84,21 @@ namespace ClientOpsPortal.Services.Directory.Services
             var cacheKey = ServiceFullKey(id);
             var cached = await _cache.GetStringAsync(cacheKey, ct);
             if (cached != null)
+            {
+                _logger.LogDebug("Full service cache hit for {ServiceId} (key {CacheKey})", id, cacheKey);
                 return JsonSerializer.Deserialize<ServiceFullDataDto>(cached, JsonOptions);
+            }
 
             var service = await _serviceRepository.GetByIdAsync(id, true, ct);
             if (service == null)
+            {
+                _logger.LogWarning("Full service data for {ServiceId} not found", id);
                 return null;
+            }
 
             var dto = ToServiceFullDataDto(service);
             await CacheAsync(cacheKey, dto, _options.ServiceByIdMinutes, ct);
+            _logger.LogDebug("Full service cache miss for {ServiceId}, cached under {CacheKey}", id, cacheKey);
             return dto;
         }
 
@@ -87,7 +106,10 @@ namespace ClientOpsPortal.Services.Directory.Services
         {
             var cached = await _cache.GetStringAsync(ActiveServicesKey, ct);
             if (cached != null)
+            {
+                _logger.LogDebug("Active services cache hit (key {CacheKey})", ActiveServicesKey);
                 return JsonSerializer.Deserialize<List<ServiceShortDataDto>>(cached, JsonOptions)!;
+            }
 
             var now = DateTimeOffset.UtcNow;
             var services = await _serviceRepository.GetWhereAsync(
@@ -95,16 +117,22 @@ namespace ClientOpsPortal.Services.Directory.Services
 
             var result = services.Select(ToServiceShortDataDto).ToList();
             await CacheAsync(ActiveServicesKey, result, _options.ActiveServicesMinutes, ct);
+            _logger.LogDebug("Active services cache miss, cached {ServiceCount} services under {CacheKey}", result.Count, ActiveServicesKey);
             return result;
         }
 
         public async Task<ServiceDto> CreateServiceAsync(CreateServiceDto createDto, CancellationToken ct)
         {
             if (!await IsServiceNameUniqueAsync(createDto.Name, null, ct))
+            {
+                _logger.LogWarning("Attempt to create service with duplicate name {ServiceName}", createDto.Name);
                 throw new InvalidOperationException($"Услуга с названием '{createDto.Name}' уже существует");
+            }
 
             var service = ToEntity(createDto);
             await _serviceRepository.AddAsync(service, ct);
+            _logger.LogInformation("Service created {ServiceId} name {ServiceName} with {TariffCount} tariff plans",
+                service.Id, service.Name, service.TariffPlans.Count);
 
             var tariffSnapshots = service.TariffPlans.Select(tp => new TariffPlanSnapshot(
                 tp.Id, tp.Name, tp.Description, tp.Price, tp.ServiceId, tp.BeginDate, tp.EndDate
@@ -117,19 +145,28 @@ namespace ClientOpsPortal.Services.Directory.Services
                 DateTimeOffset.UtcNow
             ), ct);
 
-            await InvalidateServiceCachesAsync(ct);
+            await InvalidateServiceCachesAsync(service.Id, ct);
 
             return ToServiceDto(service);
         }
 
         public async Task<ServiceDto> UpdateServiceAsync(Guid id, UpdateServiceDto updateDto, CancellationToken ct)
         {
-            var service = await _serviceRepository.GetByIdAsync(id, false, ct)
-                ?? throw new EntityNotFoundException(nameof(Service), id);
+            var service = await _serviceRepository.GetByIdAsync(id, false, ct);
+            if (service == null)
+            {
+                _logger.LogWarning("Service {ServiceId} not found for update", id);
+                throw new EntityNotFoundException(nameof(Service), id);
+            }
 
             if (!string.IsNullOrWhiteSpace(updateDto.Name) && service.Name != updateDto.Name)
+            {
                 if (!await IsServiceNameUniqueAsync(updateDto.Name, id, ct))
+                {
+                    _logger.LogWarning("Attempt to update service {ServiceId} with duplicate name {ServiceName}", id, updateDto.Name);
                     throw new InvalidOperationException($"Услуга с названием '{updateDto.Name}' уже существует");
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(updateDto.Name))
                 service.Name = updateDto.Name;
@@ -140,6 +177,7 @@ namespace ClientOpsPortal.Services.Directory.Services
             service.BeginDate = updateDto.BeginDate;
 
             await _serviceRepository.UpdateAsync(service, ct);
+            _logger.LogInformation("Service {ServiceId} updated (name {ServiceName})", id, service.Name);
 
             if (updateDto.TariffPlans != null)
                 await UpdateTariffPlansAsync(id, updateDto.TariffPlans, ct);
@@ -159,7 +197,7 @@ namespace ClientOpsPortal.Services.Directory.Services
                 DateTimeOffset.UtcNow
             ), ct);
 
-            await InvalidateServiceCachesAsync(ct);
+            await InvalidateServiceCachesAsync(id, ct);
 
             return ToServiceDto(service);
         }
@@ -167,10 +205,11 @@ namespace ClientOpsPortal.Services.Directory.Services
         public async Task DeleteServiceAsync(Guid id, CancellationToken ct)
         {
             await _serviceRepository.DeleteAsync(id, ct);
+            _logger.LogInformation("Service {ServiceId} deleted", id);
 
             await _publishEndpoint.Publish(new ServiceDeletedEvent(id, DateTimeOffset.UtcNow), ct);
             
-            await InvalidateServiceCachesAsync(ct);
+            await InvalidateServiceCachesAsync(id, ct);
         }
 
         // === TariffPlans ===
@@ -178,6 +217,7 @@ namespace ClientOpsPortal.Services.Directory.Services
         public async Task<IReadOnlyCollection<TariffPlanDto>> GetAllTariffPlansAsync(bool withIncludes, CancellationToken ct)
         {
             var tariffs = await _tariffPlanRepository.GetAllAsync(withIncludes, ct);
+            _logger.LogDebug("Retrieved {TariffCount} tariff plans (withIncludes: {WithIncludes})", tariffs.Count, withIncludes);
             return tariffs.Select(ToTariffPlanDto).ToList();
         }
 
@@ -186,20 +226,28 @@ namespace ClientOpsPortal.Services.Directory.Services
             var cacheKey = TariffByIdKey(id);
             var cached = await _cache.GetStringAsync(cacheKey, ct);
             if (cached != null)
+            {
+                _logger.LogDebug("Tariff plan cache hit for {TariffPlanId} (key {CacheKey})", id, cacheKey);
                 return JsonSerializer.Deserialize<TariffPlanDto>(cached, JsonOptions);
+            }
 
             var tariff = await _tariffPlanRepository.GetByIdAsync(id, withIncludes, ct);
             if (tariff == null)
+            {
+                _logger.LogWarning("Tariff plan {TariffPlanId} not found", id);
                 return null;
+            }
 
             var dto = ToTariffPlanDto(tariff);
             await CacheAsync(cacheKey, dto, _options.ServiceByIdMinutes, ct);
+            _logger.LogDebug("Tariff plan cache miss for {TariffPlanId}, cached under {CacheKey}", id, cacheKey);
             return dto;
         }
 
         public async Task<IReadOnlyCollection<TariffPlanDto>> GetTariffPlansByServiceAsync(Guid serviceId, CancellationToken ct)
         {
             var tariffs = await _tariffPlanRepository.GetWhereAsync(t => t.ServiceId == serviceId, false, ct);
+            _logger.LogDebug("Retrieved {TariffCount} tariff plans for service {ServiceId}", tariffs.Count, serviceId);
             return tariffs.Select(ToTariffPlanDto).ToList();
         }
 
@@ -208,7 +256,10 @@ namespace ClientOpsPortal.Services.Directory.Services
             var cacheKey = $"{ActiveTariffsPrefix}{serviceId}";
             var cached = await _cache.GetStringAsync(cacheKey, ct);
             if (cached != null)
+            {
+                _logger.LogDebug("Active tariff plans cache hit for {ServiceId} (key {CacheKey})", serviceId, cacheKey);
                 return JsonSerializer.Deserialize<List<TariffPlanShortDataDto>>(cached, JsonOptions)!;
+            }
 
             var now = DateTimeOffset.UtcNow;
             var tariffs = await _tariffPlanRepository.GetWhereAsync(
@@ -216,6 +267,8 @@ namespace ClientOpsPortal.Services.Directory.Services
 
             var result = tariffs.Select(ToTariffPlanShortDataDto).ToList();
             await CacheAsync(cacheKey, result, _options.ActiveServicesMinutes, ct);
+            _logger.LogDebug("Active tariff plans cache miss for {ServiceId}, cached {TariffCount} plans under {CacheKey}",
+                serviceId, result.Count, cacheKey);
             return result;
         }
 
@@ -223,6 +276,8 @@ namespace ClientOpsPortal.Services.Directory.Services
         {
             var tariff = ToEntity(createDto);
             await _tariffPlanRepository.AddAsync(tariff, ct);
+            _logger.LogInformation("Tariff plan created {TariffPlanId} name {TariffName} for service {ServiceId}",
+                tariff.Id, tariff.Name, tariff.ServiceId);
 
             await _publishEndpoint.Publish(new TariffPlanCreatedEvent(
                 tariff.Id, tariff.Name, tariff.Description, tariff.Price, tariff.ServiceId,
@@ -235,11 +290,16 @@ namespace ClientOpsPortal.Services.Directory.Services
 
         public async Task<TariffPlanDto> UpdateTariffPlanAsync(Guid id, UpdateTariffPlanDto updateDto, CancellationToken ct)
         {
-            var tariff = await _tariffPlanRepository.GetByIdAsync(id, false, ct)
-                ?? throw new EntityNotFoundException(nameof(TariffPlan), id);
+            var tariff = await _tariffPlanRepository.GetByIdAsync(id, false, ct);
+            if (tariff == null)
+            {
+                _logger.LogWarning("Tariff plan {TariffPlanId} not found for update", id);
+                throw new EntityNotFoundException(nameof(TariffPlan), id);
+            }
 
             UpdateEntityPartial(updateDto, tariff);
             await _tariffPlanRepository.UpdateAsync(tariff, ct);
+            _logger.LogInformation("Tariff plan {TariffPlanId} updated (name {TariffName})", id, tariff.Name);
 
             await _publishEndpoint.Publish(new TariffPlanUpdatedEvent(
                 tariff.Id, tariff.Name, tariff.Description, tariff.Price, tariff.ServiceId,
@@ -255,6 +315,7 @@ namespace ClientOpsPortal.Services.Directory.Services
         {
             var tariff = await _tariffPlanRepository.GetByIdAsync(id, false, ct);
             await _tariffPlanRepository.DeleteAsync(id, ct);
+            _logger.LogInformation("Tariff plan {TariffPlanId} deleted", id);
 
             await _publishEndpoint.Publish(new TariffPlanDeletedEvent(id, DateTimeOffset.UtcNow), ct);
 
@@ -285,15 +346,20 @@ namespace ClientOpsPortal.Services.Directory.Services
                 SlidingExpiration = TimeSpan.FromMinutes(minutes)
             };
             await _cache.SetStringAsync(key, JsonSerializer.Serialize(value, JsonOptions), options, ct);
+            _logger.LogDebug("Cached value under key {CacheKey} for {Minutes} minutes", key, minutes);
         }
 
-        private async Task InvalidateServiceCachesAsync(CancellationToken ct)
+        private async Task InvalidateServiceCachesAsync(Guid id, CancellationToken ct)
         {
+            _logger.LogDebug("Invalidating service caches for {ServiceId}", id);
+            await _cache.RemoveAsync(ServiceByIdKey(id), ct);
+            await _cache.RemoveAsync(ServiceFullKey(id), ct);
             await _cache.RemoveAsync(ActiveServicesKey, ct);
         }
 
         private async Task InvalidateTariffCachesAsync(Guid serviceId, CancellationToken ct)
         {
+            _logger.LogDebug("Invalidating tariff caches for {ServiceId}", serviceId);
             await _cache.RemoveAsync($"{ActiveTariffsPrefix}{serviceId}", ct);
             await _cache.RemoveAsync(ActiveServicesKey, ct);
         }

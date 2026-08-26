@@ -1,4 +1,4 @@
-namespace ClientOpsPortal.Services.Directory.Contracts.Models
+namespace ClientOpsPortal.Services.Directory.Data.Entities
 {
     public abstract class BaseEntity
     {

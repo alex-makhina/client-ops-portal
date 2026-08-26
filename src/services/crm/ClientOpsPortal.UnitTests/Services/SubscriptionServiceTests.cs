@@ -7,6 +7,7 @@ using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Enums;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
+using MassTransit;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
@@ -28,7 +29,8 @@ public class SubscriptionServiceTests
         _sut = new SubscriptionService(
             _subscriptionRepositoryMock.Object,
             _historyRepositoryMock.Object,
-            _cacheMock.Object);
+            _cacheMock.Object,
+            Mock.Of<IPublishEndpoint>());
     }
 
     #region GetByIdAsync Tests

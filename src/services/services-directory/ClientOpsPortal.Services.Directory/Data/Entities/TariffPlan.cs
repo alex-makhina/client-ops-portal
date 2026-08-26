@@ -1,8 +1,6 @@
-using ClientOpsPortal.Services.Directory.Contracts.Models;
-
-namespace ClientOpsPortal.Services.Directory.Contracts.Models
+namespace ClientOpsPortal.Services.Directory.Data.Entities
 {
-    public class TariffPlan : BaseEntity
+    public class TariffPlan : AuditableEntity
     {
         public required string Name { get; set; }
         public required string Description { get; set; }

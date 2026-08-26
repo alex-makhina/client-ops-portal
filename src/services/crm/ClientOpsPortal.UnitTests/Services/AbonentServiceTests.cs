@@ -8,6 +8,7 @@ using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
+using MassTransit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Moq;
@@ -41,6 +42,7 @@ public class AbonentServiceTests
             _authClientMock.Object,
             _userRepositoryMock.Object,
             Mock.Of<ClientOpsPortal.Services.Notifications.Client.INotificationPublisher>(),
+            Mock.Of<IPublishEndpoint>(),
             configMock.Object);
     }
 

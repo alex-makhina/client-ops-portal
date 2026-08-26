@@ -1,4 +1,3 @@
-using ClientOpsPortal.Services.Directory.Contracts.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace ClientOpsPortal.Services.Directory.Contracts.DTOs
