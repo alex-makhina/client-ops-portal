@@ -91,17 +91,15 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
         {
             try
             {
-                var url = $"api/v1/SubscriptionHistories/by-subscription/{subscriptionId}";
+                var url = $"api/v1/Subscriptions/{subscriptionId}/history";
                 var response = await _httpClient.GetAsync(url);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
                     return Array.Empty<SubscriptionHistoryItem>();
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
-
                 var rawData = JsonSerializer.Deserialize<List<SubscriptionHistoryDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 if (rawData == null || rawData.Count == 0)
@@ -139,11 +137,10 @@ namespace ClientOpsPortal.Web.Features.ClientCard.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/v1/SubscriptionHistories/by-abonent/{abonentId}");
+                var response = await _httpClient.GetAsync($"api/v1/Subscriptions/history/by-abonent/{abonentId}");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
                     return Array.Empty<SubscriptionHistoryItem>();
                 }
 

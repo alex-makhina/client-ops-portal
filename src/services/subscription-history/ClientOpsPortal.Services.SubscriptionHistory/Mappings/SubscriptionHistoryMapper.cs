@@ -1,14 +1,13 @@
-﻿using ClientOpsPortal.Application.DTOs;
-using ClientOpsPortal.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models;
 
-namespace ClientOpsPortal.Application.Mappings
+using SubscriptionHistoryModel = ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models.SubscriptionHistory;
+
+namespace ClientOpsPortal.Services.SubscriptionHistory.Mappings
 {
     public static class SubscriptionHistoryMapper
     {
-        public static SubscriptionHistoryDto ToSubscriptionHistoryDto(this SubscriptionHistory history)
+        public static SubscriptionHistoryDto ToSubscriptionHistoryDto(this SubscriptionHistoryModel history)
         {
             return new SubscriptionHistoryDto
             {
@@ -17,7 +16,7 @@ namespace ClientOpsPortal.Application.Mappings
                 ActionType = history.ActionType,
                 Status = history.Status,
                 TariffPlanId = history.TariffPlanId,
-                StartDate = history.StartDate,  
+                StartDate = history.StartDate,
                 Steps = history.Steps.ToList(),
                 CreatedAt = history.CreatedAt,
                 CreatedBy = history.CreatedBy,
@@ -26,26 +25,33 @@ namespace ClientOpsPortal.Application.Mappings
             };
         }
 
-        public static SubscriptionHistory ToEntity(this CreateSubscriptionHistoryDto createDto)
+        public static SubscriptionHistoryModel ToEntity(this CreateSubscriptionHistoryDto createDto)
         {
-            return new SubscriptionHistory
+            var now = DateTimeOffset.UtcNow;
+
+            return new SubscriptionHistoryModel
             {
                 Id = Guid.NewGuid(),
                 SubscriptionId = createDto.SubscriptionId,
                 ActionType = createDto.ActionType,
                 Status = createDto.Status,
                 TariffPlanId = createDto.TariffPlanId,
-                StartDate = createDto.StartDate,
-                Steps = createDto.Steps ?? new()
+                TariffPlanName = createDto.TariffPlanName ?? string.Empty,
+                ServiceName = createDto.ServiceName ?? string.Empty,
+                ContractNumber = createDto.ContractNumber ?? string.Empty,
+                AbonentId = createDto.AbonentId,
+                StartDate = createDto.StartDate != default ? createDto.StartDate : now,
+                Steps = createDto.Steps ?? new(),
+                CreatedAt = now,
             };
         }
 
-        public static void UpdateEntity(this UpdateSubscriptionHistoryDto updateDto, SubscriptionHistory entity)
+        public static void UpdateEntity(this UpdateSubscriptionHistoryDto updateDto, SubscriptionHistoryModel entity)
         {
             entity.Status = updateDto.Status;
         }
 
-        public static SubscriptionHistoryFullDto ToSubscriptionHistoryFullDto(this SubscriptionHistory history)
+        public static SubscriptionHistoryFullDto ToSubscriptionHistoryFullDto(this SubscriptionHistoryModel history)
         {
             return new SubscriptionHistoryFullDto
             {
@@ -55,9 +61,10 @@ namespace ClientOpsPortal.Application.Mappings
                 Status = history.Status,
                 StartDate = history.StartDate,
                 CreatedAt = history.CreatedAt,
-                ServiceName = history.Subscription.Service?.Name,
-                TariffPlanName = history.TariffPlan?.Name,
-                ContractNumber = history.Subscription.Contract?.ContractNumber,
+                ServiceName = history.ServiceName,
+                TariffPlanName = history.TariffPlanName,
+                ContractNumber = history.ContractNumber,
+                AbonentId = history.AbonentId,
                 Steps = history.Steps?.Select(s => new SubscriptionHistoryStep
                 {
                     Id = s.Id,

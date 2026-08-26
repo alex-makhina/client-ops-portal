@@ -5,6 +5,7 @@ using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ClientOpsPortal.Api.Controllers
 {
@@ -14,17 +15,20 @@ namespace ClientOpsPortal.Api.Controllers
         private readonly ISubscriptionService _subscriptionService;
         private readonly IContractService _contractService;
         private readonly IAbonentService _abonentService;
+        private readonly ISubscriptionHistoryClient _historyClient;
 
         public SubscriptionsController(
             ISubscriptionService subscriptionService,
             IContractService contractService,
             IAbonentService abonentService,
+            ISubscriptionHistoryClient historyClient,
             ICurrentUserService currentUserService)
             : base(currentUserService)
         {
             _subscriptionService = subscriptionService;
             _contractService = contractService;
             _abonentService = abonentService;
+            _historyClient = historyClient;
         }
 
         [HttpGet]
@@ -179,5 +183,42 @@ namespace ClientOpsPortal.Api.Controllers
                 return NotFound($"Подписка с ID {id} не найдена");
             }
         }
+
+        [HttpGet("{id}/history")]
+        public async Task<IActionResult> GetSubscriptionHistory(Guid id, CancellationToken ct = default)
+        {
+            try
+            {
+                var histories = await _historyClient.GetHistoriesBySubscriptionAsync(id, ct);
+                return Ok(histories);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("history/by-abonent/{abonentId}")]
+        [Authorize(Roles = "Manager,Abonent")]
+        public async Task<IActionResult> GetHistoryByAbonent(Guid abonentId, CancellationToken ct = default)
+        {
+            try
+            {
+                if (User.IsInRole("Abonent"))
+                {
+                    var abonent = await _abonentService.GetByIdAsync(abonentId, false, ct);
+                    if (abonent == null || !IsCurrentUserAbonentOwner(abonent.UserId))
+                        return Forbid();
+                }
+
+                var histories = await _historyClient.GetHistoriesByAbonentAsync(abonentId, ct);
+                return Ok(histories);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
     }
 }
