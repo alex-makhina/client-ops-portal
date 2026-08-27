@@ -1,12 +1,14 @@
 ﻿using AutoBogus;
 using ClientOpsPortal.Services.Directory.Contracts.DTOs;
-using ClientOpsPortal.Services.Directory.Contracts.Models;
 using ClientOpsPortal.Services.Directory.Controllers;
 using ClientOpsPortal.Services.Directory.Data;
+using ClientOpsPortal.Services.Directory.Data.Entities;
 using ClientOpsPortal.Services.Directory.Services;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
@@ -20,6 +22,7 @@ public class ServicesControllerTests : IDisposable
     private readonly ServiceRepository _serviceRepo;
     private readonly GenericRepository<TariffPlan> _tariffRepo;
     private readonly Mock<IDistributedCache> _cacheMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly DirectoryService _service;
     private readonly ServicesController _controller;
 
@@ -33,6 +36,7 @@ public class ServicesControllerTests : IDisposable
         _serviceRepo = new ServiceRepository(_context);
         _tariffRepo = new GenericRepository<TariffPlan>(_context);
         _cacheMock = new Mock<IDistributedCache>();
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
 
         // Настройка моков для кеша 
         _cacheMock.Setup(x => x.GetAsync(
@@ -62,7 +66,9 @@ public class ServicesControllerTests : IDisposable
             _serviceRepo,
             _tariffRepo,
             _cacheMock.Object,
-            cacheOptions);
+            cacheOptions,
+            _publishEndpointMock.Object,
+            NullLogger<DirectoryService>.Instance);
 
         _controller = new ServicesController(_service);
     }

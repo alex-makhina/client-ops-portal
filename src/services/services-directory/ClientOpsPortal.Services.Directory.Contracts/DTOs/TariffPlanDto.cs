@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ClientOpsPortal.Services.Directory.Contracts.DTOs
 {
-    public class TariffPlanDto : BaseDto
+    public class TariffPlanDto : AuditableDto
     {
         public required string Name { get; set; }
         public required string Description { get; set; }

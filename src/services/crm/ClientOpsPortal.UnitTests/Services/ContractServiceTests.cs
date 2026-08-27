@@ -6,6 +6,7 @@ using ClientOpsPortal.Application.Services;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
+using MassTransit;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
@@ -20,7 +21,7 @@ public class ContractServiceTests
     public ContractServiceTests()
     {
         _contractRepositoryMock = new Mock<IGenericRepository<Contract>>();
-        _sut = new ContractService(_contractRepositoryMock.Object);
+        _sut = new ContractService(_contractRepositoryMock.Object, Mock.Of<IPublishEndpoint>());
     }
 
     #region GetByIdAsync Tests

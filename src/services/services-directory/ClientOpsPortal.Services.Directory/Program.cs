@@ -1,5 +1,6 @@
-using ClientOpsPortal.Services.Directory.Contracts.Models;
 using ClientOpsPortal.Services.Directory.Data;
+using ClientOpsPortal.Services.Directory.Data.Entities;
+using ClientOpsPortal.Services.Directory.Data.Interceptors;
 using ClientOpsPortal.Services.Directory.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,12 +10,25 @@ using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.AddJsonConsole(options =>
+{
+    options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions { Indented = true };
+    options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
+    options.UseUtcTimestamp = true;
+});
+
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddDbContext<DirectoryDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DirectoryDb")));
+builder.Services.AddScoped<AuditableInterceptor>();
+builder.Services.AddDbContext<DirectoryDbContext>((sp, options) =>
+{
+    var interceptor = sp.GetRequiredService<AuditableInterceptor>();
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DirectoryDb"))
+        .AddInterceptors(interceptor);
+});
 
 builder.Services.AddScoped<GenericRepository<TariffPlan>>();
 builder.Services.AddScoped<ServiceRepository>();

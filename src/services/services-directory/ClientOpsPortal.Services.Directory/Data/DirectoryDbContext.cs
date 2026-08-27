@@ -1,4 +1,4 @@
-using ClientOpsPortal.Services.Directory.Contracts.Models;
+using ClientOpsPortal.Services.Directory.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClientOpsPortal.Services.Directory.Data
@@ -18,11 +18,6 @@ namespace ClientOpsPortal.Services.Directory.Data
             {
                 entity.ToTable("Services");
                 entity.Property(e => e.Name).HasMaxLength(50);
-
-                entity.HasMany(s => s.TariffPlans)
-                    .WithOne(t => t.Service)
-                    .HasForeignKey(t => t.ServiceId)
-                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<TariffPlan>(entity =>

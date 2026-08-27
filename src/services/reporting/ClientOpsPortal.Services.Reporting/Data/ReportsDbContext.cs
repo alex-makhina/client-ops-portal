@@ -40,30 +40,16 @@ namespace ClientOpsPortal.Services.Reporting.Data
             modelBuilder.Entity<Contract>(entity =>
             {
                 entity.Property(e => e.ContractNumber).HasMaxLength(20);
-
-                entity.Ignore(s => s.Abonent);
-                entity.Ignore(s => s.Subscriptions);
             });
 
             modelBuilder.Entity<Service>(entity =>
             {
                 entity.Property(e => e.Name).HasMaxLength(50);
-
-                entity.Ignore(s => s.TariffPlans);
             });
 
             modelBuilder.Entity<TariffPlan>(entity =>
             {
                 entity.Property(e => e.Name).HasMaxLength(50);
-
-                entity.Ignore(s => s.Service);
-            });
-
-            modelBuilder.Entity<Subscription>(entity =>
-            {
-                entity.Ignore(s => s.Contract);
-                entity.Ignore(s => s.Service);
-                entity.Ignore(s => s.TariffPlan);
             });
 
             base.OnModelCreating(modelBuilder);

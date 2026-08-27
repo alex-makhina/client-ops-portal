@@ -1,4 +1,4 @@
-using ClientOpsPortal.Services.Directory.Contracts.Models;
+using ClientOpsPortal.Services.Directory.Data.Entities;
 using ClientOpsPortal.Services.Directory.Data;
 using Microsoft.EntityFrameworkCore;
 

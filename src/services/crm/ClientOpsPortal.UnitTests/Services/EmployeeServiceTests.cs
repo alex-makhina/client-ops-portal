@@ -9,6 +9,7 @@ using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Shouldly;
@@ -51,6 +52,7 @@ public class EmployeeServiceTests
             _userRepositoryMock.Object,
             _authClientMock.Object,
             Mock.Of<ClientOpsPortal.Services.Notifications.Client.INotificationPublisher>(),
+            Mock.Of<IPublishEndpoint>(),
             configMock.Object);
     }
 
