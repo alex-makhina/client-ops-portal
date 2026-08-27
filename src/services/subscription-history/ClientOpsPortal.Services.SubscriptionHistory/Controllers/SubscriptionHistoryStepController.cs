@@ -1,37 +1,33 @@
-﻿using ClientOpsPortal.Application.DTOs;
-using ClientOpsPortal.Application.Interfaces;
-using ClientOpsPortal.Application.Services;
-using ClientOpsPortal.Domain.Exceptions;
-using ClientOpsPortal.Domain.Interfaces.Services;
-using Microsoft.AspNetCore.Authorization;
+﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Exceptions;
+using ClientOpsPortal.Services.SubscriptionHistory.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ClientOpsPortal.Api.Controllers
+namespace ClientOpsPortal.Services.SubscriptionHistory.Controllers
 {
-    [Authorize]
-    public class SubscriptionHistoryStepsController : BaseController
+    [ApiController]
+    [Route("api/v1/[controller]")]
+    public class SubscriptionHistoryStepController : ControllerBase
     {
-        private readonly ISubscriptionHistoryStepService _stepService;
+        private readonly SubscriptionHistoryStepService _historyStepService;
 
-        public SubscriptionHistoryStepsController(
-            ISubscriptionHistoryStepService stepService,
-            ICurrentUserService currentUserService)
-            : base(currentUserService)
+        public SubscriptionHistoryStepController(
+            SubscriptionHistoryStepService historyStepService)
         {
-            _stepService = stepService;
+            _historyStepService = historyStepService;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] bool withIncludes = false, CancellationToken ct = default)
+        public async Task<IActionResult> GetAll(CancellationToken ct = default)
         {
-            var services = await _stepService.GetAllAsync(withIncludes, ct);
+            var services = await _historyStepService.GetAllSubscriptionHistoryStepAsync(ct);
             return Ok(services);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetStepById")]
         public async Task<IActionResult> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            var step = await _stepService.GetByIdAsync(id, false, ct);
+            var step = await _historyStepService.GetSubscriptionHistoryStepByIdAsync(id, ct);
             if (step == null)
                 return NotFound($"Шаг истории с ID {id} не найден");
             return Ok(step);
@@ -40,7 +36,7 @@ namespace ClientOpsPortal.Api.Controllers
         [HttpGet("by-history/{historyId}")]
         public async Task<IActionResult> GetByHistory(Guid historyId, CancellationToken ct = default)
         {
-            var steps = await _stepService.GetStepsByHistoryAsync(historyId, ct);
+            var steps = await _historyStepService.GetStepsByHistoryAsync(historyId, ct);
             return Ok(steps);
         }
 
@@ -49,8 +45,8 @@ namespace ClientOpsPortal.Api.Controllers
         {
             try
             {
-                var step = await _stepService.CreateAsync(createDto, ct);
-                return CreatedAtAction(nameof(GetByIdAsync), new { id = step.Id }, step);
+                var step = await _historyStepService.CreateSubscriptionHistoryStepAsync(createDto, ct);
+                return CreatedAtRoute("GetStepById", new { id = step.Id }, step);
             }
             catch (EntityNotFoundException ex)
             {
@@ -63,7 +59,7 @@ namespace ClientOpsPortal.Api.Controllers
         {
             try
             {
-                var step = await _stepService.UpdateAsync(id, updateDto, ct);
+                var step = await _historyStepService.UpdateSubscriptionHistoryStepAsync(id, updateDto, ct);
                 if (step == null)
                     return NotFound($"Шаг истории с ID {id} не найден");
                 return Ok(step);
@@ -79,7 +75,7 @@ namespace ClientOpsPortal.Api.Controllers
         {
             try
             {
-                await _stepService.DeleteAsync(id, ct);
+                await _historyStepService.DeleteSubscriptionHistoryStepAsync(id, ct);
                 return NoContent();
             }
             catch (EntityNotFoundException)

@@ -1,5 +1,4 @@
 ﻿using ClientOpsPortal.Application.DTOs.Common;
-using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Enums;
 
 namespace ClientOpsPortal.Application.DTOs
@@ -11,7 +10,7 @@ namespace ClientOpsPortal.Application.DTOs
         public SubscriptionActionStatus Status { get; set; }
         public Guid TariffPlanId { get; set; }
         public DateTimeOffset StartDate { get; set; }
-        public List<SubscriptionHistoryStep> Steps { get; set; } = [];
+        public List<SubscriptionHistoryStepDto> Steps { get; set; } = [];
     }
 
     public class SubscriptionHistoryFullDto : AuditableDto
@@ -20,26 +19,24 @@ namespace ClientOpsPortal.Application.DTOs
         public SubscriptionActionType ActionType { get; set; }
         public SubscriptionActionStatus Status { get; set; }
         public Guid TariffPlanId { get; set; }
-        public string TariffPlanName { get; set; }
-        public string ServiceName { get; set; }
-        public string ContractNumber { get; set; }
+        public string TariffPlanName { get; set; } = string.Empty;
+        public string ServiceName { get; set; } = string.Empty;
+        public string ContractNumber { get; set; } = string.Empty;
         public DateTimeOffset StartDate { get; set; }
-        public List<SubscriptionHistoryStep> Steps { get; set; } = [];
+        public List<SubscriptionHistoryStepDto> Steps { get; set; } = [];
     }
 
-    public class CreateSubscriptionHistoryDto 
+    public class SubscriptionHistoryStepDto : CreationAuditableDto
     {
-        public required Guid SubscriptionId { get; set; }
-        public required SubscriptionActionType ActionType { get; set; }
-        public required SubscriptionActionStatus Status { get; set; }
-        public required Guid TariffPlanId { get; set; }
-        public required DateTimeOffset StartDate { get; set; }
-        public List<SubscriptionHistoryStep> Steps { get; set; } = [];
+        public Guid SubscriptionHistoryId { get; set; }
+        public SubscriptionActionStatus Status { get; set; }
+        public string? Message { get; set; }
     }
 
-    public class UpdateSubscriptionHistoryDto 
+    public class CreateSubscriptionHistoryStepDto
     {
+        public required Guid SubscriptionHistoryId { get; set; }
         public required SubscriptionActionStatus Status { get; set; }
+        public string? Message { get; set; }
     }
-
 }

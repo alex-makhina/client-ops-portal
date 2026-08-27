@@ -116,6 +116,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__AppConnection: Host=crm-db;Port=5432;Database=ClientOpsPortalCrmDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       ServicesDirectory__BaseUrl: http://services-directory:8080
+      Services__SubscriptionHistory__BaseUrl: http://subscription-history:8080
       RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
       RabbitMq__Port: 5672
       RabbitMq__Username: ${RABBITMQ_USER:-guest}
@@ -320,6 +321,49 @@ services:
       - cop-network
     depends_on:
       - api-gateway
+      
+  mongodb:
+    image: mongo:${MONGODB_VERSION:-7.0}
+    container_name: client_ops_portal_mongodb
+    restart: unless-stopped
+    ports:
+      - "${MONGODB_PORT:-27017}:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: SubscriptionHistoryDb
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - cop-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
+  subscription-history:
+    build:
+      context: .
+      dockerfile: src/services/subscription-history/Dockerfile
+    container_name: client_ops_portal_subscription_history
+    restart: unless-stopped
+    ports:
+      - "${SUBSCRIPTION_HISTORY_PORT:-5200}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      MongoDb__ConnectionString: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-password}@mongodb:27017
+      MongoDb__DatabaseName: SubscriptionHistoryDb
+      MongoDb__SubscriptionHistoryCollection: SubscriptionHistories
+      MongoDb__SubscriptionHistoryStepCollection: SubscriptionHistorySteps
+      Jwt__JwksUrl: http://auth:8080/.well-known/jwks
+      Jwt__Issuer: http://localhost:5110/
+      Jwt__Audience: ClientOpsPortalClient
+    networks:
+      - cop-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
 
 volumes:
   postgres_data:
@@ -330,6 +374,7 @@ volumes:
   redis_data:
   rabbitmq_data:
   auth-keys:
+  mongodb_data:
 
 networks:
   cop-network:

@@ -14,18 +14,21 @@ namespace ClientOpsPortal.Application.Services
     public class SubscriptionService : ISubscriptionService
     {
         private readonly IGenericRepository<Subscription> _subscriptionRepository;
-        private readonly IGenericRepository<SubscriptionHistory> _historyRepository;
+        private readonly IGenericRepository<Contract> _contractRepository;
+        private readonly ISubscriptionHistoryClient _historyClient;
         private readonly IDirectoryCacheService _cache;
         private readonly IPublishEndpoint _publishEndpoint;
 
         public SubscriptionService(
             IGenericRepository<Subscription> subscriptionRepository,
-            IGenericRepository<SubscriptionHistory> historyRepository,
+            ISubscriptionHistoryClient historyClient,
+            IGenericRepository<Contract> contractRepository,
             IDirectoryCacheService cache,
             IPublishEndpoint publishEndpoint)
         {
             _subscriptionRepository = subscriptionRepository;
-            _historyRepository = historyRepository;
+            _contractRepository = contractRepository;
+            _historyClient = historyClient;
             _cache = cache;
             _publishEndpoint = publishEndpoint;
         }
@@ -47,18 +50,30 @@ namespace ClientOpsPortal.Application.Services
 
         public async Task<SubscriptionDto> CreateAsync(SubscriptionDto createDto, CancellationToken ct = default)
         {
-            var subscription = createDto.ToEntity();       
-            var history = CreateHistory(subscription.Id, SubscriptionActionType.Open, SubscriptionActionStatus.Pending, subscription.TariffPlanId);
+            var subscription = createDto.ToEntity();
+
             await _subscriptionRepository.AddAsync(subscription, ct);
-            await _historyRepository.AddAsync(history, ct);
             await EnrichAsync(subscription, ct);
 
-            await _publishEndpoint.Publish(new SubscriptionCreatedEvent(
-                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
-                subscription.BeginDate, subscription.EndDate,
-                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
-                DateTimeOffset.UtcNow
-            ), ct);
+            var historyDto = await CreateHistory(
+                subscription.Id,
+                SubscriptionActionType.Open,
+                SubscriptionActionStatus.Pending,
+                subscription.TariffPlanId,
+                subscription.ContractId,
+                ct);
+
+            if (historyDto != null)
+            {
+                await _historyClient.UpdateHistoryStatusAsync(historyDto.Id, SubscriptionActionStatus.Pending, ct);
+
+                await _historyClient.CreateStepAsync(new CreateSubscriptionHistoryStepDto
+                {
+                    SubscriptionHistoryId = historyDto.Id,
+                    Status = SubscriptionActionStatus.Pending,
+                    Message = "Подписка успешно создана"
+                }, ct);
+            }
 
             return subscription.ToSubscriptionDto();
         }
@@ -120,20 +135,31 @@ namespace ClientOpsPortal.Application.Services
             if (subscription == null)
                 throw new EntityNotFoundException(typeof(Subscription), subscriptionId);
 
-            var history = CreateHistory(subscription.Id, SubscriptionActionType.TariffChange, SubscriptionActionStatus.Pending, subscription.TariffPlanId);
+            var historyDto = await CreateHistory(
+                subscription.Id,
+                SubscriptionActionType.TariffChange,
+                SubscriptionActionStatus.Pending,
+                subscription.TariffPlanId,
+                subscription.ContractId,
+                ct);
+
+            var oldTariffPlanId = subscription.TariffPlanId;
             subscription.TariffPlanId = newTariffPlanId;
 
             await _subscriptionRepository.UpdateAsync(subscription, ct);
-            await _historyRepository.AddAsync(history, ct);
-
-            await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
-                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
-                subscription.BeginDate, subscription.EndDate,
-                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
-                DateTimeOffset.UtcNow
-            ), ct);
-
             await EnrichAsync(subscription, ct);
+
+            if (historyDto != null)
+            {
+                await _historyClient.UpdateHistoryStatusAsync(historyDto.Id, SubscriptionActionStatus.Pending, ct);
+
+                await _historyClient.CreateStepAsync(new CreateSubscriptionHistoryStepDto
+                {
+                    SubscriptionHistoryId = historyDto.Id,
+                    Status = SubscriptionActionStatus.Pending,
+                    Message = $"Тарифный план изменен с {oldTariffPlanId} на {newTariffPlanId}"
+                }, ct);
+            }
 
             return subscription.ToSubscriptionDto();
         }
@@ -144,20 +170,30 @@ namespace ClientOpsPortal.Application.Services
             if (subscription == null)
                 throw new EntityNotFoundException(typeof(Subscription), subscriptionId);
 
-            var history = CreateHistory(subscription.Id, SubscriptionActionType.Close, SubscriptionActionStatus.Pending, subscription.TariffPlanId);
+            var historyDto = await CreateHistory(
+                subscription.Id,
+                SubscriptionActionType.Close,
+                SubscriptionActionStatus.Pending,
+                subscription.TariffPlanId,
+                subscription.ContractId,
+                ct);
+
             subscription.EndDate = DateTimeOffset.UtcNow;
 
             await _subscriptionRepository.UpdateAsync(subscription, ct);
-            await _historyRepository.AddAsync(history, ct);
-
-            await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
-                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
-                subscription.BeginDate, subscription.EndDate,
-                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
-                DateTimeOffset.UtcNow
-            ), ct);
-
             await EnrichAsync(subscription, ct);
+
+            if (historyDto != null)
+            {
+                await _historyClient.UpdateHistoryStatusAsync(historyDto.Id, SubscriptionActionStatus.Pending, ct);
+
+                await _historyClient.CreateStepAsync(new CreateSubscriptionHistoryStepDto
+                {
+                    SubscriptionHistoryId = historyDto.Id,
+                    Status = SubscriptionActionStatus.Pending,
+                    Message = "Подписка успешно отключена"
+                }, ct);
+            }
 
             return subscription.ToSubscriptionDto();
         }
@@ -172,24 +208,42 @@ namespace ClientOpsPortal.Application.Services
             return subscriptions.Select(s => s.ToSubscriptionFullDataDto()).ToList();
         }
 
-        public SubscriptionHistory CreateHistory(Guid subscriptionId, SubscriptionActionType actionType, SubscriptionActionStatus status, Guid tariffId)
+        private async Task<SubscriptionHistoryDto?> CreateHistory( Guid subscriptionId,
+            SubscriptionActionType actionType, SubscriptionActionStatus status, Guid tariffPlanId, Guid contractId, CancellationToken ct)
         {
-            var history = new SubscriptionHistory
+            try
             {
-                Id = Guid.NewGuid(),
-                SubscriptionId = subscriptionId,
-                ActionType = actionType,
-                Status = status,
-                TariffPlanId = tariffId,
-                StartDate = DateTimeOffset.UtcNow
-            };
-            history.Steps.Add(new SubscriptionHistoryStep
+                var contract = await _contractRepository.GetByIdAsync(contractId, true, ct);
+                var abonentId = contract.AbonentId;
+                var contractNumber = contract.ContractNumber;
+
+                var subscription = await _subscriptionRepository.GetByIdAsync(subscriptionId, false, ct);
+                var serviceId = subscription?.ServiceId ?? Guid.Empty;
+
+                var tariffPlan = await _cache.GetTariffPlanAsync(tariffPlanId, ct);
+                var service = await _cache.GetServiceAsync(serviceId, ct);
+
+                var eventDto = new SubscriptionHistoryEventDto
+                {
+                    SubscriptionId = subscriptionId,
+                    ActionType = actionType,
+                    Status = status,
+                    TariffPlanId = tariffPlanId,
+                    TariffPlanName = tariffPlan?.Name ?? string.Empty,
+                    ServiceName = service?.Name ?? string.Empty,
+                    ContractNumber = contractNumber,
+                    AbonentId = abonentId,
+                    StartDate = DateTimeOffset.UtcNow,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    CreatedBy = "System"
+                };
+
+                return await _historyClient.CreateHistoryAsync(eventDto, ct);
+            }
+            catch (Exception ex)
             {
-                Id = Guid.NewGuid(),
-                SubscriptionHistoryId = history.Id,
-                Status = status
-            });
-            return history;
+                return null;
+            }
         }
 
         private async Task EnrichAsync(Subscription s, CancellationToken ct)

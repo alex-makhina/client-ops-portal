@@ -1,7 +1,9 @@
-﻿using ClientOpsPortal.Application.DTOs.Common;
-using ClientOpsPortal.Domain.Enums;
+﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Enums;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace ClientOpsPortal.Application.DTOs
+namespace ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs
 {
     public class SubscriptionHistoryStepDto : CreationAuditableDto
     {

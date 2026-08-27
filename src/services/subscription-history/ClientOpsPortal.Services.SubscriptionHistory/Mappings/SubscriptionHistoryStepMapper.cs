@@ -1,7 +1,7 @@
-﻿using ClientOpsPortal.Application.DTOs;
-using ClientOpsPortal.Domain.Entities;
+﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models;
 
-namespace ClientOpsPortal.Application.Mappings
+namespace ClientOpsPortal.Services.SubscriptionHistory.Mappings
 {
     public static class SubscriptionHistoryStepMapper
     {
