@@ -1,4 +1,4 @@
-﻿using ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Services.Reporting.Data;
 using MassTransit;
 
@@ -61,11 +61,7 @@ public class EmployeeEventConsumer : IConsumer<EmployeeCreatedEvent>,
                 UserId = message.UserId,
                 Post = message.Post,
                 Department = message.Department,
-                IsActive = message.IsActive,
-                CreatedAt = message.CreatedAt,
-                CreatedBy = message.CreatedBy,
-                UpdatedAt = message.UpdatedAt,
-                UpdatedBy = message.UpdatedBy
+                IsActive = message.IsActive
             });
         }
         else
@@ -78,8 +74,6 @@ public class EmployeeEventConsumer : IConsumer<EmployeeCreatedEvent>,
             existing.Post = message.Post;
             existing.Department = message.Department;
             existing.IsActive = message.IsActive;
-            existing.UpdatedAt = message.UpdatedAt;
-            existing.UpdatedBy = message.UpdatedBy;
 
             _context.Employees.Update(existing);
         }

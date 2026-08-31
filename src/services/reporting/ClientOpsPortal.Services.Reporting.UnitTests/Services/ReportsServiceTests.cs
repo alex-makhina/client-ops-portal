@@ -414,8 +414,6 @@ public class ReportsServiceTests : IDisposable
             Description = $"Description for service {serviceId:N}",
             BeginDate = DateTimeOffset.UtcNow.AddDays(-10),
             EndDate = endDate,
-            CreatedAt = DateTimeOffset.UtcNow,
-            CreatedBy = "test-user",
             TariffPlans = new List<TariffPlan>()
         };
     }
@@ -450,8 +448,6 @@ public class ReportsServiceTests : IDisposable
             TariffPlanId = tariffPlan.Id,
             BeginDate = beginDate ?? DateTimeOffset.UtcNow.AddDays(-5),
             EndDate = endDate,
-            CreatedAt = DateTimeOffset.UtcNow,
-            CreatedBy = "test-user",
             Contract = contract,
             Service = service,
             TariffPlan = tariffPlan
@@ -482,9 +478,7 @@ public class ReportsServiceTests : IDisposable
             LastName = "Doe",
             MiddleName = null,
             UserId = Guid.NewGuid(),
-            AccountNumber = "ACC12345",
-            CreatedAt = DateTimeOffset.UtcNow,
-            CreatedBy = "test-user"
+            AccountNumber = "ACC12345"
         };
     }
 
@@ -498,8 +492,6 @@ public class ReportsServiceTests : IDisposable
             AbonentId = abonent.Id,
             BeginDate = DateTimeOffset.UtcNow.AddDays(-30),
             EndDate = null,
-            CreatedAt = DateTimeOffset.UtcNow,
-            CreatedBy = "test-user",
             Subscriptions = new List<Subscription>()
         };
         contract.Abonent = abonent;

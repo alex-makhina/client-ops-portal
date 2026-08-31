@@ -1,4 +1,4 @@
-﻿using ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Services.Reporting.Data;
 using MassTransit;
 
@@ -30,11 +30,7 @@ public class AbonentEventConsumer : IConsumer<AbonentCreatedEvent>,
             message.LastName,
             message.MiddleName,
             message.UserId,
-            message.AccountNumber,
-            message.CreatedAt,
-            message.CreatedBy,
-            message.UpdatedAt,
-            message.UpdatedBy
+            message.AccountNumber
         );
     }
 
@@ -50,11 +46,7 @@ public class AbonentEventConsumer : IConsumer<AbonentCreatedEvent>,
             message.LastName,
             message.MiddleName,
             message.UserId,
-            message.AccountNumber,
-            message.CreatedAt,
-            message.CreatedBy,
-            message.UpdatedAt,
-            message.UpdatedBy
+            message.AccountNumber
         );
     }
 
@@ -79,11 +71,7 @@ public class AbonentEventConsumer : IConsumer<AbonentCreatedEvent>,
         string lastName,
         string? middleName,
         Guid userId,
-        string accountNumber,
-        DateTimeOffset createdAt,
-        string? createdBy,
-        DateTimeOffset? updatedAt,
-        string? updatedBy)
+        string accountNumber)
     {
         var existingAbonent = await _context.Abonents.FindAsync(id);
 
@@ -97,11 +85,7 @@ public class AbonentEventConsumer : IConsumer<AbonentCreatedEvent>,
                 LastName = lastName,
                 MiddleName = middleName,
                 UserId = userId,
-                AccountNumber = accountNumber,
-                CreatedAt = createdAt,
-                CreatedBy = createdBy,
-                UpdatedAt = updatedAt,
-                UpdatedBy = updatedBy
+                AccountNumber = accountNumber
             });
         }
         else
@@ -112,10 +96,6 @@ public class AbonentEventConsumer : IConsumer<AbonentCreatedEvent>,
             existingAbonent.MiddleName = middleName;
             existingAbonent.UserId = userId;
             existingAbonent.AccountNumber = accountNumber;
-            existingAbonent.CreatedAt = createdAt;
-            existingAbonent.CreatedBy = createdBy;
-            existingAbonent.UpdatedAt = updatedAt;
-            existingAbonent.UpdatedBy = updatedBy;
 
             _context.Abonents.Update(existingAbonent);
         }

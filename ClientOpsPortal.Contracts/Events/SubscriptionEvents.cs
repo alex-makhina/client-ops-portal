@@ -1,4 +1,4 @@
-﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿namespace ClientOpsPortal.Contracts.Events;
 
 public record SubscriptionCreatedEvent(
     Guid Id,
@@ -7,10 +7,6 @@ public record SubscriptionCreatedEvent(
     Guid TariffPlanId,
     DateTimeOffset BeginDate,
     DateTimeOffset? EndDate,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     DateTimeOffset OccurredOn
 );
 
@@ -21,10 +17,6 @@ public record SubscriptionUpdatedEvent(
     Guid TariffPlanId,
     DateTimeOffset BeginDate,
     DateTimeOffset? EndDate,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     DateTimeOffset OccurredOn
 );
 

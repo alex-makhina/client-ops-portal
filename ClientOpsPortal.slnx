@@ -12,6 +12,7 @@
   </Folder>
   <Folder Name="/src/services/" />
   <Folder Name="/src/services/crm/">
+    <Project Path="ClientOpsPortal.Contracts/ClientOpsPortal.Contracts.csproj" Id="4408d501-b87a-4ec9-80ef-c6fd0b2cf851" />
     <Project Path="src/services/crm/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
     <Project Path="src/services/crm/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
     <Project Path="src/services/crm/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
@@ -38,16 +39,16 @@
     <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications/ClientOpsPortal.Services.Notifications.csproj" />
   </Folder>
   <Folder Name="/src/services/reporting/">
-    <Project Path="ClientOpsPortal.Services.Reporting.UnitTests/ClientOpsPortal.Services.Reporting.UnitTests.csproj" />
     <Project Path="src/services/reporting/ClientOpsPortal.Reporting/ClientOpsPortal.Services.Reporting.Client/ClientOpsPortal.Services.Reporting.Client.csproj" />
     <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ClientOpsPortal.Services.Reporting.Contracts.csproj" />
+    <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting.UnitTests/ClientOpsPortal.Services.Reporting.UnitTests.csproj" />
     <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting/ClientOpsPortal.Services.Reporting.csproj" />
   </Folder>
   <Folder Name="/src/services/api-gateway/">
     <Project Path="src/services/api-gateway/ClientOpsPortal.ApiGateway/ClientOpsPortal.ApiGateway.csproj" />
   </Folder>
   <Folder Name="/src/services/subscription-history/">
-    <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory.Client/ClientOpsPortal.Services.SubscriptionHistory.Client.csproj"/>
+    <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory.Client/ClientOpsPortal.Services.SubscriptionHistory.Client.csproj" />
     <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory.Contracts/ClientOpsPortal.Services.SubscriptionHistory.Contracts.csproj" />
     <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory/ClientOpsPortal.Services.SubscriptionHistory.csproj" />
   </Folder>

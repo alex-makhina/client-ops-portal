@@ -1,6 +1,6 @@
 ﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Models
 {
-    public class Service : AuditableEntity
+    public class Service : BaseEntity
     {
         public required string Name { get; set; }
         public required string Description { get; set; }

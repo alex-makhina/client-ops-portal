@@ -1,6 +1,6 @@
 ﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Models
 {
-    public class Subscription : AuditableEntity
+    public class Subscription : BaseEntity
     {
         public Guid ContractId { get; set; }
         public Guid ServiceId { get; set; }

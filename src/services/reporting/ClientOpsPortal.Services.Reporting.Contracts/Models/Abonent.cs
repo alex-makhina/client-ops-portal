@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ClientOpsPortal.Services.Reporting.Contracts.Models
 {
-    public class Abonent : AuditableEntity
+    public class Abonent : BaseEntity
     {
         public required string IdentificationNumber { get; set; }
         public required string FirstName { get; set; }

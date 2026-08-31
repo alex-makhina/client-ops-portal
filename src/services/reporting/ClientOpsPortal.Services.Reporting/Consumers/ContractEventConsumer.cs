@@ -1,4 +1,4 @@
-﻿using ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Services.Reporting.Data;
 using MassTransit;
 
@@ -22,14 +22,14 @@ public class ContractEventConsumer : IConsumer<ContractCreatedEvent>,
     {
         var message = context.Message;
         _logger.LogInformation("Получено событие ContractCreatedEvent для ContractId: {Id}", message.Id);
-        await UpsertContractAsync(message.Id, message.ContractNumber, message.AbonentId, message.BeginDate, message.EndDate, message.CreatedAt, message.CreatedBy, message.UpdatedAt, message.UpdatedBy);
+        await UpsertContractAsync(message.Id, message.ContractNumber, message.AbonentId, message.BeginDate, message.EndDate);
     }
 
     public async Task Consume(ConsumeContext<ContractUpdatedEvent> context)
     {
         var message = context.Message;
         _logger.LogInformation("Получено событие ContractUpdatedEvent для ContractId: {Id}", message.Id);
-        await UpsertContractAsync(message.Id, message.ContractNumber, message.AbonentId, message.BeginDate, message.EndDate, message.CreatedAt, message.CreatedBy, message.UpdatedAt, message.UpdatedBy);
+        await UpsertContractAsync(message.Id, message.ContractNumber, message.AbonentId, message.BeginDate, message.EndDate);
     }
 
     public async Task Consume(ConsumeContext<ContractDeletedEvent> context)
@@ -46,8 +46,7 @@ public class ContractEventConsumer : IConsumer<ContractCreatedEvent>,
     }
 
     private async Task UpsertContractAsync(
-        Guid id, string contractNumber, Guid abonentId, DateTimeOffset beginDate, DateTimeOffset? endDate,
-        DateTimeOffset createdAt, string? createdBy, DateTimeOffset? updatedAt, string? updatedBy)
+        Guid id, string contractNumber, Guid abonentId, DateTimeOffset beginDate, DateTimeOffset? endDate)
     {
         var existing = await _context.Contracts.FindAsync(id);
 
@@ -59,11 +58,7 @@ public class ContractEventConsumer : IConsumer<ContractCreatedEvent>,
                 ContractNumber = contractNumber,
                 AbonentId = abonentId,
                 BeginDate = beginDate,
-                EndDate = endDate,
-                CreatedAt = createdAt,
-                CreatedBy = createdBy,
-                UpdatedAt = updatedAt,
-                UpdatedBy = updatedBy
+                EndDate = endDate
             });
         }
         else
@@ -72,8 +67,6 @@ public class ContractEventConsumer : IConsumer<ContractCreatedEvent>,
             existing.AbonentId = abonentId;
             existing.BeginDate = beginDate;
             existing.EndDate = endDate;
-            existing.UpdatedAt = updatedAt;
-            existing.UpdatedBy = updatedBy;
 
             _context.Contracts.Update(existing);
         }

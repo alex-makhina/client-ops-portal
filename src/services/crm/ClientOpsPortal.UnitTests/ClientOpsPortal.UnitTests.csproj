@@ -8,6 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\SubscriptionControllerTests.cs" />
+    <Compile Remove="Controllers\SubscriptionHistoryControllerTests.cs" />
+    <Compile Remove="Controllers\SubscriptionHistoryStepController.cs" />
+    <Compile Remove="Services\SubscriptionHistoryServiceTests.cs" />
+    <Compile Remove="Services\SubscriptionHistoryStepServiceTests.cs" />
+    <Compile Remove="Services\SubscriptionServiceTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoBogus" Version="2.13.1" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

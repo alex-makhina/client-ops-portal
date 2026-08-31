@@ -10,8 +10,8 @@ using ClientOpsPortal.Services.Notifications.Client;
 using ClientOpsPortal.Services.Notifications.Contracts;
 using System.Linq.Expressions;
 using Microsoft.Extensions.Configuration;
-using ClientOpsPortal.Services.Reporting.Contracts.Events;
 using MassTransit;
+using ClientOpsPortal.Contracts.Events;
 
 namespace ClientOpsPortal.Application.Services
 {
@@ -111,8 +111,7 @@ namespace ClientOpsPortal.Application.Services
 
             await _publishEndpoint.Publish(new EmployeeCreatedEvent(
                 employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
-                employee.UserId, employee.Post, employee.Department, employee.IsActive,
-                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+                employee.UserId, employee.Post, employee.Department, employee.IsActive, DateTimeOffset.UtcNow
             ), ct);
 
             return employee.ToEmployeeDto();
@@ -134,8 +133,7 @@ namespace ClientOpsPortal.Application.Services
 
             await _publishEndpoint.Publish(new EmployeeUpdatedEvent(
                 employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
-                employee.UserId, employee.Post, employee.Department, employee.IsActive,
-                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+                employee.UserId, employee.Post, employee.Department, employee.IsActive, DateTimeOffset.UtcNow
             ), ct);
 
             return employee.ToEmployeeDto();
@@ -212,8 +210,7 @@ namespace ClientOpsPortal.Application.Services
 
             await _publishEndpoint.Publish(new EmployeeUpdatedEvent(
                employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
-               employee.UserId, employee.Post, employee.Department, employee.IsActive,
-               employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+               employee.UserId, employee.Post, employee.Department, employee.IsActive, DateTimeOffset.UtcNow
             ), ct);
 
             if (employee.User != null)
@@ -280,8 +277,7 @@ namespace ClientOpsPortal.Application.Services
 
             await _publishEndpoint.Publish(new EmployeeCreatedEvent(
                 employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
-                employee.UserId, employee.Post, employee.Department, employee.IsActive,
-                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+                employee.UserId, employee.Post, employee.Department, employee.IsActive, DateTimeOffset.UtcNow
             ), ct);
 
             var dto = employee.ToEmployeeDto();
@@ -310,8 +306,7 @@ namespace ClientOpsPortal.Application.Services
 
             await _publishEndpoint.Publish(new EmployeeUpdatedEvent(
                 employee.Id, employee.StaffNumber, employee.FirstName, employee.LastName, employee.MiddleName,
-                employee.UserId, employee.Post, employee.Department, employee.IsActive,
-                employee.CreatedAt, employee.CreatedBy, employee.UpdatedAt, employee.UpdatedBy, DateTimeOffset.UtcNow
+                employee.UserId, employee.Post, employee.Department, employee.IsActive, DateTimeOffset.UtcNow
             ), ct);
 
             var dto = employee.ToEmployeeDto();

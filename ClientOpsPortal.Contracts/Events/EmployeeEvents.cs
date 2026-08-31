@@ -1,4 +1,4 @@
-﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿namespace ClientOpsPortal.Contracts.Events;
 
 public record EmployeeCreatedEvent(
     Guid Id,
@@ -10,10 +10,6 @@ public record EmployeeCreatedEvent(
     string Post,
     string? Department,
     bool IsActive,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     DateTimeOffset OccurredOn
 );
 
@@ -27,10 +23,6 @@ public record EmployeeUpdatedEvent(
     string Post,
     string? Department,
     bool IsActive,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     DateTimeOffset OccurredOn
 );
 

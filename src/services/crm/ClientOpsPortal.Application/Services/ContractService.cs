@@ -1,10 +1,10 @@
 ﻿using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
+using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
-using ClientOpsPortal.Services.Reporting.Contracts.Events;
 using MassTransit;
 using System.Linq.Expressions;
 
@@ -46,10 +46,6 @@ namespace ClientOpsPortal.Application.Services
                 contract.AbonentId,
                 contract.BeginDate,
                 contract.EndDate,
-                contract.CreatedAt,
-                contract.CreatedBy,
-                contract.UpdatedAt,
-                contract.UpdatedBy,
                 DateTimeOffset.UtcNow
             ), ct);
 
@@ -76,10 +72,6 @@ namespace ClientOpsPortal.Application.Services
                 contract.AbonentId,
                 contract.BeginDate,
                 contract.EndDate,
-                contract.CreatedAt,
-                contract.CreatedBy,
-                contract.UpdatedAt,
-                contract.UpdatedBy,
                 DateTimeOffset.UtcNow
             ), ct);
             return contract.ToContractDto();

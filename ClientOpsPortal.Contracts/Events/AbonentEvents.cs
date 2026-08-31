@@ -1,4 +1,4 @@
-﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿namespace ClientOpsPortal.Contracts.Events;
 
 public record AbonentCreatedEvent(
     Guid Id,
@@ -9,10 +9,6 @@ public record AbonentCreatedEvent(
     string FullName,
     Guid UserId,
     string AccountNumber,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     DateTimeOffset OccurredOn
 );
 
@@ -25,10 +21,6 @@ public record AbonentUpdatedEvent(
     string FullName,
     Guid UserId,
     string AccountNumber,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     DateTimeOffset OccurredOn
 );
 
