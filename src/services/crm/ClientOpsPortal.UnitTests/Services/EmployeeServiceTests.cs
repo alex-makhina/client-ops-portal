@@ -1,19 +1,22 @@
 ﻿using AutoBogus;
-using Bogus;
 using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
 using ClientOpsPortal.Application.Services;
+using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
+using ClientOpsPortal.Services.Notifications.Client;
+using ClientOpsPortal.Services.Notifications.Contracts;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
+using Xunit;
 
 namespace ClientOpsPortal.UnitTests.Services;
 
@@ -22,6 +25,8 @@ public class EmployeeServiceTests
     private readonly Mock<IGenericRepository<Employee>> _employeeRepositoryMock;
     private readonly Mock<IGenericRepository<User>> _userRepositoryMock;
     private readonly Mock<IAuthClient> _authClientMock;
+    private readonly Mock<INotificationPublisher> _notificationPublisherMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly EmployeeService _sut;
 
     public EmployeeServiceTests()
@@ -29,6 +34,8 @@ public class EmployeeServiceTests
         _employeeRepositoryMock = new Mock<IGenericRepository<Employee>>();
         _userRepositoryMock = new Mock<IGenericRepository<User>>();
         _authClientMock = new Mock<IAuthClient>();
+        _notificationPublisherMock = new Mock<INotificationPublisher>();
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
 
         AutoFaker.Configure(builder =>
         {
@@ -43,17 +50,64 @@ public class EmployeeServiceTests
             .Setup(x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid().ToString());
 
-        var configMock = new Mock<IConfiguration>();
-        configMock.Setup(c => c.GetSection(It.IsAny<string>())).Returns(new Mock<IConfigurationSection>().Object);
-        configMock.Setup(c => c["AuthService:PublicUrl"]).Returns("http://localhost:5110");
+        _authClientMock
+            .Setup(x => x.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("reset-token-123");
+
+        _authClientMock
+            .Setup(x => x.GetUserByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken ct) => new UserResponse
+            {
+                Id = id,
+                UserName = $"user_{id}",
+                Email = $"user_{id}@test.com",
+                Roles = new List<string> { "Manager" }
+            });
+
+        _authClientMock
+            .Setup(x => x.BlockUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _authClientMock
+            .Setup(x => x.UnblockUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _authClientMock
+            .Setup(x => x.SetUserRoleAsync(It.IsAny<SetUserRoleRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _notificationPublisherMock
+            .Setup(x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Настройка Publish для конкретных типов событий
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<EmployeeCreatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<EmployeeUpdatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<EmployeeDeletedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Создаем реальную конфигурацию с нужными значениями
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "AuthService:PublicUrl", "http://localhost:5110" }
+            })
+            .Build();
 
         _sut = new EmployeeService(
             _employeeRepositoryMock.Object,
             _userRepositoryMock.Object,
             _authClientMock.Object,
-            Mock.Of<ClientOpsPortal.Services.Notifications.Client.INotificationPublisher>(),
-            Mock.Of<IPublishEndpoint>(),
-            configMock.Object);
+            _notificationPublisherMock.Object,
+            _publishEndpointMock.Object,
+            config);
     }
 
     #region GetByIdAsync Tests
@@ -180,12 +234,20 @@ public class EmployeeServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(userId);
 
+        _authClientMock
+            .Setup(s => s.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("reset-token-123");
+
         _userRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         _employeeRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _notificationPublisherMock
+            .Setup(x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -209,6 +271,14 @@ public class EmployeeServiceTests
 
         _employeeRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _notificationPublisherMock.Verify(
+            x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<EmployeeCreatedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -282,6 +352,10 @@ public class EmployeeServiceTests
 
         _employeeRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<EmployeeUpdatedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -357,6 +431,10 @@ public class EmployeeServiceTests
         // Assert
         _employeeRepositoryMock.Verify(
             r => r.DeleteAsync(employeeId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<EmployeeDeletedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -676,16 +754,6 @@ public class EmployeeServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(employees);
 
-        _authClientMock
-            .Setup(x => x.GetUserByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string id, CancellationToken ct) => new UserResponse
-            {
-                Id = id,
-                UserName = $"user_{id}",
-                Email = $"user_{id}@test.com",
-                Roles = new List<string> { "Manager" }
-            });
-
         // Act
         var result = await _sut.GetAllUsersAsync();
 
@@ -768,6 +836,10 @@ public class EmployeeServiceTests
         _authClientMock.Verify(
             x => x.UnblockUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<EmployeeUpdatedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -804,6 +876,10 @@ public class EmployeeServiceTests
         _authClientMock.Verify(
             x => x.BlockUserAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<EmployeeUpdatedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -827,6 +903,203 @@ public class EmployeeServiceTests
 
     #endregion
 
+    #region GetAvailableRolesAsync Tests
+
+    [Fact]
+    public async Task GetAvailableRolesAsync_ReturnsListOfRoles()
+    {
+        // Act
+        var result = await _sut.GetAvailableRolesAsync();
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBe(4);
+        result.ShouldContain("Администратор");
+        result.ShouldContain("Специалист по услугам");
+        result.ShouldContain("Аналитик");
+        result.ShouldContain("Специалист по работе с клиентами");
+    }
+
+    #endregion
+
+    #region CreateAdminUserAsync Tests
+
+    [Fact]
+    public async Task CreateAdminUserAsync_WhenValidDto_CreatesAdminUser()
+    {
+        // Arrange
+        var createDto = CreateCreateEmployeeDto();
+        createDto.Login = "admin_user";
+        createDto.Role = "Администратор";
+        createDto.Password = "Admin123!";
+        var userId = Guid.NewGuid().ToString();
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Employee, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Employee>());
+
+        _authClientMock
+            .Setup(s => s.CreateUserAsync(
+                It.Is<CreateUserRequest>(r =>
+                    r.UserName == createDto.Login &&
+                    r.Email == createDto.Email &&
+                    r.Password == createDto.Password),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userId);
+
+        _authClientMock
+            .Setup(s => s.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("reset-token-123");
+
+        _userRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _employeeRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _notificationPublisherMock
+            .Setup(x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _sut.CreateAdminUserAsync(createDto);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.StaffNumber.ShouldBe(createDto.StaffNumber);
+
+        _authClientMock.Verify(
+            s => s.CreateUserAsync(
+                It.Is<CreateUserRequest>(r =>
+                    r.UserName == createDto.Login &&
+                    r.Email == createDto.Email &&
+                    r.Roles.Contains("Admin")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _userRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _employeeRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _notificationPublisherMock.Verify(
+            x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<EmployeeCreatedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAdminUserAsync_WhenStaffNumberExists_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var createDto = CreateCreateEmployeeDto();
+        var existingEmployee = CreateEmployeeEntity(Guid.NewGuid());
+        existingEmployee.StaffNumber = createDto.StaffNumber;
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Employee, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Employee> { existingEmployee });
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => _sut.CreateAdminUserAsync(createDto));
+
+        exception.Message.ShouldContain(createDto.StaffNumber);
+
+        _authClientMock.Verify(
+            s => s.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    #endregion
+
+    #region UpdateAdminUserAsync Tests
+
+    [Fact]
+    public async Task UpdateAdminUserAsync_WhenValidDto_UpdatesAdminUser()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+        var existingEmployee = CreateEmployeeEntity(employeeId);
+        existingEmployee.User = new User { Id = Guid.NewGuid(), ExternalId = Guid.NewGuid().ToString() };
+        var updateDto = CreateUpdateEmployeeDto();
+        updateDto.Role = "Администратор";
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetByIdAsync(employeeId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingEmployee);
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Employee, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Employee>());
+
+        _employeeRepositoryMock
+            .Setup(r => r.UpdateAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _authClientMock
+            .Setup(x => x.SetUserRoleAsync(
+                It.IsAny<SetUserRoleRequest>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _sut.UpdateAdminUserAsync(employeeId, updateDto);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(employeeId);
+
+        _authClientMock.Verify(
+            x => x.SetUserRoleAsync(
+                It.Is<SetUserRoleRequest>(r => r.Role == "Admin"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _employeeRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<EmployeeUpdatedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAdminUserAsync_WhenEmployeeNotFound_ThrowsEntityNotFoundException()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+        var updateDto = CreateUpdateEmployeeDto();
+
+        _employeeRepositoryMock
+            .Setup(r => r.GetByIdAsync(employeeId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Employee?)null);
+
+        // Act & Assert
+        await Should.ThrowAsync<EntityNotFoundException>(
+            () => _sut.UpdateAdminUserAsync(employeeId, updateDto));
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static Employee CreateEmployeeEntity(Guid? id = null)
@@ -840,6 +1113,7 @@ public class EmployeeServiceTests
             .RuleFor(e => e.StaffNumber, _ => $"EMP-{DateTime.Now:yyyy}-{Guid.NewGuid():N}".Substring(0, 15))
             .RuleFor(e => e.FirstName, _ => $"FirstName_{Guid.NewGuid():N}".Substring(0, 10))
             .RuleFor(e => e.LastName, _ => $"LastName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(e => e.MiddleName, _ => $"MiddleName_{Guid.NewGuid():N}".Substring(0, 10))
             .RuleFor(e => e.Post, _ => "Менеджер")
             .RuleFor(e => e.Department, _ => "IT")
             .RuleFor(e => e.IsActive, _ => true)
@@ -866,8 +1140,10 @@ public class EmployeeServiceTests
             .RuleFor(dto => dto.Email, _ => $"{Guid.NewGuid():N}@test.com")
             .RuleFor(dto => dto.FirstName, _ => $"FirstName_{Guid.NewGuid():N}".Substring(0, 10))
             .RuleFor(dto => dto.LastName, _ => $"LastName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(dto => dto.MiddleName, _ => $"MiddleName_{Guid.NewGuid():N}".Substring(0, 10))
             .RuleFor(dto => dto.Post, _ => "Менеджер")
             .RuleFor(dto => dto.Department, _ => "IT")
+            .RuleFor(dto => dto.Role, _ => "Специалист по работе с клиентами")
             .Generate();
     }
 
@@ -879,8 +1155,10 @@ public class EmployeeServiceTests
             .RuleFor(dto => dto.StaffNumber, _ => $"EMP-{DateTime.Now:yyyy}-{Guid.NewGuid():N}".Substring(0, 15))
             .RuleFor(dto => dto.FirstName, _ => $"FirstName_{Guid.NewGuid():N}".Substring(0, 10))
             .RuleFor(dto => dto.LastName, _ => $"LastName_{Guid.NewGuid():N}".Substring(0, 10))
+            .RuleFor(dto => dto.MiddleName, _ => $"MiddleName_{Guid.NewGuid():N}".Substring(0, 10))
             .RuleFor(dto => dto.Post, _ => "Менеджер")
             .RuleFor(dto => dto.Department, _ => "IT")
+            .RuleFor(dto => dto.Role, _ => "Специалист по работе с клиентами")
             .Generate();
     }
 

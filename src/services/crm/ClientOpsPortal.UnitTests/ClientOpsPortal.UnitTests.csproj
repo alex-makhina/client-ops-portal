@@ -33,6 +33,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ClientOpsPortal.Api\ClientOpsPortal.Api.csproj" />
     <ProjectReference Include="..\ClientOpsPortal.Application\ClientOpsPortal.Application.csproj" />
+	<ProjectReference Include="..\..\subscription-history\ClientOpsPortal.Services.SubscriptionHistory.Contracts\ClientOpsPortal.Services.SubscriptionHistory.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

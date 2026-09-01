@@ -12,9 +12,9 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Services
 {
     public class SubscriptionHistoryStepService
     {
-        private readonly MongoRepository<SubscriptionHistoryStep> _subscriptionHistoryStepRepository;
+        private readonly IMongoRepository<SubscriptionHistoryStep> _subscriptionHistoryStepRepository;
 
-        public SubscriptionHistoryStepService(MongoRepository<SubscriptionHistoryStep> subscriptionHistoryStepRepository)
+        public SubscriptionHistoryStepService(IMongoRepository<SubscriptionHistoryStep> subscriptionHistoryStepRepository)
         {
             _subscriptionHistoryStepRepository = subscriptionHistoryStepRepository;
         }

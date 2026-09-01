@@ -1,6 +1,7 @@
 ﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Exceptions;
 using ClientOpsPortal.Services.SubscriptionHistory.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Services.SubscriptionHistory.Controllers
@@ -10,11 +11,17 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Controllers
     public class SubscriptionHistoryStepController : ControllerBase
     {
         private readonly SubscriptionHistoryStepService _historyStepService;
+        private readonly IValidator<CreateSubscriptionHistoryStepDto> _createValidator;
+        private readonly IValidator<UpdateSubscriptionHistoryStepDto> _updateValidator;
 
         public SubscriptionHistoryStepController(
-            SubscriptionHistoryStepService historyStepService)
+            SubscriptionHistoryStepService historyStepService,
+            IValidator<CreateSubscriptionHistoryStepDto> createValidator,
+            IValidator<UpdateSubscriptionHistoryStepDto> updateValidator)
         {
             _historyStepService = historyStepService;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
         }
 
         [HttpGet]
@@ -43,6 +50,10 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateSubscriptionHistoryStepDto createDto, CancellationToken ct = default)
         {
+            var validationResult = await _createValidator.ValidateAsync(createDto, ct);
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.Errors);
+
             try
             {
                 var step = await _historyStepService.CreateSubscriptionHistoryStepAsync(createDto, ct);
@@ -57,6 +68,10 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, UpdateSubscriptionHistoryStepDto updateDto, CancellationToken ct = default)
         {
+            var validationResult = await _updateValidator.ValidateAsync(updateDto, ct);
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.Errors);
+
             try
             {
                 var step = await _historyStepService.UpdateSubscriptionHistoryStepAsync(id, updateDto, ct);

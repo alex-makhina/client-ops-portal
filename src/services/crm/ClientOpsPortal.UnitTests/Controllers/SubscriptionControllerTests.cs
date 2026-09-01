@@ -5,11 +5,15 @@ using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Services;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Shouldly;
 using System.Security.Claims;
+using Xunit;
+
+using SubscriptionHistoryDto = ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs.SubscriptionHistoryDto;
 
 namespace ClientOpsPortal.UnitTests.Controllers;
 
@@ -19,6 +23,7 @@ public class SubscriptionsControllerTests
     private readonly Mock<IContractService> _contractServiceMock;
     private readonly Mock<IAbonentService> _abonentServiceMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
+    private readonly Mock<ISubscriptionHistoryClient> _historyClientMock;
     private readonly SubscriptionsController _sut;
 
     public SubscriptionsControllerTests()
@@ -27,10 +32,23 @@ public class SubscriptionsControllerTests
         _contractServiceMock = new Mock<IContractService>();
         _abonentServiceMock = new Mock<IAbonentService>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
+        _historyClientMock = new Mock<ISubscriptionHistoryClient>();
+
+        _historyClientMock
+            .Setup(x => x.GetHistoriesBySubscriptionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult<IReadOnlyCollection<ClientOpsPortal.Application.DTOs.SubscriptionHistoryDto>>(
+                new List<ClientOpsPortal.Application.DTOs.SubscriptionHistoryDto>().AsReadOnly()));
+
+        _historyClientMock
+            .Setup(x => x.GetHistoriesByAbonentAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult<IReadOnlyCollection<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>>(
+                new List<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>().AsReadOnly()));
+
         _sut = new SubscriptionsController(
             _subscriptionServiceMock.Object,
             _contractServiceMock.Object,
             _abonentServiceMock.Object,
+            _historyClientMock.Object,
             _currentUserServiceMock.Object);
     }
 
@@ -232,7 +250,7 @@ public class SubscriptionsControllerTests
     {
         // Arrange
         var contractId = Guid.NewGuid();
-        var expectedSubscriptions = CreateSubscriptionFullDataDtoList(3); // Используем правильный тип
+        var expectedSubscriptions = CreateSubscriptionFullDataDtoList(3);
 
         _subscriptionServiceMock
             .Setup(s => s.GetActiveSubscriptionsByContractAsync(contractId, It.IsAny<CancellationToken>()))
@@ -307,7 +325,7 @@ public class SubscriptionsControllerTests
         // Arrange
         var abonentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var expectedSubscriptions = CreateSubscriptionFullDataDtoList(2); // Используем правильный тип
+        var expectedSubscriptions = CreateSubscriptionFullDataDtoList(2);
         var existingAbonent = CreateAbonentDto(abonentId, userId: userId);
 
         SetupUserRole("Abonent", userId);
@@ -318,14 +336,14 @@ public class SubscriptionsControllerTests
 
         _subscriptionServiceMock
             .Setup(s => s.GetSubscriptionsByAbonentIdAsync(abonentId, true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSubscriptions); // Теперь тип правильный
+            .ReturnsAsync(expectedSubscriptions);
 
         // Act
         var result = await _sut.GetByAbonentId(abonentId, true);
 
         // Assert
         var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var subscriptions = okResult.Value.ShouldBeAssignableTo<IEnumerable<SubscriptionFullDataDto>>(); // Исправлен тип
+        var subscriptions = okResult.Value.ShouldBeAssignableTo<IEnumerable<SubscriptionFullDataDto>>();
         subscriptions.Count().ShouldBe(2);
 
         _abonentServiceMock.Verify(
@@ -351,6 +369,30 @@ public class SubscriptionsControllerTests
         _abonentServiceMock
             .Setup(s => s.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingAbonent);
+
+        // Act
+        var result = await _sut.GetByAbonentId(abonentId, true);
+
+        // Assert
+        result.ShouldBeOfType<ForbidResult>();
+
+        _subscriptionServiceMock.Verify(
+            s => s.GetSubscriptionsByAbonentIdAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByAbonentId_WhenAbonentNotFound_ReturnsForbid()
+    {
+        // Arrange
+        var abonentId = Guid.NewGuid();
+        var currentUserId = Guid.NewGuid();
+
+        SetupUserRole("Abonent", currentUserId);
+
+        _abonentServiceMock
+            .Setup(s => s.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AbonentDto?)null);
 
         // Act
         var result = await _sut.GetByAbonentId(abonentId, true);
@@ -747,6 +789,179 @@ public class SubscriptionsControllerTests
 
     #endregion
 
+    #region GetSubscriptionHistory Tests
+
+    [Fact]
+    public async Task GetSubscriptionHistory_WhenHistoryExists_ReturnsOkWithHistory()
+    {
+        // Arrange
+        var subscriptionId = Guid.NewGuid();
+        var expectedHistory = new List<ClientOpsPortal.Application.DTOs.SubscriptionHistoryDto>
+        {
+            new AutoFaker<ClientOpsPortal.Application.DTOs.SubscriptionHistoryDto>().Generate(),
+            new AutoFaker<ClientOpsPortal.Application.DTOs.SubscriptionHistoryDto>().Generate()
+        }.AsReadOnly();
+
+        _historyClientMock
+            .Setup(x => x.GetHistoriesBySubscriptionAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedHistory);
+
+        // Act
+        var result = await _sut.GetSubscriptionHistory(subscriptionId);
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var history = okResult.Value.ShouldBeAssignableTo<IEnumerable<ClientOpsPortal.Application.DTOs.SubscriptionHistoryDto>>();
+        history.Count().ShouldBe(2);
+
+        _historyClientMock.Verify(
+            x => x.GetHistoriesBySubscriptionAsync(subscriptionId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetSubscriptionHistory_WhenExceptionThrown_ReturnsBadRequest()
+    {
+        // Arrange
+        var subscriptionId = Guid.NewGuid();
+        var errorMessage = "Ошибка получения истории";
+
+        _historyClientMock
+            .Setup(x => x.GetHistoriesBySubscriptionAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception(errorMessage));
+
+        // Act
+        var result = await _sut.GetSubscriptionHistory(subscriptionId);
+
+        // Assert
+        var badRequestResult = result.ShouldBeOfType<BadRequestObjectResult>();
+        badRequestResult.Value.ShouldNotBeNull();
+        badRequestResult.Value.ToString().ShouldContain(errorMessage);
+    }
+
+    #endregion
+
+    #region GetHistoryByAbonent Tests
+
+    [Fact]
+    public async Task GetHistoryByAbonent_WhenManager_ReturnsOkWithHistory()
+    {
+        // Arrange
+        var abonentId = Guid.NewGuid();
+        var expectedHistory = new List<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>
+        {
+            new AutoFaker<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>().Generate(),
+            new AutoFaker<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>().Generate()
+        }.AsReadOnly();
+
+        SetupUserRole("Manager");
+
+        _historyClientMock
+            .Setup(x => x.GetHistoriesByAbonentAsync(abonentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedHistory);
+
+        // Act
+        var result = await _sut.GetHistoryByAbonent(abonentId);
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var history = okResult.Value.ShouldBeAssignableTo<IEnumerable<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>>();
+        history.Count().ShouldBe(2);
+
+        _historyClientMock.Verify(
+            x => x.GetHistoriesByAbonentAsync(abonentId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetHistoryByAbonent_WhenAbonentRoleAndOwnsAbonent_ReturnsOkWithHistory()
+    {
+        // Arrange
+        var abonentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var expectedHistory = new List<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>
+        {
+            new AutoFaker<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>().Generate()
+        }.AsReadOnly();
+        var existingAbonent = CreateAbonentDto(abonentId, userId: userId);
+
+        SetupUserRole("Abonent", userId);
+
+        _abonentServiceMock
+            .Setup(s => s.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingAbonent);
+
+        _historyClientMock
+            .Setup(x => x.GetHistoriesByAbonentAsync(abonentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedHistory);
+
+        // Act
+        var result = await _sut.GetHistoryByAbonent(abonentId);
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var history = okResult.Value.ShouldBeAssignableTo<IEnumerable<ClientOpsPortal.Application.DTOs.SubscriptionHistoryFullDto>>();
+        history.Count().ShouldBe(1);
+
+        _abonentServiceMock.Verify(
+            s => s.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyClientMock.Verify(
+            x => x.GetHistoriesByAbonentAsync(abonentId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetHistoryByAbonent_WhenAbonentRoleAndDoesNotOwnAbonent_ReturnsForbid()
+    {
+        // Arrange
+        var abonentId = Guid.NewGuid();
+        var currentUserId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var existingAbonent = CreateAbonentDto(abonentId, userId: differentUserId);
+
+        SetupUserRole("Abonent", currentUserId);
+
+        _abonentServiceMock
+            .Setup(s => s.GetByIdAsync(abonentId, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingAbonent);
+
+        // Act
+        var result = await _sut.GetHistoryByAbonent(abonentId);
+
+        // Assert
+        result.ShouldBeOfType<ForbidResult>();
+
+        _historyClientMock.Verify(
+            x => x.GetHistoriesByAbonentAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetHistoryByAbonent_WhenExceptionThrown_ReturnsBadRequest()
+    {
+        // Arrange
+        var abonentId = Guid.NewGuid();
+        var errorMessage = "Ошибка получения истории";
+
+        SetupUserRole("Manager");
+
+        _historyClientMock
+            .Setup(x => x.GetHistoriesByAbonentAsync(abonentId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception(errorMessage));
+
+        // Act
+        var result = await _sut.GetHistoryByAbonent(abonentId);
+
+        // Assert
+        var badRequestResult = result.ShouldBeOfType<BadRequestObjectResult>();
+        badRequestResult.Value.ShouldNotBeNull();
+        badRequestResult.Value.ToString().ShouldContain(errorMessage);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private void SetupUserRole(string role, Guid? userId = null)
@@ -784,7 +999,11 @@ public class SubscriptionsControllerTests
         if (contractId.HasValue)
             autoFaker.RuleFor(dto => dto.ContractId, _ => contractId.Value);
 
-        return autoFaker.Generate();
+        return autoFaker
+            .RuleFor(dto => dto.ContractId, _ => Guid.NewGuid())
+            .RuleFor(dto => dto.ServiceId, _ => Guid.NewGuid())
+            .RuleFor(dto => dto.TariffPlanId, _ => Guid.NewGuid())
+            .Generate();
     }
 
     private static IReadOnlyCollection<SubscriptionDto> CreateSubscriptionDtoList(int count)
