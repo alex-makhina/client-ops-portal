@@ -2,16 +2,19 @@ using ClientOpsPortal.Services.Auth.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 
 namespace ClientOpsPortal.Services.Auth.Pages;
 
 public class ResetPasswordModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ILogger<ResetPasswordModel> _logger;
 
-    public ResetPasswordModel(UserManager<ApplicationUser> userManager)
+    public ResetPasswordModel(UserManager<ApplicationUser> userManager, ILogger<ResetPasswordModel> logger)
     {
         _userManager = userManager;
+        _logger = logger;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -50,6 +53,7 @@ public class ResetPasswordModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(UserId) || string.IsNullOrWhiteSpace(Token))
         {
+            _logger.LogWarning("Reset password page opened with invalid link");
             ErrorMessage = "Ссылка для сброса пароля некорректна. Запросите новую ссылку.";
             return Page();
         }
@@ -57,6 +61,7 @@ public class ResetPasswordModel : PageModel
         var user = await _userManager.FindByIdAsync(UserId);
         if (user is null)
         {
+            _logger.LogWarning("Reset password requested for unknown user {UserId}", UserId);
             ErrorMessage = "Пользователь не найден. Запросите новую ссылку.";
         }
 
@@ -93,10 +98,12 @@ public class ResetPasswordModel : PageModel
         var result = await _userManager.ResetPasswordAsync(user, Token, NewPassword);
         if (!result.Succeeded)
         {
+            _logger.LogWarning("Password reset failed for user {UserId}: {Errors}", user.Id, string.Join("; ", result.Errors.Select(e => e.Description)));
             ErrorMessage = string.Join("; ", result.Errors.Select(e => e.Description));
             return Page();
         }
 
+        _logger.LogInformation("Password reset completed for user {UserId}", user.Id);
         SuccessMessage = "Пароль успешно установлен. Теперь вы можете войти в систему.";
         return Page();
     }

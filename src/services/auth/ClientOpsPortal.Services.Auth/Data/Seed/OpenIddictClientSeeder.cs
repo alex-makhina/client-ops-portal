@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -7,11 +8,16 @@ public class OpenIddictClientSeeder
 {
     private readonly IOpenIddictApplicationManager _manager;
     private readonly IOpenIddictScopeManager _scopeManager;
+    private readonly ILogger<OpenIddictClientSeeder> _logger;
 
-    public OpenIddictClientSeeder(IOpenIddictApplicationManager manager, IOpenIddictScopeManager scopeManager)
+    public OpenIddictClientSeeder(
+        IOpenIddictApplicationManager manager,
+        IOpenIddictScopeManager scopeManager,
+        ILogger<OpenIddictClientSeeder> logger)
     {
         _manager = manager;
         _scopeManager = scopeManager;
+        _logger = logger;
     }
 
     public async Task SeedAsync(CancellationToken ct = default)
@@ -54,6 +60,7 @@ public class OpenIddictClientSeeder
             descriptor.Resources.Add(resource);
 
         await _scopeManager.CreateAsync(descriptor, ct);
+        _logger.LogInformation("Created OpenIddict scope {ScopeName}", name);
     }
 
     private async Task EnsurePublicClientAsync(string clientId, string displayName,
@@ -64,11 +71,13 @@ public class OpenIddictClientSeeder
         if (application is null)
         {
             await _manager.CreateAsync(BuildDescriptor(clientId, displayName, redirectUri, postLogoutRedirectUris), ct);
+            _logger.LogInformation("Created OpenIddict client {ClientId} ({DisplayName})", clientId, displayName);
             return;
         }
 
         var descriptor = BuildDescriptor(clientId, displayName, redirectUri, postLogoutRedirectUris);
         await _manager.UpdateAsync(application, descriptor, ct);
+        _logger.LogDebug("Updated OpenIddict client {ClientId} ({DisplayName})", clientId, displayName);
     }
 
     private static OpenIddictApplicationDescriptor BuildDescriptor(string clientId, string displayName,

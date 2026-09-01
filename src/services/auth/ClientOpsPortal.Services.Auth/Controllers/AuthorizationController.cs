@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
@@ -21,19 +22,22 @@ public class AuthorizationController : ControllerBase
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
         SignInManager<ApplicationUser> signInManager,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
         _authorizationManager = authorizationManager;
         _scopeManager = scopeManager;
         _signInManager = signInManager;
         _userManager = userManager;
+        _logger = logger;
     }
 
     [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme, Roles = "Admin,Manager")]
@@ -41,8 +45,14 @@ public class AuthorizationController : ControllerBase
     public async Task<IActionResult> GenerateResetToken([FromBody] ForgotPasswordRequest request)
     {
         var user = await _userManager.FindByNameAsync(request.LoginIdentifier);
-        if (user == null) return NotFound("User not found");
+        if (user == null)
+        {
+            _logger.LogWarning("Password reset token requested for unknown user {LoginIdentifier}", request.LoginIdentifier);
+            return NotFound("User not found");
+        }
+
         var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        _logger.LogInformation("Password reset token generated for user {UserId}", user.Id);
         return Ok(new ForgotPasswordResponse { TemporaryPassword = resetToken });
     }
 
@@ -53,6 +63,8 @@ public class AuthorizationController : ControllerBase
     {
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        _logger.LogDebug("Authorization request received for client {ClientId} with scopes {Scopes}", request.ClientId, request.GetScopes());
 
         var result = await HttpContext.AuthenticateAsync();
         if (result is not { Succeeded: true } ||
@@ -95,6 +107,8 @@ public class AuthorizationController : ControllerBase
         switch (await _applicationManager.GetConsentTypeAsync(application))
         {
             case ConsentTypes.External when authorizations.Count is 0:
+                _logger.LogWarning("User {UserId} not allowed to access client {ClientId} without authorization",
+                    await _userManager.GetUserIdAsync(user), request.ClientId);
                 return Forbid(
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -107,10 +121,12 @@ public class AuthorizationController : ControllerBase
             case ConsentTypes.Implicit:
             case ConsentTypes.External when authorizations.Count is not 0:
             case ConsentTypes.Explicit when authorizations.Count is not 0 && !request.HasPromptValue(PromptValues.Consent):
+                _logger.LogDebug("Signing in user {UserId} to client {ClientId} with existing authorization", await _userManager.GetUserIdAsync(user), request.ClientId);
                 return await SignInWithAuthorizationAsync(user, application, authorizations, request);
 
             case ConsentTypes.Explicit when request.HasPromptValue(PromptValues.None):
             case ConsentTypes.Systematic when request.HasPromptValue(PromptValues.None):
+                _logger.LogWarning("User {UserId} denied consent to client {ClientId}", await _userManager.GetUserIdAsync(user), request.ClientId);
                 return Forbid(
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -120,6 +136,7 @@ public class AuthorizationController : ControllerBase
                     }));
 
             default:
+                _logger.LogDebug("Signing in user {UserId} to client {ClientId}", await _userManager.GetUserIdAsync(user), request.ClientId);
                 return await SignInWithAuthorizationAsync(user, application, authorizations, request);
         }
     }
@@ -129,6 +146,8 @@ public class AuthorizationController : ControllerBase
     {
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        _logger.LogDebug("Token exchange requested with grant type {GrantType} for client {ClientId}", request.GrantType, request.ClientId);
 
         if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
         {
@@ -140,6 +159,7 @@ public class AuthorizationController : ControllerBase
             return await HandlePasswordGrantAsync(request);
         }
 
+        _logger.LogWarning("Unsupported grant type {GrantType} requested", request.GrantType);
         throw new InvalidOperationException("The specified grant type is not supported.");
     }
 
@@ -149,7 +169,9 @@ public class AuthorizationController : ControllerBase
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
+        var subject = User.FindFirst(Claims.Subject)?.Value;
         await _signInManager.SignOutAsync();
+        _logger.LogInformation("User {UserId} logged out from client {ClientId}", subject, request.ClientId);
 
         return SignOut(
             authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
@@ -163,9 +185,11 @@ public class AuthorizationController : ControllerBase
     [HttpGet("~/connect/userinfo"), HttpPost("~/connect/userinfo"), Produces("application/json")]
     public async Task<IActionResult> Userinfo()
     {
-        var user = await _userManager.FindByIdAsync(User.GetClaim(Claims.Subject)!);
+        var subject = User.GetClaim(Claims.Subject);
+        var user = await _userManager.FindByIdAsync(subject!);
         if (user is null)
         {
+            _logger.LogWarning("Userinfo requested for missing user {Subject}", subject);
             return Challenge(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -174,6 +198,8 @@ public class AuthorizationController : ControllerBase
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The specified access token is bound to an account that no longer exists."
                 }));
         }
+
+        _logger.LogDebug("Userinfo requested for user {UserId}", user.Id);
 
         var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {
@@ -206,6 +232,7 @@ public class AuthorizationController : ControllerBase
         var user = await _userManager.FindByIdAsync(result.Principal!.GetClaim(Claims.Subject)!);
         if (user is null)
         {
+            _logger.LogWarning("Token exchange rejected for missing user {Subject}", result.Principal!.GetClaim(Claims.Subject));
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -217,6 +244,7 @@ public class AuthorizationController : ControllerBase
 
         if (!await _signInManager.CanSignInAsync(user))
         {
+            _logger.LogWarning("Token exchange rejected for user {UserId}: sign-in is no longer allowed", user.Id);
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -225,6 +253,8 @@ public class AuthorizationController : ControllerBase
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user is no longer allowed to sign in."
                 }));
         }
+
+        _logger.LogInformation("Token exchange succeeded for user {UserId} via authorization code or refresh token", user.Id);
 
         var identity = new ClaimsIdentity(result.Principal!.Claims,
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
@@ -247,6 +277,7 @@ public class AuthorizationController : ControllerBase
         var user = await _userManager.FindByNameAsync(request.Username!);
         if (user is null || !await _userManager.CheckPasswordAsync(user, request.Password!))
         {
+            _logger.LogWarning("Failed password grant for user {Username}: invalid credentials", request.Username);
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -258,6 +289,7 @@ public class AuthorizationController : ControllerBase
 
         if (await _userManager.IsLockedOutAsync(user))
         {
+            _logger.LogWarning("Password grant rejected for user {Username}: account is locked out", request.Username);
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -266,6 +298,8 @@ public class AuthorizationController : ControllerBase
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "User is blocked."
                 }));
         }
+
+        _logger.LogInformation("User {Username} authenticated via password grant for client {ClientId}", request.Username, request.ClientId);
 
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
@@ -302,12 +336,18 @@ public class AuthorizationController : ControllerBase
         identity.SetResources(await _scopeManager.ListResourcesAsync(identity.GetScopes()).ToListAsync());
 
         var authorization = authorizations.LastOrDefault();
-        authorization ??= await _authorizationManager.CreateAsync(
-            identity: identity,
-            subject: await _userManager.GetUserIdAsync(user),
-            client: (await _applicationManager.GetIdAsync(application))!,
-            type: AuthorizationTypes.Permanent,
-            scopes: identity.GetScopes());
+        if (authorization is null)
+        {
+            authorization = await _authorizationManager.CreateAsync(
+                identity: identity,
+                subject: await _userManager.GetUserIdAsync(user),
+                client: (await _applicationManager.GetIdAsync(application))!,
+                type: AuthorizationTypes.Permanent,
+                scopes: identity.GetScopes());
+
+            _logger.LogInformation("New permanent authorization created for user {UserId} on client {ClientId}",
+                await _userManager.GetUserIdAsync(user), request.ClientId);
+        }
 
         identity.SetAuthorizationId(await _authorizationManager.GetIdAsync(authorization));
         identity.SetDestinations(GetDestinations);
