@@ -1,6 +1,6 @@
 ﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Models
 {
-    public class Contract : AuditableEntity
+    public class Contract : BaseEntity
     {
         public required string ContractNumber { get; set; }
 

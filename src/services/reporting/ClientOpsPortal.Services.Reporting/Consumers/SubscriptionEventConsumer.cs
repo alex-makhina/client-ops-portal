@@ -1,4 +1,4 @@
-﻿using ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Services.Reporting.Data;
 using MassTransit;
 
@@ -58,11 +58,7 @@ public class SubscriptionEventConsumer : IConsumer<SubscriptionCreatedEvent>,
                 ServiceId = message.ServiceId,
                 TariffPlanId = message.TariffPlanId,
                 BeginDate = message.BeginDate,
-                EndDate = message.EndDate,
-                CreatedAt = message.CreatedAt,
-                CreatedBy = message.CreatedBy,
-                UpdatedAt = message.UpdatedAt,
-                UpdatedBy = message.UpdatedBy
+                EndDate = message.EndDate
             });
         }
         else
@@ -72,8 +68,6 @@ public class SubscriptionEventConsumer : IConsumer<SubscriptionCreatedEvent>,
             existing.TariffPlanId = message.TariffPlanId;
             existing.BeginDate = message.BeginDate;
             existing.EndDate = message.EndDate;
-            existing.UpdatedAt = message.UpdatedAt;
-            existing.UpdatedBy = message.UpdatedBy;
 
             _context.Subscriptions.Update(existing);
         }

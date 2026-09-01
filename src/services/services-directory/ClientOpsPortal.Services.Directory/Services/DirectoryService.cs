@@ -1,8 +1,8 @@
 using ClientOpsPortal.Services.Directory.Contracts.DTOs;
+using ClientOpsPortal.Services.Directory.Contracts.Events;
 using ClientOpsPortal.Services.Directory.Contracts.Exceptions;
 using ClientOpsPortal.Services.Directory.Data;
 using ClientOpsPortal.Services.Directory.Data.Entities;
-using ClientOpsPortal.Services.Reporting.Contracts.Events;
 using MassTransit;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -140,7 +140,6 @@ namespace ClientOpsPortal.Services.Directory.Services
 
             await _publishEndpoint.Publish(new ServiceCreatedEvent(
                 service.Id, service.Name, service.Description, service.BeginDate, service.EndDate,
-                service.CreatedAt, service.CreatedBy, service.UpdatedAt, service.UpdatedBy,
                 tariffSnapshots,
                 DateTimeOffset.UtcNow
             ), ct);
@@ -191,8 +190,7 @@ namespace ClientOpsPortal.Services.Directory.Services
 
             await _publishEndpoint.Publish(new ServiceUpdatedEvent(
                 updatedService.Id, updatedService.Name, updatedService.Description,
-                updatedService.BeginDate, updatedService.EndDate, updatedService.CreatedAt,
-                updatedService.CreatedBy, updatedService.UpdatedAt, updatedService.UpdatedBy,
+                updatedService.BeginDate, updatedService.EndDate, 
                 tariffSnapshots,
                 DateTimeOffset.UtcNow
             ), ct);

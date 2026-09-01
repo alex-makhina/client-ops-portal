@@ -1,4 +1,4 @@
-﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿namespace ClientOpsPortal.Services.Directory.Contracts.Events;
 
 public record TariffPlanCreatedEvent(
     Guid Id,

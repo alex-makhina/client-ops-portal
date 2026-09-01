@@ -1,4 +1,4 @@
-﻿using ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿using ClientOpsPortal.Services.Directory.Contracts.Events;
 using ClientOpsPortal.Services.Reporting.Data;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -24,8 +24,7 @@ public class ServiceEventConsumer : IConsumer<ServiceCreatedEvent>,
         var message = context.Message;
         _logger.LogInformation("Получено событие ServiceCreatedEvent для ServiceId: {Id}", message.Id);
         await SyncServiceAndTariffsAsync(
-            message.Id, message.Name, message.Description, message.BeginDate, message.EndDate,
-            message.CreatedAt, message.CreatedBy, message.UpdatedAt, message.UpdatedBy, message.TariffPlans
+            message.Id, message.Name, message.Description, message.BeginDate, message.EndDate, message.TariffPlans
         );
     }
 
@@ -34,8 +33,7 @@ public class ServiceEventConsumer : IConsumer<ServiceCreatedEvent>,
         var message = context.Message;
         _logger.LogInformation("Получено событие ServiceUpdatedEvent для ServiceId: {Id}", message.Id);
         await SyncServiceAndTariffsAsync(
-            message.Id, message.Name, message.Description, message.BeginDate, message.EndDate,
-            message.CreatedAt, message.CreatedBy, message.UpdatedAt, message.UpdatedBy, message.TariffPlans
+            message.Id, message.Name, message.Description, message.BeginDate, message.EndDate, message.TariffPlans
         );
     }
 
@@ -57,7 +55,6 @@ public class ServiceEventConsumer : IConsumer<ServiceCreatedEvent>,
 
     private async Task SyncServiceAndTariffsAsync(
         Guid id, string name, string description, DateTimeOffset beginDate, DateTimeOffset? endDate,
-        DateTimeOffset createdAt, string? createdBy, DateTimeOffset? updatedAt, string? updatedBy,
         List<TariffPlanSnapshot> tariffPlans)
     {
         var existingService = await _context.Services.FindAsync(id);
@@ -69,11 +66,7 @@ public class ServiceEventConsumer : IConsumer<ServiceCreatedEvent>,
                 Name = name,
                 Description = description,
                 BeginDate = beginDate,
-                EndDate = endDate,
-                CreatedAt = createdAt,
-                CreatedBy = createdBy,
-                UpdatedAt = updatedAt,
-                UpdatedBy = updatedBy
+                EndDate = endDate
             });
         }
         else
@@ -82,8 +75,6 @@ public class ServiceEventConsumer : IConsumer<ServiceCreatedEvent>,
             existingService.Description = description;
             existingService.BeginDate = beginDate;
             existingService.EndDate = endDate;
-            existingService.UpdatedAt = updatedAt;
-            existingService.UpdatedBy = updatedBy;
             _context.Services.Update(existingService);
         }
 

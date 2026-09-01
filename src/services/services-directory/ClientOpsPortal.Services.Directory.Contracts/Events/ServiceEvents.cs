@@ -1,4 +1,4 @@
-﻿namespace ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿namespace ClientOpsPortal.Services.Directory.Contracts.Events;
 
 public record TariffPlanSnapshot(
     Guid Id,
@@ -16,10 +16,6 @@ public record ServiceCreatedEvent(
     string Description,
     DateTimeOffset BeginDate,
     DateTimeOffset? EndDate,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     List<TariffPlanSnapshot> TariffPlans,
     DateTimeOffset OccurredOn
 );
@@ -30,10 +26,6 @@ public record ServiceUpdatedEvent(
     string Description,
     DateTimeOffset BeginDate,
     DateTimeOffset? EndDate,
-    DateTimeOffset CreatedAt,
-    string? CreatedBy,
-    DateTimeOffset? UpdatedAt,
-    string? UpdatedBy,
     List<TariffPlanSnapshot> TariffPlans,
     DateTimeOffset OccurredOn
 );

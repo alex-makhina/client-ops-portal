@@ -1,11 +1,11 @@
 using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
+using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Enums;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
-using ClientOpsPortal.Services.Reporting.Contracts.Events;
 using MassTransit;
 using System.Linq.Expressions;
 
@@ -89,9 +89,7 @@ namespace ClientOpsPortal.Application.Services
 
             await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
                 subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
-                subscription.BeginDate, subscription.EndDate,
-                subscription.CreatedAt, subscription.CreatedBy, subscription.UpdatedAt, subscription.UpdatedBy,
-                DateTimeOffset.UtcNow
+                subscription.BeginDate, subscription.EndDate, DateTimeOffset.UtcNow
             ), ct);
 
             return subscription.ToSubscriptionDto();

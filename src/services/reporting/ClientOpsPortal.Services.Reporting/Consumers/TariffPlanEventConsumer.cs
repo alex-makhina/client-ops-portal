@@ -1,4 +1,4 @@
-﻿using ClientOpsPortal.Services.Reporting.Contracts.Events;
+﻿using ClientOpsPortal.Services.Directory.Contracts.Events;
 using ClientOpsPortal.Services.Reporting.Data;
 using MassTransit;
 
