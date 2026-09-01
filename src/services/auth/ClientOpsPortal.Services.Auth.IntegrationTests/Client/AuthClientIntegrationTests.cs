@@ -7,8 +7,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text.Json;
 using Xunit;
 
@@ -37,35 +39,35 @@ public class AuthClientIntegrationTests : IAsyncLifetime
                 app.UseRouting();
                 app.UseEndpoints(endpoints =>
                 {
-                    endpoints.MapPost("/api/v1/auth/login", async context =>
+                endpoints.MapPost("/connect/token", async context =>
+                {
+                    var form = await context.Request.ReadFormAsync();
+                    var username = form["username"].ToString();
+                    var password = form["password"].ToString();
+
+                    if (username == "testuser" && password == "Test123!")
                     {
-                        string body;
-                        using (var reader = new StreamReader(context.Request.Body))
+                        var token = CreateTestJwt(username, Guid.NewGuid().ToString(), new[] { "Manager", "Abonent" });
+                        var response = new TokenResponse
                         {
-                            body = await reader.ReadToEndAsync();
-                        }
-                        var request = JsonSerializer.Deserialize<LoginRequest>(body, JsonOptions);
+                            AccessToken = token,
+                            TokenType = "Bearer",
+                            ExpiresIn = 3600,
+                            Scope = "openid profile roles api"
+                        };
+                        context.Response.StatusCode = 200;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsync("{\"error\":\"invalid_grant\"}");
+                    }
+                });
 
-                        if (request?.Login == "testuser" && request?.Password == "Test123!")
-                        {
-                            var response = new AuthResponse
-                            {
-                                Token = "test-jwt-token-123456789",
-                                UserId = Guid.NewGuid().ToString(),
-                                UserName = request.Login,
-                                Roles = new List<string> { "Manager", "Abonent" }
-                            };
-                            context.Response.StatusCode = 200;
-                            await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
-                        }
-                        else
-                        {
-                            context.Response.StatusCode = 401;
-                            await context.Response.WriteAsync("Invalid username or password");
-                        }
-                    });
-
-                    endpoints.MapPost("/api/v1/auth/forgot-password", async context =>
+                    endpoints.MapPost("/api/v1/auth/reset-token", async context =>
                     {
                         string body;
                         using (var reader = new StreamReader(context.Request.Body))
@@ -177,7 +179,8 @@ public class AuthClientIntegrationTests : IAsyncLifetime
                             _users[userId] = newUser;
 
                             context.Response.StatusCode = 200;
-                            await context.Response.WriteAsync(JsonSerializer.Serialize(userId, JsonOptions));
+                            context.Response.ContentType = "application/json";
+                            await context.Response.WriteAsync(JsonSerializer.Serialize(new CreateUserResponse { UserId = userId }, JsonOptions));
                         }
                     });
 
@@ -286,7 +289,8 @@ public class AuthClientIntegrationTests : IAsyncLifetime
 
         // Assert
         result.ShouldNotBeNull();
-        result.Token.ShouldBe("test-jwt-token-123456789");
+        result.Token.ShouldNotBeNullOrEmpty();
+        result.UserId.ShouldNotBeNullOrEmpty();
         result.UserName.ShouldBe("testuser");
         result.Roles.ShouldContain("Manager");
         result.Roles.ShouldContain("Abonent");
@@ -576,6 +580,23 @@ public class AuthClientIntegrationTests : IAsyncLifetime
     {
         _users.Clear();
         await Task.CompletedTask;
+    }
+
+    private static string CreateTestJwt(string userName, string userId, IEnumerable<string> roles)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(JwtRegisteredClaimNames.Name, userName),
+            new(JwtRegisteredClaimNames.PreferredUsername, userName)
+        };
+        claims.AddRange(roles.Select(r => new Claim("role", r)));
+
+        var token = new JwtSecurityToken(
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1));
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     public async Task DisposeAsync()

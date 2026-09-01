@@ -2,9 +2,11 @@
 using ClientOpsPortal.Services.Auth.Controllers;
 using ClientOpsPortal.Services.Auth.Contracts;
 using ClientOpsPortal.Services.Auth.Domain;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
 
@@ -20,7 +22,17 @@ public class UsersControllerTests
     {
         _userManagerMock = CreateUserManagerMock();
         _roleManagerMock = CreateRoleManagerMock();
-        _sut = new UsersController(_userManagerMock.Object, _roleManagerMock.Object);
+        _sut = new UsersController(_userManagerMock.Object, _roleManagerMock.Object, NullLogger<UsersController>.Instance);
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Role, "Admin")
+                }, "Test"))
+            }
+        };
     }
 
     private static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
@@ -238,8 +250,8 @@ public class UsersControllerTests
 
         // Assert
         var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var returnedId = okResult.Value.ShouldBeOfType<string>();
-        returnedId.ShouldBe(userId.ToString());
+        var response = okResult.Value.ShouldBeOfType<CreateUserResponse>();
+        response.UserId.ShouldBe(userId.ToString());
 
         _userManagerMock.Verify(x => x.CreateAsync(It.IsAny<ApplicationUser>(), createRequest.Password), Times.Once);
         _roleManagerMock.Verify(x => x.RoleExistsAsync(It.IsAny<string>()), Times.Exactly(createRequest.Roles.Count));

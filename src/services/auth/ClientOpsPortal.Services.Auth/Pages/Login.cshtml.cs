@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 
 namespace ClientOpsPortal.Services.Auth.Pages;
 
@@ -10,11 +11,13 @@ public class LoginModel : PageModel
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ILogger<LoginModel> _logger;
 
-    public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
+    public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, ILogger<LoginModel> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _logger = logger;
     }
 
     [BindProperty]
@@ -42,6 +45,7 @@ public class LoginModel : PageModel
         var user = await _userManager.FindByNameAsync(UserName);
         if (user is null)
         {
+            _logger.LogWarning("Login failed for {UserName}: user not found", UserName);
             ErrorMessage = "Неверный логин или пароль.";
             return Page();
         }
@@ -49,11 +53,22 @@ public class LoginModel : PageModel
         var result = await _signInManager.PasswordSignInAsync(user, Password, RememberMe, lockoutOnFailure: true);
         if (!result.Succeeded)
         {
+            if (result.IsLockedOut)
+            {
+                _logger.LogWarning("Login failed for user {UserId} ({UserName}): account is locked out", user.Id, UserName);
+            }
+            else
+            {
+                _logger.LogWarning("Login failed for user {UserId} ({UserName}): invalid password", user.Id, UserName);
+            }
+
             ErrorMessage = result.IsLockedOut
                 ? "Пользователь заблокирован. Попробуйте позже."
                 : "Неверный логин или пароль.";
             return Page();
         }
+
+        _logger.LogInformation("User {UserId} ({UserName}) logged in", user.Id, UserName);
 
         if (IsAllowedReturnUrl(ReturnUrl))
             return Redirect(ReturnUrl);

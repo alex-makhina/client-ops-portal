@@ -4,6 +4,7 @@ using ClientOpsPortal.Services.Notifications.Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 
 namespace ClientOpsPortal.Services.Auth.Pages;
 
@@ -11,11 +12,16 @@ public class ForgotPasswordModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly INotificationPublisher _notificationPublisher;
+    private readonly ILogger<ForgotPasswordModel> _logger;
 
-    public ForgotPasswordModel(UserManager<ApplicationUser> userManager, INotificationPublisher notificationPublisher)
+    public ForgotPasswordModel(
+        UserManager<ApplicationUser> userManager,
+        INotificationPublisher notificationPublisher,
+        ILogger<ForgotPasswordModel> logger)
     {
         _userManager = userManager;
         _notificationPublisher = notificationPublisher;
+        _logger = logger;
     }
 
     [BindProperty]
@@ -57,6 +63,7 @@ public class ForgotPasswordModel : PageModel
         var user = await _userManager.FindByNameAsync(LoginIdentifier.Trim());
         if (user is null)
         {
+            _logger.LogWarning("Password reset requested for unknown user {LoginIdentifier}", LoginIdentifier.Trim());
             ErrorMessage = "Пользователь с таким логином не найден.";
             return Page();
         }
@@ -73,6 +80,8 @@ public class ForgotPasswordModel : PageModel
             Login = LoginIdentifier.Trim(),
             ResetLink = resetLink
         });
+
+        _logger.LogInformation("Password reset link sent to user {UserId} ({LoginIdentifier})", user.Id, LoginIdentifier.Trim());
 
         SuccessMessage = "Ссылка для восстановления пароля отправлена на вашу почту.";
         return Page();
