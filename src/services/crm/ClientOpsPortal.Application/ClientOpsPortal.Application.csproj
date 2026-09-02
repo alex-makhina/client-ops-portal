@@ -8,7 +8,7 @@
     <PackageReference Include="MassTransit" Version="8.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\ClientOpsPortal.Contracts\ClientOpsPortal.Contracts.csproj" />
+    <ProjectReference Include="..\ClientOpsPortal.Contracts\ClientOpsPortal.Contracts.csproj" />
     <ProjectReference Include="..\ClientOpsPortal.Domain\ClientOpsPortal.Domain.csproj" />
     <ProjectReference Include="..\..\auth\ClientOpsPortal.Services.Auth.Client\ClientOpsPortal.Services.Auth.Client.csproj" />
     <ProjectReference Include="..\..\services-directory\ClientOpsPortal.Services.Directory.Contracts\ClientOpsPortal.Services.Directory.Contracts.csproj" />
