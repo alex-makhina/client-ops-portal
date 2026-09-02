@@ -6,13 +6,13 @@ namespace ClientOpsPortal.Api.Services
 {
     public class DirectoryCacheService : ClientOpsPortal.Application.Interfaces.IDirectoryCacheService
     {
-        private readonly IServicesDirectoryClient _client;
+        private readonly IDirectoryGrpcClient _client;
         private readonly IMemoryCache _cache;
 
         private const string ServicesKey = "directory:services:all";
         private const string TariffsKey = "directory:tariffs:all";
 
-        public DirectoryCacheService(IServicesDirectoryClient client, IMemoryCache cache)
+        public DirectoryCacheService(IDirectoryGrpcClient client, IMemoryCache cache)
         {
             _client = client;
             _cache = cache;

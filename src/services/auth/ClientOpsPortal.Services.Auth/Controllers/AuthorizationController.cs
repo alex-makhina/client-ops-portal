@@ -154,11 +154,6 @@ public class AuthorizationController : ControllerBase
             return await HandleAuthorizationCodeOrRefreshTokenAsync();
         }
 
-        if (request.IsPasswordGrantType())
-        {
-            return await HandlePasswordGrantAsync(request);
-        }
-
         _logger.LogWarning("Unsupported grant type {GrantType} requested", request.GrantType);
         throw new InvalidOperationException("The specified grant type is not supported.");
     }
@@ -268,52 +263,6 @@ public class AuthorizationController : ControllerBase
                 .SetClaims(Claims.Role, [.. await _userManager.GetRolesAsync(user)]);
 
         identity.SetDestinations(GetDestinations);
-
-        return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-    }
-
-    private async Task<IActionResult> HandlePasswordGrantAsync(OpenIddictRequest request)
-    {
-        var user = await _userManager.FindByNameAsync(request.Username!);
-        if (user is null || !await _userManager.CheckPasswordAsync(user, request.Password!))
-        {
-            _logger.LogWarning("Failed password grant for user {Username}: invalid credentials", request.Username);
-            return Forbid(
-                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid username or password."
-                }));
-        }
-
-        if (await _userManager.IsLockedOutAsync(user))
-        {
-            _logger.LogWarning("Password grant rejected for user {Username}: account is locked out", request.Username);
-            return Forbid(
-                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "User is blocked."
-                }));
-        }
-
-        _logger.LogInformation("User {Username} authenticated via password grant for client {ClientId}", request.Username, request.ClientId);
-
-        var identity = new ClaimsIdentity(
-            authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-            nameType: Claims.Name,
-            roleType: Claims.Role);
-
-        identity.SetClaim(Claims.Subject, await _userManager.GetUserIdAsync(user))
-                .SetClaim(Claims.Email, await _userManager.GetEmailAsync(user))
-                .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
-                .SetClaim(Claims.PreferredUsername, await _userManager.GetUserNameAsync(user))
-                .SetClaims(Claims.Role, [.. await _userManager.GetRolesAsync(user)])
-                .SetScopes(request.GetScopes())
-                .SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync())
-                .SetDestinations(GetDestinations);
 
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }

@@ -39,7 +39,7 @@ builder.Services.AddEmailSettings(builder.Configuration);
 var directoryServiceUrl = builder.Configuration.GetValue<string>("ServicesDirectory:BaseUrl")
     ?? "http://localhost:5100";
 builder.Services.AddMemoryCache();
-builder.Services.AddServicesDirectoryClient(directoryServiceUrl);
+builder.Services.AddDirectoryGrpcClient(directoryServiceUrl);
 builder.Services.AddSingleton<IDirectoryCacheService, DirectoryCacheService>();
 
 var authServiceUrl = builder.Configuration.GetValue<string>("AuthService:BaseUrl")

@@ -1,4 +1,5 @@
 using ClientOpsPortal.Services.Auth.Domain;
+using ClientOpsPortal.Services.Auth.Settings;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,12 +12,18 @@ public class LoginModel : PageModel
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AuthSettings _authSettings;
     private readonly ILogger<LoginModel> _logger;
 
-    public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, ILogger<LoginModel> logger)
+    public LoginModel(
+        SignInManager<ApplicationUser> signInManager,
+        UserManager<ApplicationUser> userManager,
+        AuthSettings authSettings,
+        ILogger<LoginModel> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _authSettings = authSettings;
         _logger = logger;
     }
 
@@ -70,31 +77,11 @@ public class LoginModel : PageModel
 
         _logger.LogInformation("User {UserId} ({UserName}) logged in", user.Id, UserName);
 
-        if (IsAllowedReturnUrl(ReturnUrl))
-            return Redirect(ReturnUrl);
-
-        return Redirect(await DefaultReturnUrlAsync(user));
-    }
-
-    private static bool IsAllowedReturnUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-            return false;
-
-        if (url.StartsWith('/') && !url.StartsWith("//"))
-            return true;
-
-        if (Uri.TryCreate(url, UriKind.Absolute, out var absolute))
-            return absolute.Host is "localhost" or "127.0.0.1" && absolute.Port is 5022 or 62000;
-
-        return false;
-    }
-
-    private async Task<string> DefaultReturnUrlAsync(ApplicationUser user)
-    {
         var roles = await _userManager.GetRolesAsync(user);
-        return roles.Contains("Abonent")
-            ? "http://localhost:62000/"
-            : "http://localhost:5022/";
+        var targetUrl = _authSettings.IsAllowedReturnUrl(ReturnUrl)
+            ? ReturnUrl
+            : $"{_authSettings.GetPortalUrl(roles)}/";
+
+        return Redirect(targetUrl);
     }
 }

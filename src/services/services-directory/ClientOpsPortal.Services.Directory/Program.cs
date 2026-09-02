@@ -4,11 +4,21 @@ using ClientOpsPortal.Services.Directory.Data.Interceptors;
 using ClientOpsPortal.Services.Directory.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Serve REST (HTTP/1.1) and gRPC (HTTP/2 h2c) on the same port.
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ConfigureEndpointDefaults(listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+    });
+});
 
 builder.Logging.AddJsonConsole(options =>
 {
@@ -21,6 +31,7 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddGrpc();
 
 builder.Services.AddScoped<AuditableInterceptor>();
 builder.Services.AddDbContext<DirectoryDbContext>((sp, options) =>
@@ -111,5 +122,6 @@ app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGrpcService<ClientOpsPortal.Services.Directory.Grpc.DirectoryCatalogGrpcService>();
 
 app.Run();

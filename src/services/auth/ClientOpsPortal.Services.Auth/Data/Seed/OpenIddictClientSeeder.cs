@@ -1,3 +1,4 @@
+using ClientOpsPortal.Services.Auth.Settings;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -8,15 +9,18 @@ public class OpenIddictClientSeeder
 {
     private readonly IOpenIddictApplicationManager _manager;
     private readonly IOpenIddictScopeManager _scopeManager;
+    private readonly AuthSettings _authSettings;
     private readonly ILogger<OpenIddictClientSeeder> _logger;
 
     public OpenIddictClientSeeder(
         IOpenIddictApplicationManager manager,
         IOpenIddictScopeManager scopeManager,
+        AuthSettings authSettings,
         ILogger<OpenIddictClientSeeder> logger)
     {
         _manager = manager;
         _scopeManager = scopeManager;
+        _authSettings = authSettings;
         _logger = logger;
     }
 
@@ -27,20 +31,20 @@ public class OpenIddictClientSeeder
         await EnsurePublicClientAsync(
             clientId: "admin-portal",
             displayName: "Admin Portal (Blazor WASM)",
-            redirectUri: "http://localhost:5022/authentication/login-callback",
+            redirectUri: $"{_authSettings.AdminPortalUrl}/authentication/login-callback",
             postLogoutRedirectUris: new[]
             {
-                "http://localhost:5110/LoggedOut?returnUrl=http://localhost:5022/"
+                $"{_authSettings.Issuer}/LoggedOut?returnUrl={_authSettings.AdminPortalUrl}/"
             },
             ct);
 
         await EnsurePublicClientAsync(
             clientId: "personal-account",
             displayName: "Personal Account (React)",
-            redirectUri: "http://localhost:62000/auth/callback",
+            redirectUri: $"{_authSettings.PersonalAccountUrl}/auth/callback",
             postLogoutRedirectUris: new[]
             {
-                "http://localhost:5110/LoggedOut?returnUrl=http://localhost:62000/"
+                $"{_authSettings.Issuer}/LoggedOut?returnUrl={_authSettings.PersonalAccountUrl}/"
             },
             ct);
     }
@@ -97,7 +101,6 @@ public class OpenIddictClientSeeder
                 Permissions.Endpoints.Token,
                 Permissions.GrantTypes.AuthorizationCode,
                 Permissions.GrantTypes.RefreshToken,
-                Permissions.GrantTypes.Password,
                 Permissions.ResponseTypes.Code,
                 Permissions.Scopes.Email,
                 Permissions.Scopes.Profile,
