@@ -1,0 +1,102 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0'
+  SOLUTION_FILE: 'ClientOpsPortal.slnx'
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
+
+    - name: Build solution
+      run: dotnet build ${{ env.SOLUTION_FILE }} --no-restore --configuration Release
+
+    - name: Run unit tests
+      run: |
+        dotnet test ${{ env.SOLUTION_FILE }} \
+          --no-build \
+          --configuration Release \
+          --verbosity normal \
+          --filter "FullyQualifiedName~UnitTests"
+
+    - name: Run integration tests
+      run: |
+        dotnet test ${{ env.SOLUTION_FILE }} \
+          --no-build \
+          --configuration Release \
+          --verbosity normal \
+          --filter "FullyQualifiedName~IntegrationTests"
+
+  build-and-publish:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service: 
+          - src/services/crm
+          - src/services/auth
+          - src/services/reporting
+          - src/services/notifications
+          - src/services/api-gateway
+          - src/services/services-directory
+          - src/services/subscription-history
+          - src/apps/admin-portal
+          - src/apps/personal-account
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set lowercase image name
+      run: |
+        LOWER_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+        SERVICE_NAME=$(echo "${{ matrix.service }}" | awk -F/ '{print $NF}')
+        echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
+        echo "IMAGE_NAME=${LOWER_OWNER}/client-ops-portal-${SERVICE_NAME}" >> $GITHUB_ENV
+        
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ${{ matrix.service }}/Dockerfile
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

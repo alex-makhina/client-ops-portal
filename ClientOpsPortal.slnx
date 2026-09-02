@@ -12,7 +12,7 @@
   </Folder>
   <Folder Name="/src/services/" />
   <Folder Name="/src/services/crm/">
-    <Project Path="ClientOpsPortal.Contracts/ClientOpsPortal.Contracts.csproj" Id="4408d501-b87a-4ec9-80ef-c6fd0b2cf851" />
+    <Project Path="src/services/crm/ClientOpsPortal.Contracts/ClientOpsPortal.Contracts.csproj" Id="4408d501-b87a-4ec9-80ef-c6fd0b2cf851" />
     <Project Path="src/services/crm/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
     <Project Path="src/services/crm/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
     <Project Path="src/services/crm/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
