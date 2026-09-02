@@ -1,19 +1,20 @@
-﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Exceptions;
+﻿using ClientOpsPortal.Services.SubscriptionHistory.Configuration;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Exceptions;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models;
+using ClientOpsPortal.Services.SubscriptionHistory.Data.Interceptors;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using System.Linq.Expressions;
-using ClientOpsPortal.Services.SubscriptionHistory.Configuration;
-
 using SubscriptionHistoryModel = ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models.SubscriptionHistory;
 
 namespace ClientOpsPortal.Services.SubscriptionHistory.Data
 {
-    public class MongoRepository<T> where T : BaseEntity
+    public class MongoRepository<T> : IMongoRepository<T> where T : BaseEntity
     {
         protected readonly IMongoCollection<T> _collection;
+        private readonly MongoAuditableInterceptor _auditableInterceptor;
 
-        public MongoRepository(IMongoDatabase database, IConfiguration configuration)
+        public MongoRepository(IMongoDatabase database, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             var collectionName = typeof(T).Name switch
             {
@@ -22,6 +23,7 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Data
                 _ => typeof(T).Name + "s"
             };
             _collection = database.GetCollection<T>(collectionName);
+            _auditableInterceptor = new MongoAuditableInterceptor(httpContextAccessor);
         }
 
         public async Task<IReadOnlyCollection<T>> GetAllAsync(CancellationToken ct = default)
@@ -42,11 +44,13 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Data
 
         public async Task AddAsync(T entity, CancellationToken ct = default)
         {
+            _auditableInterceptor.ApplyAuditRules(entity);
             await _collection.InsertOneAsync(entity, cancellationToken: ct);
         }
 
         public async Task UpdateAsync(T entity, CancellationToken ct = default)
         {
+            _auditableInterceptor.ApplyAuditRules(entity);
             var filter = Builders<T>.Filter.Eq(x => x.Id, entity.Id);
             await _collection.ReplaceOneAsync(filter, entity, cancellationToken: ct);
         }

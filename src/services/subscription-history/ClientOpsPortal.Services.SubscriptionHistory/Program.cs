@@ -1,7 +1,13 @@
 using ClientOpsPortal.Services.SubscriptionHistory.Configuration;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models;
 using ClientOpsPortal.Services.SubscriptionHistory.Data;
+using ClientOpsPortal.Services.SubscriptionHistory.Data.Interceptors;
+using ClientOpsPortal.Services.SubscriptionHistory.Middleware;
 using ClientOpsPortal.Services.SubscriptionHistory.Services;
+using ClientOpsPortal.Services.SubscriptionHistory.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -18,10 +24,23 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
-BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
-BsonSerializer.RegisterSerializer<Guid?>(new NullableSerializer<Guid>(new GuidSerializer(BsonType.String)));
+try
+{
+    BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
+}
+catch (BsonSerializationException) { }
 
-BsonSerializer.RegisterSerializer(new DateTimeOffsetSerializer(BsonType.String));
+try
+{
+    BsonSerializer.RegisterSerializer<Guid?>(new NullableSerializer<Guid>(new GuidSerializer(BsonType.String)));
+}
+catch (BsonSerializationException) { }
+
+try
+{
+    BsonSerializer.RegisterSerializer(new DateTimeOffsetSerializer(BsonType.String));
+}
+catch (BsonSerializationException) { }
 
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
@@ -39,12 +58,17 @@ builder.Services.AddScoped(sp =>
     return client.GetDatabase(databaseName);
 });
 
-builder.Services.AddScoped<MongoRepository<SubscriptionHistory>>();
-builder.Services.AddScoped<MongoRepository<SubscriptionHistoryStep>>();
-
-// Регистрация сервисов
+builder.Services.AddScoped<IMongoRepository<SubscriptionHistory>, MongoRepository<SubscriptionHistory>>();
+builder.Services.AddScoped<IMongoRepository<SubscriptionHistoryStep>, MongoRepository<SubscriptionHistoryStep>>();
 builder.Services.AddScoped<SubscriptionHistoryService>();
 builder.Services.AddScoped<SubscriptionHistoryStepService>();
+builder.Services.AddScoped<MongoAuditableInterceptor>();
+builder.Services.AddScoped<IValidator<CreateSubscriptionHistoryDto>, CreateSubscriptionHistoryDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateSubscriptionHistoryDto>, UpdateSubscriptionHistoryDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateSubscriptionHistoryStepDto>, CreateSubscriptionHistoryStepDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateSubscriptionHistoryStepDto>, UpdateSubscriptionHistoryStepDtoValidator>();
+
+builder.Services.AddHttpContextAccessor();
 
 var jwksUrl = builder.Configuration["Jwt:JwksUrl"]
     ?? "http://localhost:5110/.well-known/jwks";
@@ -92,6 +116,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.UseMiddleware<ValidationExceptionHandlingMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
@@ -99,3 +124,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

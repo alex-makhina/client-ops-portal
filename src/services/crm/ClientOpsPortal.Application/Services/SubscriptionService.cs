@@ -70,8 +70,7 @@ namespace ClientOpsPortal.Application.Services
                 await _historyClient.CreateStepAsync(new CreateSubscriptionHistoryStepDto
                 {
                     SubscriptionHistoryId = historyDto.Id,
-                    Status = SubscriptionActionStatus.Pending,
-                    Message = "Подписка успешно создана"
+                    Status = SubscriptionActionStatus.Pending
                 }, ct);
             }
 
@@ -154,8 +153,7 @@ namespace ClientOpsPortal.Application.Services
                 await _historyClient.CreateStepAsync(new CreateSubscriptionHistoryStepDto
                 {
                     SubscriptionHistoryId = historyDto.Id,
-                    Status = SubscriptionActionStatus.Pending,
-                    Message = $"Тарифный план изменен с {oldTariffPlanId} на {newTariffPlanId}"
+                    Status = SubscriptionActionStatus.Pending
                 }, ct);
             }
 
@@ -188,8 +186,7 @@ namespace ClientOpsPortal.Application.Services
                 await _historyClient.CreateStepAsync(new CreateSubscriptionHistoryStepDto
                 {
                     SubscriptionHistoryId = historyDto.Id,
-                    Status = SubscriptionActionStatus.Pending,
-                    Message = "Подписка успешно отключена"
+                    Status = SubscriptionActionStatus.Pending
                 }, ct);
             }
 
@@ -230,10 +227,7 @@ namespace ClientOpsPortal.Application.Services
                     TariffPlanName = tariffPlan?.Name ?? string.Empty,
                     ServiceName = service?.Name ?? string.Empty,
                     ContractNumber = contractNumber,
-                    AbonentId = abonentId,
-                    StartDate = DateTimeOffset.UtcNow,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    CreatedBy = "System"
+                    AbonentId = abonentId
                 };
 
                 return await _historyClient.CreateHistoryAsync(eventDto, ct);

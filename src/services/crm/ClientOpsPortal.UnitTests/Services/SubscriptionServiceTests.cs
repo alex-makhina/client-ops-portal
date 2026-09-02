@@ -7,30 +7,105 @@ using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Enums;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
+using ClientOpsPortal.Services.Reporting.Contracts.Events;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
+using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models;
 using MassTransit;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
+using Xunit;
+using AppSubscriptionHistoryDto = ClientOpsPortal.Application.DTOs.SubscriptionHistoryDto;
+using AppSubscriptionHistoryStepDto = ClientOpsPortal.Application.DTOs.SubscriptionHistoryStepDto;
+using ContractSubscriptionHistoryStepDto = ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs.SubscriptionHistoryStepDto;
+using CreateStepDto = ClientOpsPortal.Application.DTOs.CreateSubscriptionHistoryStepDto;
+using StepDto = ClientOpsPortal.Application.DTOs.SubscriptionHistoryStepDto;
+using SubscriptionHistoryStepModel = ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models.SubscriptionHistoryStep;
 
 namespace ClientOpsPortal.UnitTests.Services;
 
 public class SubscriptionServiceTests
 {
     private readonly Mock<IGenericRepository<Subscription>> _subscriptionRepositoryMock;
-    private readonly Mock<IGenericRepository<SubscriptionHistory>> _historyRepositoryMock;
+    private readonly Mock<IGenericRepository<Contract>> _contractRepositoryMock;
+    private readonly Mock<ISubscriptionHistoryClient> _historyClientMock;
     private readonly Mock<IDirectoryCacheService> _cacheMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly SubscriptionService _sut;
 
     public SubscriptionServiceTests()
     {
         _subscriptionRepositoryMock = new Mock<IGenericRepository<Subscription>>();
-        _historyRepositoryMock = new Mock<IGenericRepository<SubscriptionHistory>>();
+        _contractRepositoryMock = new Mock<IGenericRepository<Contract>>();
+        _historyClientMock = new Mock<ISubscriptionHistoryClient>();
         _cacheMock = new Mock<IDirectoryCacheService>();
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
+
+        _cacheMock
+            .Setup(x => x.GetServiceAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) => new ClientOpsPortal.Services.Directory.Contracts.DTOs.ServiceDto
+            {
+                Id = id,
+                Name = $"Service {id:N}",
+                Description = $"Description for service {id:N}",
+                BeginDate = DateTimeOffset.UtcNow,
+                EndDate = null
+            });
+
+        _cacheMock
+            .Setup(x => x.GetTariffPlanAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken ct) => new ClientOpsPortal.Services.Directory.Contracts.DTOs.TariffPlanDto
+            {
+                Id = id,
+                Name = $"Tariff {id:N}",
+                Description = $"Description for tariff {id:N}",
+                Price = 100,
+                ServiceId = Guid.NewGuid(),
+                BeginDate = DateTimeOffset.UtcNow,
+                EndDate = null
+            });
+
+        _historyClientMock
+            .Setup(x => x.CreateHistoryAsync(It.IsAny<SubscriptionHistoryEventDto>(), It.IsAny<CancellationToken>()))
+            .Returns<SubscriptionHistoryEventDto, CancellationToken>((dto, ct) =>
+                Task.FromResult(new AppSubscriptionHistoryDto
+                {
+                    Id = Guid.NewGuid(),
+                    SubscriptionId = dto.SubscriptionId,
+                    ActionType = (Domain.Enums.SubscriptionActionType)dto.ActionType,
+                    Status = (Domain.Enums.SubscriptionActionStatus)dto.Status,
+                    TariffPlanId = dto.TariffPlanId,
+                    StartDate = DateTimeOffset.UtcNow,
+                    Steps = new List<AppSubscriptionHistoryStepDto>()
+                }));
+
+        _historyClientMock
+            .Setup(x => x.UpdateHistoryStatusAsync(It.IsAny<Guid>(), It.IsAny<Domain.Enums.SubscriptionActionStatus>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _historyClientMock
+            .Setup(x => x.CreateStepAsync(It.IsAny<CreateStepDto>(), It.IsAny<CancellationToken>()))
+            .Returns<CreateStepDto, CancellationToken>((dto, ct) =>
+                Task.FromResult(new StepDto
+                {
+                    Id = Guid.NewGuid(),
+                    SubscriptionHistoryId = dto.SubscriptionHistoryId,
+                    Status = dto.Status,
+                    Message = dto.Message,
+                    CreatedAt = DateTimeOffset.UtcNow
+                }));
+
+        // Настройка PublishEndpoint
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         _sut = new SubscriptionService(
             _subscriptionRepositoryMock.Object,
-            _historyRepositoryMock.Object,
+            _historyClientMock.Object,
+            _contractRepositoryMock.Object,
             _cacheMock.Object,
-            Mock.Of<IPublishEndpoint>());
+            _publishEndpointMock.Object);
     }
 
     #region GetByIdAsync Tests
@@ -134,13 +209,14 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var createDto = CreateSubscriptionDto();
+        var contract = CreateContract();
+
+        _contractRepositoryMock
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contract);
 
         _subscriptionRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        _historyRepositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<SubscriptionHistory>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -149,14 +225,21 @@ public class SubscriptionServiceTests
         // Assert
         result.ShouldNotBeNull();
         result.ContractId.ShouldBe(createDto.ContractId);
-        result.ServiceId.ShouldBe(createDto.ServiceId);
 
         _subscriptionRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        _historyRepositoryMock.Verify(
-            r => r.AddAsync(It.IsAny<SubscriptionHistory>(), It.IsAny<CancellationToken>()),
+        _historyClientMock.Verify(
+            x => x.CreateHistoryAsync(It.IsAny<SubscriptionHistoryEventDto>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyClientMock.Verify(
+            x => x.UpdateHistoryStatusAsync(It.IsAny<Guid>(), Domain.Enums.SubscriptionActionStatus.Pending, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyClientMock.Verify(
+            x => x.CreateStepAsync(It.IsAny<CreateStepDto>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -165,13 +248,14 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var createDto = CreateSubscriptionDto();
+        var contract = CreateContract();
+
+        _contractRepositoryMock
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contract);
 
         _subscriptionRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        _historyRepositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<SubscriptionHistory>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -180,11 +264,11 @@ public class SubscriptionServiceTests
         // Assert
         result.ShouldNotBeNull();
 
-        _historyRepositoryMock.Verify(
-            r => r.AddAsync(
-                It.Is<SubscriptionHistory>(h =>
-                    h.ActionType == SubscriptionActionType.Open &&
-                    h.Status == SubscriptionActionStatus.Pending),
+        _historyClientMock.Verify(
+            x => x.CreateHistoryAsync(
+                It.Is<SubscriptionHistoryEventDto>(h =>
+                    h.ActionType == Domain.Enums.SubscriptionActionType.Open &&
+                    h.Status == Domain.Enums.SubscriptionActionStatus.Pending),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -218,6 +302,10 @@ public class SubscriptionServiceTests
 
         _subscriptionRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<SubscriptionUpdatedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -328,7 +416,11 @@ public class SubscriptionServiceTests
 
         // Assert
         _subscriptionRepositoryMock.Verify(
-            r => r.DeleteAsync(subscriptionId, It.IsAny<CancellationToken>()),
+                    r => r.DeleteAsync(subscriptionId, It.IsAny<CancellationToken>()),
+                    Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<SubscriptionDeletedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -375,9 +467,10 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var contractId = Guid.NewGuid();
-        var subscriptions = CreateSubscriptionEntityList(3, contractId: contractId);
+        var subscriptions = CreateSubscriptionEntityList(3);
         foreach (var subscription in subscriptions)
         {
+            subscription.ContractId = contractId;
             subscription.EndDate = null;
         }
 
@@ -430,10 +523,12 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var contractId = Guid.NewGuid();
-        var activeSubscription = CreateSubscriptionEntity(Guid.NewGuid(), contractId: contractId);
+        var activeSubscription = CreateSubscriptionEntity(Guid.NewGuid());
+        activeSubscription.ContractId = contractId;
         activeSubscription.EndDate = null;
 
-        var expiredSubscription = CreateSubscriptionEntity(Guid.NewGuid(), contractId: contractId);
+        var expiredSubscription = CreateSubscriptionEntity(Guid.NewGuid());
+        expiredSubscription.ContractId = contractId;
         expiredSubscription.EndDate = DateTimeOffset.UtcNow.AddDays(-1);
 
         _subscriptionRepositoryMock
@@ -471,8 +566,7 @@ public class SubscriptionServiceTests
 
         // Assert
         result.ShouldNotBeNull();
-        result.ServiceName.ShouldBe(subscription.Service!.Name);
-        result.TariffPlanName.ShouldBe(subscription.TariffPlan!.Name);
+        result.ShouldBeOfType<SubscriptionFullDataDto>();
 
         _subscriptionRepositoryMock.Verify(
             r => r.GetByIdAsync(subscriptionId, true, It.IsAny<CancellationToken>()),
@@ -506,8 +600,14 @@ public class SubscriptionServiceTests
         // Arrange
         var subscriptionId = Guid.NewGuid();
         var existingSubscription = CreateSubscriptionEntity(subscriptionId);
-        var oldTariffPlanId = existingSubscription.TariffPlanId;
         var newTariffPlanId = Guid.NewGuid();
+
+        var contract = CreateContract();
+        contract.Id = existingSubscription.ContractId;
+
+        _contractRepositoryMock
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contract);
 
         _subscriptionRepositoryMock
             .Setup(r => r.GetByIdAsync(subscriptionId, false, It.IsAny<CancellationToken>()))
@@ -515,10 +615,6 @@ public class SubscriptionServiceTests
 
         _subscriptionRepositoryMock
             .Setup(r => r.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        _historyRepositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<SubscriptionHistory>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -533,12 +629,20 @@ public class SubscriptionServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        _historyRepositoryMock.Verify(
-            r => r.AddAsync(
-                It.Is<SubscriptionHistory>(h =>
-                    h.ActionType == SubscriptionActionType.TariffChange &&
-                    h.Status == SubscriptionActionStatus.Pending),
+        _historyClientMock.Verify(
+            x => x.CreateHistoryAsync(
+                It.Is<SubscriptionHistoryEventDto>(h =>
+                    h.ActionType == Domain.Enums.SubscriptionActionType.TariffChange &&
+                    h.Status == Domain.Enums.SubscriptionActionStatus.Pending),
                 It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyClientMock.Verify(
+            x => x.UpdateHistoryStatusAsync(It.IsAny<Guid>(), Domain.Enums.SubscriptionActionStatus.Pending, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyClientMock.Verify(
+            x => x.CreateStepAsync(It.IsAny<CreateStepDto>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -574,16 +678,19 @@ public class SubscriptionServiceTests
         var existingSubscription = CreateSubscriptionEntity(subscriptionId);
         existingSubscription.EndDate = null;
 
+        var contract = CreateContract();
+        contract.Id = existingSubscription.ContractId;
+
+        _contractRepositoryMock
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contract);
+
         _subscriptionRepositoryMock
             .Setup(r => r.GetByIdAsync(subscriptionId, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingSubscription);
 
         _subscriptionRepositoryMock
             .Setup(r => r.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        _historyRepositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<SubscriptionHistory>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -598,12 +705,20 @@ public class SubscriptionServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        _historyRepositoryMock.Verify(
-            r => r.AddAsync(
-                It.Is<SubscriptionHistory>(h =>
-                    h.ActionType == SubscriptionActionType.Close &&
-                    h.Status == SubscriptionActionStatus.Pending),
+        _historyClientMock.Verify(
+            x => x.CreateHistoryAsync(
+                It.Is<SubscriptionHistoryEventDto>(h =>
+                    h.ActionType == Domain.Enums.SubscriptionActionType.Close &&
+                    h.Status == Domain.Enums.SubscriptionActionStatus.Pending),
                 It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyClientMock.Verify(
+            x => x.UpdateHistoryStatusAsync(It.IsAny<Guid>(), Domain.Enums.SubscriptionActionStatus.Pending, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _historyClientMock.Verify(
+            x => x.CreateStepAsync(It.IsAny<CreateStepDto>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -635,7 +750,12 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var abonentId = Guid.NewGuid();
-        var subscriptions = CreateSubscriptionEntityList(3, abonentId: abonentId);
+        var subscriptions = CreateSubscriptionEntityList(3);
+        foreach (var sub in subscriptions)
+        {
+            sub.Contract = CreateContract(abonentId);
+            sub.ContractId = sub.Contract.Id;
+        }
 
         _subscriptionRepositoryMock
             .Setup(r => r.GetWhereAsync(
@@ -664,10 +784,14 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var abonentId = Guid.NewGuid();
-        var activeSubscription = CreateSubscriptionEntity(Guid.NewGuid(), abonentId: abonentId);
+        var activeSubscription = CreateSubscriptionEntity(Guid.NewGuid());
+        activeSubscription.Contract = CreateContract(abonentId);
+        activeSubscription.ContractId = activeSubscription.Contract.Id;
         activeSubscription.EndDate = null;
 
-        var expiredSubscription = CreateSubscriptionEntity(Guid.NewGuid(), abonentId: abonentId);
+        var expiredSubscription = CreateSubscriptionEntity(Guid.NewGuid());
+        expiredSubscription.Contract = CreateContract(abonentId);
+        expiredSubscription.ContractId = expiredSubscription.Contract.Id;
         expiredSubscription.EndDate = DateTimeOffset.UtcNow.AddDays(-1);
 
         var subscriptions = new List<Subscription> { activeSubscription, expiredSubscription };
@@ -692,10 +816,14 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var abonentId = Guid.NewGuid();
-        var activeSubscription = CreateSubscriptionEntity(Guid.NewGuid(), abonentId: abonentId);
+        var activeSubscription = CreateSubscriptionEntity(Guid.NewGuid());
+        activeSubscription.Contract = CreateContract(abonentId);
+        activeSubscription.ContractId = activeSubscription.Contract.Id;
         activeSubscription.EndDate = null;
 
-        var expiredSubscription = CreateSubscriptionEntity(Guid.NewGuid(), abonentId: abonentId);
+        var expiredSubscription = CreateSubscriptionEntity(Guid.NewGuid());
+        expiredSubscription.Contract = CreateContract(abonentId);
+        expiredSubscription.ContractId = expiredSubscription.Contract.Id;
         expiredSubscription.EndDate = DateTimeOffset.UtcNow.AddDays(-1);
 
         _subscriptionRepositoryMock
@@ -733,49 +861,6 @@ public class SubscriptionServiceTests
         // Assert
         result.ShouldNotBeNull();
         result.ShouldBeEmpty();
-    }
-
-    #endregion
-
-    #region CreateHistory Tests
-
-    [Fact]
-    public void CreateHistory_CreatesHistoryWithOneStep()
-    {
-        // Arrange
-        var subscriptionId = Guid.NewGuid();
-        var tariffId = Guid.NewGuid();
-
-        // Act
-        var result = _sut.CreateHistory(subscriptionId, SubscriptionActionType.Open, SubscriptionActionStatus.Pending, tariffId);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.SubscriptionId.ShouldBe(subscriptionId);
-        result.ActionType.ShouldBe(SubscriptionActionType.Open);
-        result.Status.ShouldBe(SubscriptionActionStatus.Pending);
-        result.TariffPlanId.ShouldBe(tariffId);
-        result.Steps.ShouldNotBeNull();
-        result.Steps.Count.ShouldBe(1);
-        result.Steps[0].Status.ShouldBe(SubscriptionActionStatus.Pending);
-    }
-
-    [Fact]
-    public void CreateHistory_CreatesHistoryWithDifferentActionTypes()
-    {
-        // Arrange
-        var subscriptionId = Guid.NewGuid();
-        var tariffId = Guid.NewGuid();
-
-        // Act
-        var openHistory = _sut.CreateHistory(subscriptionId, SubscriptionActionType.Open, SubscriptionActionStatus.Pending, tariffId);
-        var closeHistory = _sut.CreateHistory(subscriptionId, SubscriptionActionType.Close, SubscriptionActionStatus.Completed, tariffId);
-        var tariffChangeHistory = _sut.CreateHistory(subscriptionId, SubscriptionActionType.TariffChange, SubscriptionActionStatus.InProgress, tariffId);
-
-        // Assert
-        openHistory.ActionType.ShouldBe(SubscriptionActionType.Open);
-        closeHistory.ActionType.ShouldBe(SubscriptionActionType.Close);
-        tariffChangeHistory.ActionType.ShouldBe(SubscriptionActionType.TariffChange);
     }
 
     #endregion
@@ -876,12 +961,19 @@ public class SubscriptionServiceTests
 
     private static SubscriptionDto CreateSubscriptionDto()
     {
-        return new AutoFaker<SubscriptionDto>().Generate();
+        return new AutoFaker<SubscriptionDto>()
+            .RuleFor(d => d.ContractId, _ => Guid.NewGuid())
+            .RuleFor(d => d.ServiceId, _ => Guid.NewGuid())
+            .RuleFor(d => d.TariffPlanId, _ => Guid.NewGuid())
+            .Generate();
     }
 
     private static UpdateSubscriptionDto CreateUpdateSubscriptionDto()
     {
-        return new AutoFaker<UpdateSubscriptionDto>().Generate();
+        return new AutoFaker<UpdateSubscriptionDto>()
+            .RuleFor(d => d.TariffPlanId, _ => Guid.NewGuid())
+            .RuleFor(d => d.EndDate, _ => DateTimeOffset.UtcNow.AddDays(30))
+            .Generate();
     }
 
     #endregion

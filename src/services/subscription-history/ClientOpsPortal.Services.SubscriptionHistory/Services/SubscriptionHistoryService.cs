@@ -12,8 +12,8 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Services
 {
     public class SubscriptionHistoryService
     {
-        private readonly MongoRepository<SubscriptionHistoryModel> _subscriptionHistoryRepository;
-        private readonly MongoRepository<SubscriptionHistoryStep> _subscriptionHistoryStepRepository;
+        private readonly IMongoRepository<SubscriptionHistoryModel> _subscriptionHistoryRepository;
+        private readonly IMongoRepository<SubscriptionHistoryStep> _subscriptionHistoryStepRepository;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -21,8 +21,8 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Services
         };
 
         public SubscriptionHistoryService(
-            MongoRepository<SubscriptionHistoryModel> subscriptionHistoryRepository,
-            MongoRepository<SubscriptionHistoryStep> subscriptionHistoryStepRepository)
+            IMongoRepository<SubscriptionHistoryModel> subscriptionHistoryRepository,
+            IMongoRepository<SubscriptionHistoryStep> subscriptionHistoryStepRepository)
         {
             _subscriptionHistoryRepository = subscriptionHistoryRepository;
             _subscriptionHistoryStepRepository = subscriptionHistoryStepRepository;
@@ -77,8 +77,28 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Services
 
         public async Task<IReadOnlyCollection<SubscriptionHistoryFullDto>> GetSubscriptionsHistoryByAbonentIdAsync(Guid abonentId, CancellationToken ct = default)
         {
-            var histories = await _subscriptionHistoryRepository.GetWhereAsync(s => s.AbonentId == abonentId, ct);
-            return histories.OrderByDescending(h => h.CreatedAt).Select(h => h.ToSubscriptionHistoryFullDto()).ToList();
+            var histories = await _subscriptionHistoryRepository.GetWhereAsync(s => s.AbonentId == abonentId, ct); var result = new List<SubscriptionHistoryFullDto>();
+
+            foreach (var history in histories)
+            {
+                var steps = await _subscriptionHistoryStepRepository.GetWhereAsync(
+                    s => s.SubscriptionHistoryId == history.Id, ct);
+
+                var dto = history.ToSubscriptionHistoryFullDto();
+                dto.Steps = steps?.Select(s => new SubscriptionHistoryStep
+                {
+                    Id = s.Id,
+                    SubscriptionHistoryId = s.SubscriptionHistoryId,
+                    Status = s.Status,
+                    Message = s.Message,
+                    CreatedAt = s.CreatedAt,
+                    CreatedBy = s.CreatedBy
+                }).ToList() ?? new List<SubscriptionHistoryStep>();
+
+                result.Add(dto);
+            }
+
+            return result.OrderByDescending(h => h.CreatedAt).ToList();
         }
     }
 }

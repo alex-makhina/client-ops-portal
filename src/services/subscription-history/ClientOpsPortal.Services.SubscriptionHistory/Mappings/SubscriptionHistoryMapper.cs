@@ -59,19 +59,24 @@ namespace ClientOpsPortal.Services.SubscriptionHistory.Mappings
                 SubscriptionId = history.SubscriptionId,
                 ActionType = history.ActionType,
                 Status = history.Status,
-                StartDate = history.StartDate,
-                CreatedAt = history.CreatedAt,
                 ServiceName = history.ServiceName,
+                TariffPlanId = history.TariffPlanId,
                 TariffPlanName = history.TariffPlanName,
                 ContractNumber = history.ContractNumber,
                 AbonentId = history.AbonentId,
+                StartDate = history.StartDate,
+                CreatedAt = history.CreatedAt,
+                CreatedBy = history.CreatedBy,
+                UpdatedAt = history.UpdatedAt,
+                UpdatedBy = history.UpdatedBy,
                 Steps = history.Steps?.Select(s => new SubscriptionHistoryStep
                 {
                     Id = s.Id,
                     SubscriptionHistoryId = s.SubscriptionHistoryId,
                     Status = s.Status,
                     Message = s.Message,
-                    CreatedAt = s.CreatedAt
+                    CreatedAt = s.CreatedAt,
+                    CreatedBy = s.CreatedBy
                 }).ToList() ?? new List<SubscriptionHistoryStep>()
             };
         }

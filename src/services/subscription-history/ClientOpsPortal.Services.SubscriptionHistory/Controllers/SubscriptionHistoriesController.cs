@@ -1,6 +1,7 @@
 ﻿using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Exceptions;
 using ClientOpsPortal.Services.SubscriptionHistory.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientOpsPortal.Services.Subscription.Controllers
@@ -10,11 +11,17 @@ namespace ClientOpsPortal.Services.Subscription.Controllers
     public class SubscriptionHistoriesController : ControllerBase
     {
         private readonly SubscriptionHistoryService _historyService;
+        private readonly IValidator<CreateSubscriptionHistoryDto> _createValidator;
+        private readonly IValidator<UpdateSubscriptionHistoryDto> _updateValidator;
 
         public SubscriptionHistoriesController(
-            SubscriptionHistoryService historyService)
+            SubscriptionHistoryService historyService,
+            IValidator<CreateSubscriptionHistoryDto> createValidator,
+            IValidator<UpdateSubscriptionHistoryDto> updateValidator)
         {
             _historyService = historyService;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
         }
 
         [HttpGet]
@@ -50,6 +57,10 @@ namespace ClientOpsPortal.Services.Subscription.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateSubscriptionHistoryDto createDto, CancellationToken ct = default)
         {
+            var validationResult = await _createValidator.ValidateAsync(createDto, ct);
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.Errors);
+
             try
             {
                 var history = await _historyService.CreateSubscriptionHistoryAsync(createDto, ct);
@@ -64,6 +75,10 @@ namespace ClientOpsPortal.Services.Subscription.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, UpdateSubscriptionHistoryDto updateDto, CancellationToken ct = default)
         {
+            var validationResult = await _updateValidator.ValidateAsync(updateDto, ct);
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.Errors);
+
             try
             {
                 var history = await _historyService.UpdateSubscriptionHistoryAsync(id, updateDto, ct);

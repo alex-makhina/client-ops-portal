@@ -3,17 +3,21 @@ using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
 using ClientOpsPortal.Application.Services;
+using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Auth.Contracts;
+using ClientOpsPortal.Services.Notifications.Client;
+using ClientOpsPortal.Services.Notifications.Contracts;
 using MassTransit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
+using Xunit;
 
 namespace ClientOpsPortal.UnitTests.Services;
 
@@ -23,6 +27,8 @@ public class AbonentServiceTests
     private readonly Mock<IGenericRepository<Contract>> _contractRepositoryMock;
     private readonly Mock<IGenericRepository<User>> _userRepositoryMock;
     private readonly Mock<IAuthClient> _authClientMock;
+    private readonly Mock<INotificationPublisher> _notificationPublisherMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly AbonentService _sut;
 
     public AbonentServiceTests()
@@ -31,19 +37,70 @@ public class AbonentServiceTests
         _contractRepositoryMock = new Mock<IGenericRepository<Contract>>();
         _userRepositoryMock = new Mock<IGenericRepository<User>>();
         _authClientMock = new Mock<IAuthClient>();
+        _notificationPublisherMock = new Mock<INotificationPublisher>();
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
 
-        var configMock = new Mock<IConfiguration>();
-        configMock.Setup(c => c.GetSection(It.IsAny<string>())).Returns(new Mock<IConfigurationSection>().Object);
-        configMock.Setup(c => c["AuthService:PublicUrl"]).Returns("http://localhost:5110");
+        _authClientMock
+            .Setup(x => x.GenerateRandomPasswordAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Temp123!");
+
+        _authClientMock
+            .Setup(x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid().ToString());
+
+        _authClientMock
+            .Setup(x => x.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("reset-token-123");
+
+        _authClientMock
+            .Setup(x => x.GetUserByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken ct) => new UserResponse
+            {
+                Id = id,
+                UserName = $"user_{id}",
+                Email = $"user_{id}@test.com",
+                Roles = new List<string> { "Abonent" }
+            });
+
+        // Настройка NotificationPublisher
+        _notificationPublisherMock
+            .Setup(x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Настройка PublishEndpoint - используем Returns вместо ReturnsAsync
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Настройка Publish для конкретных типов событий
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<AbonentCreatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<AbonentUpdatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<AbonentDeletedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Создаем реальную конфигурацию с нужными значениями
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "AuthService:PublicUrl", "http://localhost:5110" }
+            })
+            .Build();
 
         _sut = new AbonentService(
             _abonentRepositoryMock.Object,
             _contractRepositoryMock.Object,
             _authClientMock.Object,
             _userRepositoryMock.Object,
-            Mock.Of<ClientOpsPortal.Services.Notifications.Client.INotificationPublisher>(),
-            Mock.Of<IPublishEndpoint>(),
-            configMock.Object);
+            _notificationPublisherMock.Object,
+            _publishEndpointMock.Object,
+            config);
     }
 
     #region GetByIdAsync Tests
@@ -226,6 +283,13 @@ public class AbonentServiceTests
         var userExternalId = Guid.NewGuid().ToString();
         var generatedPassword = "Temp123!";
 
+        _abonentRepositoryMock
+            .Setup(r => r.GetWhereAsync(
+                It.IsAny<Expression<Func<Abonent, bool>>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Abonent>());
+
         _authClientMock
             .Setup(x => x.GenerateRandomPasswordAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(generatedPassword);
@@ -233,6 +297,10 @@ public class AbonentServiceTests
         _authClientMock
             .Setup(x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(userExternalId);
+
+        _authClientMock
+            .Setup(x => x.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("reset-token-123");
 
         _userRepositoryMock
             .Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
@@ -242,12 +310,9 @@ public class AbonentServiceTests
             .Setup(r => r.AddAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _abonentRepositoryMock
-            .Setup(r => r.GetWhereAsync(
-                It.IsAny<Expression<Func<Abonent, bool>>>(),
-                false,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Abonent>());
+        _notificationPublisherMock
+            .Setup(x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
         var result = await _sut.CreateAsync(createDto);
@@ -267,8 +332,25 @@ public class AbonentServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
+        _authClientMock.Verify(
+            x => x.GeneratePasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _userRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
         _abonentRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _notificationPublisherMock.Verify(
+            x => x.PublishAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Проверяем Publish для конкретного типа события
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<AbonentCreatedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -295,6 +377,10 @@ public class AbonentServiceTests
 
         _authClientMock.Verify(
             x => x.CreateUserAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _userRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
         _abonentRepositoryMock.Verify(
@@ -339,6 +425,11 @@ public class AbonentServiceTests
         _abonentRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
             Times.Once);
+
+        // Проверяем Publish для конкретного типа события
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<AbonentUpdatedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -360,6 +451,7 @@ public class AbonentServiceTests
             r => r.UpdateAsync(It.IsAny<Abonent>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
     #endregion
 
     #region DeleteAsync Tests
@@ -380,6 +472,11 @@ public class AbonentServiceTests
         // Assert
         _abonentRepositoryMock.Verify(
             r => r.DeleteAsync(abonentId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Проверяем Publish для конкретного типа события
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<AbonentDeletedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

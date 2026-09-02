@@ -3,6 +3,7 @@ using ClientOpsPortal.Application.DTOs;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
 using ClientOpsPortal.Application.Services;
+using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
@@ -10,18 +11,36 @@ using MassTransit;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
+using Xunit;
 
 namespace ClientOpsPortal.UnitTests.Services;
 
 public class ContractServiceTests
 {
     private readonly Mock<IGenericRepository<Contract>> _contractRepositoryMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly ContractService _sut;
 
     public ContractServiceTests()
     {
         _contractRepositoryMock = new Mock<IGenericRepository<Contract>>();
-        _sut = new ContractService(_contractRepositoryMock.Object, Mock.Of<IPublishEndpoint>());
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<ContractCreatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<ContractUpdatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<ContractDeletedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _sut = new ContractService(
+            _contractRepositoryMock.Object,
+            _publishEndpointMock.Object);
     }
 
     #region GetByIdAsync Tests
@@ -171,11 +190,13 @@ public class ContractServiceTests
                 c.AbonentId == createDto.AbonentId),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<ContractCreatedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion
-
-    #region UpdateAsync Tests
 
     #region UpdateAsync Tests
 
@@ -185,7 +206,7 @@ public class ContractServiceTests
         // Arrange
         var contractId = Guid.NewGuid();
         var existingContract = CreateContractEntity(contractId);
-        existingContract.Subscriptions = new List<Subscription>(); // Пустой список для проверки
+        existingContract.Subscriptions = new List<Subscription>(); // Пустой список
         var updateDto = CreateUpdateContractDto();
 
         _contractRepositoryMock
@@ -205,6 +226,10 @@ public class ContractServiceTests
 
         _contractRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Contract>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<ContractUpdatedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -234,7 +259,7 @@ public class ContractServiceTests
         // Arrange
         var contractId = Guid.NewGuid();
         var existingContract = CreateContractEntity(contractId);
-        existingContract.Subscriptions = new List<Subscription>(); // Пустой список для проверки
+        existingContract.Subscriptions = new List<Subscription>(); // Пустой список
         var updateDto = new UpdateContractDto
         {
             EndDate = DateTimeOffset.UtcNow.AddDays(30)
@@ -267,15 +292,16 @@ public class ContractServiceTests
         // Arrange
         var contractId = Guid.NewGuid();
         var existingContract = CreateContractEntity(contractId);
+
         existingContract.Subscriptions = new List<Subscription>
-    {
-        new Subscription
         {
-            Id = Guid.NewGuid(),
-            BeginDate = DateTimeOffset.UtcNow.AddDays(-10),
-            EndDate = null
-        }
-    };
+            new Subscription
+            {
+                Id = Guid.NewGuid(),
+                BeginDate = DateTimeOffset.UtcNow.AddDays(-10),
+                EndDate = null
+            }
+        };
         var updateDto = CreateUpdateContractDto();
 
         _contractRepositoryMock
@@ -300,14 +326,14 @@ public class ContractServiceTests
         var contractId = Guid.NewGuid();
         var existingContract = CreateContractEntity(contractId);
         existingContract.Subscriptions = new List<Subscription>
-    {
-        new Subscription
         {
-            Id = Guid.NewGuid(),
-            BeginDate = DateTimeOffset.UtcNow.AddDays(-30),
-            EndDate = DateTimeOffset.UtcNow.AddDays(-1) // Истекшая подписка
-        }
-    };
+            new Subscription
+            {
+                Id = Guid.NewGuid(),
+                BeginDate = DateTimeOffset.UtcNow.AddDays(-30),
+                EndDate = DateTimeOffset.UtcNow.AddDays(-1) // Истекшая подписка
+            }
+        };
         var updateDto = CreateUpdateContractDto();
 
         _contractRepositoryMock
@@ -330,7 +356,6 @@ public class ContractServiceTests
     }
 
     #endregion
-    #endregion
 
     #region DeleteAsync Tests
 
@@ -350,6 +375,10 @@ public class ContractServiceTests
         // Assert
         _contractRepositoryMock.Verify(
             r => r.DeleteAsync(contractId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<ContractDeletedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -462,6 +491,7 @@ public class ContractServiceTests
         shortDto.ContractNumber.ShouldBe(contract.ContractNumber);
         shortDto.AbonentId.ShouldBe(contract.AbonentId);
         shortDto.BeginDate.ShouldBe(contract.BeginDate);
+        shortDto.EndDate.ShouldBe(contract.EndDate);
     }
 
     #endregion
@@ -475,7 +505,12 @@ public class ContractServiceTests
         if (id.HasValue)
             faker.RuleFor(c => c.Id, _ => id.Value);
 
-        return faker.Generate();
+        return faker
+            .RuleFor(c => c.ContractNumber, _ => $"CT-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid():N}".Substring(0, 20))
+            .RuleFor(c => c.BeginDate, _ => DateTimeOffset.UtcNow)
+            .RuleFor(c => c.EndDate, _ => null)
+            .RuleFor(c => c.Subscriptions, _ => new List<Subscription>())
+            .Generate();
     }
 
     private static List<Contract> CreateContractEntityList(int count)
@@ -490,12 +525,16 @@ public class ContractServiceTests
 
     private static ContractDataDto CreateContractDataDto()
     {
-        return new AutoFaker<ContractDataDto>().Generate();
+        return new AutoFaker<ContractDataDto>()
+            .RuleFor(d => d.ContractNumber, _ => $"CT-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid():N}".Substring(0, 20))
+            .Generate();
     }
 
     private static UpdateContractDto CreateUpdateContractDto()
     {
-        return new AutoFaker<UpdateContractDto>().Generate();
+        return new AutoFaker<UpdateContractDto>()
+            .RuleFor(d => d.EndDate, _ => DateTimeOffset.UtcNow.AddDays(30))
+            .Generate();
     }
 
     #endregion

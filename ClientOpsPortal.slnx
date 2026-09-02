@@ -50,6 +50,8 @@
   <Folder Name="/src/services/subscription-history/">
     <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory.Client/ClientOpsPortal.Services.SubscriptionHistory.Client.csproj" />
     <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory.Contracts/ClientOpsPortal.Services.SubscriptionHistory.Contracts.csproj" />
+    <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory.IntegrationalTests/ClientOpsPortal.Services.SubscriptionHistory.IntegrationalTests.csproj" Id="2953fc06-db75-4ca3-82b4-2c581c1c0db4" />
+    <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory.UnitTests/ClientOpsPortal.Services.SubscriptionHistory.UnitTests.csproj" Id="6fb1ee12-c8ed-4c3c-bb87-25612162c8c2" />
     <Project Path="src/services/subscription-history/ClientOpsPortal.Services.SubscriptionHistory/ClientOpsPortal.Services.SubscriptionHistory.csproj" />
   </Folder>
 </Solution>
