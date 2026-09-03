@@ -12,9 +12,9 @@
   </Folder>
   <Folder Name="/src/services/" />
   <Folder Name="/src/services/crm/">
-    <Project Path="src/services/crm/ClientOpsPortal.Contracts/ClientOpsPortal.Contracts.csproj" Id="4408d501-b87a-4ec9-80ef-c6fd0b2cf851" />
     <Project Path="src/services/crm/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj" />
     <Project Path="src/services/crm/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj" />
+    <Project Path="src/services/crm/ClientOpsPortal.Contracts/ClientOpsPortal.Contracts.csproj" Id="4408d501-b87a-4ec9-80ef-c6fd0b2cf851" />
     <Project Path="src/services/crm/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj" />
     <Project Path="src/services/crm/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj" />
     <Project Path="src/services/crm/ClientOpsPortal.UnitTests/ClientOpsPortal.UnitTests.csproj" />
@@ -39,7 +39,7 @@
     <Project Path="src/services/notifications/ClientOpsPortal.Services.Notifications/ClientOpsPortal.Services.Notifications.csproj" />
   </Folder>
   <Folder Name="/src/services/reporting/">
-    <Project Path="src/services/reporting/ClientOpsPortal.Reporting/ClientOpsPortal.Services.Reporting.Client/ClientOpsPortal.Services.Reporting.Client.csproj" />
+    <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting.Client/ClientOpsPortal.Services.Reporting.Client.csproj" />
     <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting.Contracts/ClientOpsPortal.Services.Reporting.Contracts.csproj" />
     <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting.UnitTests/ClientOpsPortal.Services.Reporting.UnitTests.csproj" />
     <Project Path="src/services/reporting/ClientOpsPortal.Services.Reporting/ClientOpsPortal.Services.Reporting.csproj" />
