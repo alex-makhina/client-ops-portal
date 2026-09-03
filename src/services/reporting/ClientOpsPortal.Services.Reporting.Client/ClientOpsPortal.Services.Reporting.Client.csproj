@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ClientOpsPortal.Services.Reporting.Contracts\ClientOpsPortal.Services.Reporting.Contracts.csproj" />
+    <ProjectReference Include="..\ClientOpsPortal.Services.Reporting.Contracts\ClientOpsPortal.Services.Reporting.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
