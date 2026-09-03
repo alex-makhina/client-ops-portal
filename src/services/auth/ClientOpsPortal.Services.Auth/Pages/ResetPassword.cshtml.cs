@@ -1,4 +1,5 @@
 using ClientOpsPortal.Services.Auth.Domain;
+using ClientOpsPortal.Services.Auth.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -9,11 +10,13 @@ namespace ClientOpsPortal.Services.Auth.Pages;
 public class ResetPasswordModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AuthSettings _authSettings;
     private readonly ILogger<ResetPasswordModel> _logger;
 
-    public ResetPasswordModel(UserManager<ApplicationUser> userManager, ILogger<ResetPasswordModel> logger)
+    public ResetPasswordModel(UserManager<ApplicationUser> userManager, AuthSettings authSettings, ILogger<ResetPasswordModel> logger)
     {
         _userManager = userManager;
+        _authSettings = authSettings;
         _logger = logger;
     }
 
@@ -35,19 +38,7 @@ public class ResetPasswordModel : PageModel
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
 
-    public string LoginUrl => IsAllowedReturnUrl(ReturnUrl) ? ReturnUrl! : "/Login";
-
-    private static bool IsAllowedReturnUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-            return false;
-
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            return false;
-
-        return uri.Host is "localhost" or "127.0.0.1" &&
-               uri.Port is 5022 or 62000;
-    }
+    public string LoginUrl => _authSettings.IsAllowedReturnUrl(ReturnUrl) ? ReturnUrl! : "/Login";
 
     public async Task<IActionResult> OnGetAsync()
     {

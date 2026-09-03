@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package directory.v1;
+
+option csharp_namespace = "ClientOpsPortal.Services.Directory.Grpc";
+
+import "google/protobuf/timestamp.proto";
+
+// Read-only catalog API used by internal service-to-service consumers
+// (e.g. the CRM API). Writes stay on the REST API.
+service DirectoryCatalog {
+  rpc GetServices(GetServicesRequest) returns (ServiceListResponse);
+  rpc GetActiveServices(Empty) returns (ServiceShortListResponse);
+  rpc GetServiceById(GetServiceByIdRequest) returns (ServiceResponse);
+  rpc GetFullServiceData(GetServiceByIdRequest) returns (ServiceFullDataResponse);
+  rpc GetTariffPlans(GetTariffPlansRequest) returns (TariffPlanListResponse);
+  rpc GetTariffPlanById(GetTariffPlanByIdRequest) returns (TariffPlanResponse);
+  rpc GetTariffPlansByService(GetTariffPlansByServiceRequest) returns (TariffPlanListResponse);
+  rpc GetActiveTariffPlansByService(GetTariffPlansByServiceRequest) returns (TariffPlanShortListResponse);
+}
+
+message Empty {}
+
+message Service {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  google.protobuf.Timestamp begin_date = 4;
+  google.protobuf.Timestamp end_date = 5;
+  google.protobuf.Timestamp created_at = 6;
+  string created_by = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  string updated_by = 9;
+}
+
+message ServiceShort {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  google.protobuf.Timestamp begin_date = 4;
+  google.protobuf.Timestamp end_date = 5;
+}
+
+message ServiceFullData {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  google.protobuf.Timestamp begin_date = 4;
+  google.protobuf.Timestamp end_date = 5;
+  repeated TariffPlan tariff_plans = 6;
+}
+
+message TariffPlan {
+  string id = 1;
+  string service_id = 2;
+  string name = 3;
+  string description = 4;
+  double price = 5;
+  google.protobuf.Timestamp begin_date = 6;
+  google.protobuf.Timestamp end_date = 7;
+  google.protobuf.Timestamp created_at = 8;
+  string created_by = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  string updated_by = 11;
+}
+
+message TariffPlanShort {
+  string id = 1;
+  string name = 2;
+  double price = 3;
+}
+
+message GetServicesRequest {
+  bool with_includes = 1;
+}
+
+message GetTariffPlansRequest {
+  bool with_includes = 1;
+}
+
+message GetServiceByIdRequest {
+  string id = 1;
+  bool with_includes = 2;
+}
+
+message GetTariffPlanByIdRequest {
+  string id = 1;
+  bool with_includes = 2;
+}
+
+message GetTariffPlansByServiceRequest {
+  string service_id = 1;
+}
+
+message ServiceResponse {
+  Service service = 1;
+}
+
+message ServiceListResponse {
+  repeated Service items = 1;
+}
+
+message ServiceShortListResponse {
+  repeated ServiceShort items = 1;
+}
+
+message ServiceFullDataResponse {
+  ServiceFullData data = 1;
+}
+
+message TariffPlanResponse {
+  TariffPlan tariff_plan = 1;
+}
+
+message TariffPlanListResponse {
+  repeated TariffPlan items = 1;
+}
+
+message TariffPlanShortListResponse {
+  repeated TariffPlanShort items = 1;
+}

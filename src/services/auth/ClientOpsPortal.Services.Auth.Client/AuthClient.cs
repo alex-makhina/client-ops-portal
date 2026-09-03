@@ -1,7 +1,5 @@
 using ClientOpsPortal.Services.Auth.Contracts;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Text.Json;
 
 namespace ClientOpsPortal.Services.Auth.Client;
@@ -12,35 +10,6 @@ public class AuthClient : IAuthClient
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public AuthClient(HttpClient http) => _http = http;
-
-    public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
-    {
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["grant_type"] = "password",
-            ["username"] = request.Login,
-            ["password"] = request.Password,
-            ["client_id"] = "admin-portal",
-            ["scope"] = "openid profile roles api"
-        });
-
-        var r = await _http.PostAsync("connect/token", content, ct);
-        r.EnsureSuccessStatusCode();
-
-        var tokenResponse = await r.Content.ReadFromJsonAsync<TokenResponse>(JsonOptions, ct)
-            ?? throw new InvalidOperationException("Token response is null");
-
-        var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(tokenResponse.AccessToken);
-
-        return new AuthResponse
-        {
-            Token = tokenResponse.AccessToken,
-            Roles = jwt.Claims.Where(c => c.Type is ClaimTypes.Role or "role").Select(c => c.Value).ToList(),
-            UserId = jwt.Claims.FirstOrDefault(c => c.Type is ClaimTypes.NameIdentifier or "sub")?.Value ?? string.Empty,
-            UserName = jwt.Claims.FirstOrDefault(c => c.Type is ClaimTypes.Name or "name")?.Value ?? string.Empty
-        };
-    }
 
     public async Task<string> CreateUserAsync(CreateUserRequest request, CancellationToken ct = default)
     {

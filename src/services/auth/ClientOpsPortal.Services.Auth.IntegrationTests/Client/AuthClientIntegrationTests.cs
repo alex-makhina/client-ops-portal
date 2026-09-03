@@ -7,10 +7,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Text.Json;
 using Xunit;
 
@@ -39,34 +37,6 @@ public class AuthClientIntegrationTests : IAsyncLifetime
                 app.UseRouting();
                 app.UseEndpoints(endpoints =>
                 {
-                endpoints.MapPost("/connect/token", async context =>
-                {
-                    var form = await context.Request.ReadFormAsync();
-                    var username = form["username"].ToString();
-                    var password = form["password"].ToString();
-
-                    if (username == "testuser" && password == "Test123!")
-                    {
-                        var token = CreateTestJwt(username, Guid.NewGuid().ToString(), new[] { "Manager", "Abonent" });
-                        var response = new TokenResponse
-                        {
-                            AccessToken = token,
-                            TokenType = "Bearer",
-                            ExpiresIn = 3600,
-                            Scope = "openid profile roles api"
-                        };
-                        context.Response.StatusCode = 200;
-                        context.Response.ContentType = "application/json";
-                        await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = 400;
-                        context.Response.ContentType = "application/json";
-                        await context.Response.WriteAsync("{\"error\":\"invalid_grant\"}");
-                    }
-                });
-
                     endpoints.MapPost("/api/v1/auth/reset-token", async context =>
                     {
                         string body;
@@ -271,62 +241,6 @@ public class AuthClientIntegrationTests : IAsyncLifetime
         _httpClient.BaseAddress = new Uri("http://localhost:5000/");
         _client = new AuthClient(_httpClient);
     }
-
-    #region Login Tests
-
-    [Fact]
-    public async Task LoginAsync_WhenValidCredentials_ReturnsAuthResponse()
-    {
-        // Arrange
-        var loginRequest = new LoginRequest
-        {
-            Login = "testuser",
-            Password = "Test123!"
-        };
-
-        // Act
-        var result = await _client.LoginAsync(loginRequest);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Token.ShouldNotBeNullOrEmpty();
-        result.UserId.ShouldNotBeNullOrEmpty();
-        result.UserName.ShouldBe("testuser");
-        result.Roles.ShouldContain("Manager");
-        result.Roles.ShouldContain("Abonent");
-    }
-
-    [Fact]
-    public async Task LoginAsync_WhenInvalidCredentials_ThrowsException()
-    {
-        // Arrange
-        var loginRequest = new LoginRequest
-        {
-            Login = "wronguser",
-            Password = "wrongpass"
-        };
-
-        // Act & Assert
-        await Should.ThrowAsync<HttpRequestException>(
-            () => _client.LoginAsync(loginRequest));
-    }
-
-    [Fact]
-    public async Task LoginAsync_WhenUserNotFound_ThrowsException()
-    {
-        // Arrange
-        var loginRequest = new LoginRequest
-        {
-            Login = "nonexistent",
-            Password = "Test123!"
-        };
-
-        // Act & Assert
-        await Should.ThrowAsync<HttpRequestException>(
-            () => _client.LoginAsync(loginRequest));
-    }
-
-    #endregion
 
     #region User Management Tests
 
@@ -580,23 +494,6 @@ public class AuthClientIntegrationTests : IAsyncLifetime
     {
         _users.Clear();
         await Task.CompletedTask;
-    }
-
-    private static string CreateTestJwt(string userName, string userId, IEnumerable<string> roles)
-    {
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, userId),
-            new(JwtRegisteredClaimNames.Name, userName),
-            new(JwtRegisteredClaimNames.PreferredUsername, userName)
-        };
-        claims.AddRange(roles.Select(r => new Claim("role", r)));
-
-        var token = new JwtSecurityToken(
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1));
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     public async Task DisposeAsync()

@@ -2,14 +2,19 @@ using ClientOpsPortal.Services.Auth.Data;
 using ClientOpsPortal.Services.Auth.Data.Seed;
 using ClientOpsPortal.Services.Auth.Domain;
 using ClientOpsPortal.Services.Auth.Services;
+using ClientOpsPortal.Services.Auth.Settings;
+using ClientOpsPortal.Services.Notifications.Client;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using ClientOpsPortal.Services.Notifications.Client;
+using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using Scalar.AspNetCore;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var authSettings = builder.Configuration.GetSection(AuthSettings.SectionName).Get<AuthSettings>() ?? new AuthSettings();
+builder.Services.AddSingleton(authSettings);
 
 builder.Services.AddControllers();
 builder.Services.AddRazorPages();
@@ -20,8 +25,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendClients", policy =>
     {
-        policy.WithOrigins("http://localhost:5022", "http://127.0.0.1:5022",
-                           "http://localhost:62000", "http://127.0.0.1:62000")
+        policy.WithOrigins(authSettings.AllowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -53,7 +57,11 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
 });
 
-builder.Services.AddSingleton<RsaKeyProvider>();
+using var keyLoggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
+var rsaKeyProvider = new RsaKeyProvider(
+    builder.Environment,
+    builder.Configuration,
+    keyLoggerFactory.CreateLogger<RsaKeyProvider>());
 
 builder.Services.AddOpenIddict()
     .AddCore(options =>
@@ -63,9 +71,7 @@ builder.Services.AddOpenIddict()
     })
     .AddServer(options =>
     {
-        var rsaKeyProvider = builder.Services.BuildServiceProvider().GetRequiredService<RsaKeyProvider>();
-
-        options.SetIssuer(new Uri("http://localhost:5110"))
+        options.SetIssuer(new Uri(authSettings.Issuer))
                .SetAuthorizationEndpointUris("connect/authorize")
                .SetEndSessionEndpointUris("connect/logout")
                .SetTokenEndpointUris("connect/token")
@@ -74,7 +80,6 @@ builder.Services.AddOpenIddict()
         options.RegisterScopes(Scopes.Email, Scopes.Profile, Scopes.Roles, "api");
 
         options.AllowAuthorizationCodeFlow()
-               .AllowPasswordFlow()
                .AllowRefreshTokenFlow();
 
         options.AddSigningKey(rsaKeyProvider.SecurityKey)

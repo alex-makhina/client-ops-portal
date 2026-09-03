@@ -1,4 +1,5 @@
 using ClientOpsPortal.Services.Auth.Domain;
+using ClientOpsPortal.Services.Auth.Settings;
 using ClientOpsPortal.Services.Notifications.Client;
 using ClientOpsPortal.Services.Notifications.Contracts;
 using Microsoft.AspNetCore.Identity;
@@ -12,15 +13,18 @@ public class ForgotPasswordModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly INotificationPublisher _notificationPublisher;
+    private readonly AuthSettings _authSettings;
     private readonly ILogger<ForgotPasswordModel> _logger;
 
     public ForgotPasswordModel(
         UserManager<ApplicationUser> userManager,
         INotificationPublisher notificationPublisher,
+        AuthSettings authSettings,
         ILogger<ForgotPasswordModel> logger)
     {
         _userManager = userManager;
         _notificationPublisher = notificationPublisher;
+        _authSettings = authSettings;
         _logger = logger;
     }
 
@@ -47,12 +51,12 @@ public class ForgotPasswordModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        ReturnUrl = IsAllowedReturnUrl(returnUrl) ? returnUrl : null;
+        ReturnUrl = _authSettings.IsAllowedReturnUrl(returnUrl) ? returnUrl : null;
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        ReturnUrl = IsAllowedReturnUrl(returnUrl) ? returnUrl : null;
+        ReturnUrl = _authSettings.IsAllowedReturnUrl(returnUrl) ? returnUrl : null;
 
         if (string.IsNullOrWhiteSpace(LoginIdentifier))
         {
@@ -85,17 +89,5 @@ public class ForgotPasswordModel : PageModel
 
         SuccessMessage = "Ссылка для восстановления пароля отправлена на вашу почту.";
         return Page();
-    }
-
-    private static bool IsAllowedReturnUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-            return false;
-
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            return false;
-
-        return uri.Host is "localhost" or "127.0.0.1" &&
-               uri.Port is 5022 or 62000;
     }
 }
