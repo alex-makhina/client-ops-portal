@@ -16,6 +16,7 @@ namespace ClientOpsPortal.Services.Directory.Client
 
         public static IServiceCollection AddDirectoryGrpcClient(this IServiceCollection services, string baseUrl)
         {
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
             services.AddSingleton(_ => GrpcChannel.ForAddress(baseUrl));
             services.AddSingleton(sp =>
                 new DirectoryCatalog.DirectoryCatalogClient(sp.GetRequiredService<GrpcChannel>()));

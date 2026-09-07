@@ -10,6 +10,8 @@ using ClientOpsPortal.Services.Auth.Client;
 using ClientOpsPortal.Services.Directory.Client;
 using ClientOpsPortal.Services.Notifications.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
@@ -37,7 +39,7 @@ builder.Services.AddApplicationServices();
 builder.Services.AddEmailSettings(builder.Configuration);
 
 var directoryServiceUrl = builder.Configuration.GetValue<string>("ServicesDirectory:BaseUrl")
-    ?? "http://localhost:5100";
+    ?? "http://localhost:5101";
 builder.Services.AddMemoryCache();
 builder.Services.AddDirectoryGrpcClient(directoryServiceUrl);
 builder.Services.AddSingleton<IDirectoryCacheService, DirectoryCacheService>();
@@ -59,8 +61,11 @@ var jwksUrl = builder.Configuration["Jwt:JwksUrl"]
     ?? "http://localhost:5110/.well-known/jwks";
 var issuer = builder.Configuration["Jwt:Issuer"] ?? "http://localhost:5110";
 var audience = builder.Configuration["Jwt:Audience"] ?? "ClientOpsPortalClient";
-var jwksClient = new HttpClient();
-Task<SecurityKey[]> keysTask = null!;
+
+var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+    jwksUrl,
+    new JwksConfigurationRetriever(),
+    new HttpDocumentRetriever { RequireHttps = false });
 
 builder.Services.AddAuthentication(options =>
 {
@@ -78,13 +83,8 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
         {
-            if (keysTask is null)
-            {
-                keysTask = jwksClient.GetStringAsync(jwksUrl)
-                    .ContinueWith(t => (SecurityKey[])JsonWebKeySet.Create(t.Result).Keys.Cast<SecurityKey>().ToArray());
-            }
-
-            return keysTask.GetAwaiter().GetResult();
+            var config = configurationManager.GetConfigurationAsync(CancellationToken.None).GetAwaiter().GetResult();
+            return config.SigningKeys;
         }
     };
 });
@@ -115,3 +115,16 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+sealed class JwksConfigurationRetriever : IConfigurationRetriever<OpenIdConnectConfiguration>
+{
+    public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(string address, IDocumentRetriever retriever, CancellationToken cancel)
+    {
+        var json = await retriever.GetDocumentAsync(address, cancel).ConfigureAwait(false);
+        var keySet = new JsonWebKeySet(json);
+        var configuration = new OpenIdConnectConfiguration { JsonWebKeySet = keySet };
+        foreach (var key in keySet.GetSigningKeys())
+            configuration.SigningKeys.Add(key);
+        return configuration;
+    }
+}

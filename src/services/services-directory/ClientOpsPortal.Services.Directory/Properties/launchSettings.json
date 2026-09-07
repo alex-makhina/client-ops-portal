@@ -4,9 +4,10 @@
       "commandName": "Project",
       "launchBrowser": false,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "http://localhost:5100"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Kestrel__RestPort": "5100",
+        "Kestrel__GrpcPort": "5101"
+      }
     }
   }
 }

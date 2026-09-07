@@ -115,7 +115,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__AppConnection: Host=crm-db;Port=5432;Database=ClientOpsPortalCrmDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
-      ServicesDirectory__BaseUrl: http://services-directory:8080
+      ServicesDirectory__BaseUrl: http://services-directory:8081
       Services__SubscriptionHistory__BaseUrl: http://subscription-history:8080
       RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
       RabbitMq__Port: 5672
@@ -142,8 +142,11 @@ services:
     restart: unless-stopped
     ports:
       - "${DIRECTORY_PORT:-5100}:8080"
+      - "${DIRECTORY_GRPC_PORT:-5101}:8081"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Kestrel__RestPort: 8080
+      Kestrel__GrpcPort: 8081
       ConnectionStrings__DirectoryDb: Host=directory-db;Port=5432;Database=ClientOpsPortalDirectoryDb;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}
       Redis__Configuration: ${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
       Jwt__JwksUrl: http://auth:8080/.well-known/jwks

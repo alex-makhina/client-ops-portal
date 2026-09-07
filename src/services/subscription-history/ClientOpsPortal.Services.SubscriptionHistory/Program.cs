@@ -10,6 +10,8 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -74,8 +76,11 @@ var jwksUrl = builder.Configuration["Jwt:JwksUrl"]
     ?? "http://localhost:5110/.well-known/jwks";
 var issuer = builder.Configuration["Jwt:Issuer"] ?? "http://localhost:5110";
 var audience = builder.Configuration["Jwt:Audience"] ?? "ClientOpsPortalClient";
-var jwksClient = new HttpClient();
-Task<SecurityKey[]> keysTask = null!;
+
+var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+    jwksUrl,
+    new JwksConfigurationRetriever(),
+    new HttpDocumentRetriever { RequireHttps = false });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -89,13 +94,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
             {
-                if (keysTask is null)
-                {
-                    keysTask = jwksClient.GetStringAsync(jwksUrl)
-                        .ContinueWith(t => (SecurityKey[])JsonWebKeySet.Create(t.Result).Keys.Cast<SecurityKey>().ToArray());
-                }
-
-                return keysTask.GetAwaiter().GetResult();
+                var config = configurationManager.GetConfigurationAsync(CancellationToken.None).GetAwaiter().GetResult();
+                return config.SigningKeys;
             }
         };
     });
@@ -126,3 +126,16 @@ app.MapControllers();
 app.Run();
 
 public partial class Program { }
+
+sealed class JwksConfigurationRetriever : IConfigurationRetriever<OpenIdConnectConfiguration>
+{
+    public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(string address, IDocumentRetriever retriever, CancellationToken cancel)
+    {
+        var json = await retriever.GetDocumentAsync(address, cancel).ConfigureAwait(false);
+        var keySet = new JsonWebKeySet(json);
+        var configuration = new OpenIdConnectConfiguration { JsonWebKeySet = keySet };
+        foreach (var key in keySet.GetSigningKeys())
+            configuration.SigningKeys.Add(key);
+        return configuration;
+    }
+}

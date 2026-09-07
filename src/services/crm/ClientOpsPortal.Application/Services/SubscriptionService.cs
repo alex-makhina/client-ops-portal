@@ -7,6 +7,7 @@ using ClientOpsPortal.Domain.Enums;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
 namespace ClientOpsPortal.Application.Services
@@ -18,19 +19,22 @@ namespace ClientOpsPortal.Application.Services
         private readonly ISubscriptionHistoryClient _historyClient;
         private readonly IDirectoryCacheService _cache;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly ILogger<SubscriptionService> _logger;
 
         public SubscriptionService(
             IGenericRepository<Subscription> subscriptionRepository,
             ISubscriptionHistoryClient historyClient,
             IGenericRepository<Contract> contractRepository,
             IDirectoryCacheService cache,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint,
+            ILogger<SubscriptionService> logger)
         {
             _subscriptionRepository = subscriptionRepository;
             _contractRepository = contractRepository;
             _historyClient = historyClient;
             _cache = cache;
             _publishEndpoint = publishEndpoint;
+            _logger = logger;
         }
 
         public async Task<SubscriptionDto?> GetByIdAsync(Guid id, bool withIncludes = false, CancellationToken ct = default)
@@ -234,6 +238,7 @@ namespace ClientOpsPortal.Application.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to create subscription history for subscription {SubscriptionId}", subscriptionId);
                 return null;
             }
         }

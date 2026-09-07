@@ -1,7 +1,6 @@
 using ClientOpsPortal.Application.DTOs.Reports;
 using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Application.Mappings;
-using ClientOpsPortal.Application.Interfaces;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
 using System.Globalization;
 using System.Text;

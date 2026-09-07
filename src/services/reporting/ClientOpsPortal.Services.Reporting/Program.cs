@@ -32,7 +32,7 @@ var audience = builder.Configuration["Jwt:Audience"] ?? "ClientOpsPortalClient";
 
 var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
     jwksUrl,
-    new OpenIdConnectConfigurationRetriever(),
+    new JwksConfigurationRetriever(),
     new HttpDocumentRetriever { RequireHttps = false });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -102,3 +102,16 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+sealed class JwksConfigurationRetriever : IConfigurationRetriever<OpenIdConnectConfiguration>
+{
+    public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(string address, IDocumentRetriever retriever, CancellationToken cancel)
+    {
+        var json = await retriever.GetDocumentAsync(address, cancel).ConfigureAwait(false);
+        var keySet = new JsonWebKeySet(json);
+        var configuration = new OpenIdConnectConfiguration { JsonWebKeySet = keySet };
+        foreach (var key in keySet.GetSigningKeys())
+            configuration.SigningKeys.Add(key);
+        return configuration;
+    }
+}

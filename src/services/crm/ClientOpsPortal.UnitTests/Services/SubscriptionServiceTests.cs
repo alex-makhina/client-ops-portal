@@ -11,6 +11,7 @@ using ClientOpsPortal.Services.Reporting.Contracts.Events;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models;
 using MassTransit;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
 using System.Linq.Expressions;
@@ -105,7 +106,8 @@ public class SubscriptionServiceTests
             _historyClientMock.Object,
             _contractRepositoryMock.Object,
             _cacheMock.Object,
-            _publishEndpointMock.Object);
+            _publishEndpointMock.Object,
+            NullLogger<SubscriptionService>.Instance);
     }
 
     #region GetByIdAsync Tests

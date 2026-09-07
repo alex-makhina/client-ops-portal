@@ -5,18 +5,28 @@ using ClientOpsPortal.Services.Directory.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serve REST (HTTP/1.1) and gRPC (HTTP/2 h2c) on the same port.
+// REST over HTTP/1.1 and gRPC over HTTP/2 (h2c) on dedicated endpoints.
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ConfigureEndpointDefaults(listenOptions =>
+    var restPort = builder.Configuration.GetValue<int?>("Kestrel:RestPort") ?? 8080;
+    var grpcPort = builder.Configuration.GetValue<int?>("Kestrel:GrpcPort") ?? 8081;
+
+    options.ListenAnyIP(restPort, listenOptions =>
     {
-        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+        listenOptions.Protocols = HttpProtocols.Http1;
+    });
+
+    options.ListenAnyIP(grpcPort, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http2;
     });
 });
 
@@ -59,8 +69,11 @@ var jwksUrl = builder.Configuration["Jwt:JwksUrl"]
     ?? "http://localhost:5110/.well-known/jwks";
 var issuer = builder.Configuration["Jwt:Issuer"] ?? "http://localhost:5110";
 var audience = builder.Configuration["Jwt:Audience"] ?? "ClientOpsPortalClient";
-var jwksClient = new HttpClient();
-Task<SecurityKey[]> keysTask = null!;
+
+var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+    jwksUrl,
+    new JwksConfigurationRetriever(),
+    new HttpDocumentRetriever { RequireHttps = false });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -74,13 +87,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
             {
-                if (keysTask is null)
-                {
-                    keysTask = jwksClient.GetStringAsync(jwksUrl)
-                        .ContinueWith(t => (SecurityKey[])JsonWebKeySet.Create(t.Result).Keys.Cast<SecurityKey>().ToArray());
-                }
-
-                return keysTask.GetAwaiter().GetResult();
+                var config = configurationManager.GetConfigurationAsync(CancellationToken.None).GetAwaiter().GetResult();
+                return config.SigningKeys;
             }
         };
     });
@@ -125,3 +133,16 @@ app.MapControllers();
 app.MapGrpcService<ClientOpsPortal.Services.Directory.Grpc.DirectoryCatalogGrpcService>();
 
 app.Run();
+
+sealed class JwksConfigurationRetriever : IConfigurationRetriever<OpenIdConnectConfiguration>
+{
+    public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(string address, IDocumentRetriever retriever, CancellationToken cancel)
+    {
+        var json = await retriever.GetDocumentAsync(address, cancel).ConfigureAwait(false);
+        var keySet = new JsonWebKeySet(json);
+        var configuration = new OpenIdConnectConfiguration { JsonWebKeySet = keySet };
+        foreach (var key in keySet.GetSigningKeys())
+            configuration.SigningKeys.Add(key);
+        return configuration;
+    }
+}
