@@ -7,12 +7,10 @@ using System.Text.Json;
 
 namespace ClientOpsPortal.Services.Reporting.Client
 {
-    public class ReportingClient : IReportingClient
+    public class ReportingClient(HttpClient http) : IReportingClient
     {
-        private readonly HttpClient _http;
+        private readonly HttpClient _http = http;
         private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-        public ReportingClient(HttpClient http) => _http = http;
 
         public async Task<IEnumerable<ServiceStatusReportDto>> GetServicesStatusReportAsync(
             string format = "json",

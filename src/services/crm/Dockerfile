@@ -5,6 +5,7 @@ WORKDIR /app
 # Copy csproj files
 COPY src/services/crm/ClientOpsPortal.Api/ClientOpsPortal.Api.csproj ClientOpsPortal.Api/
 COPY src/services/crm/ClientOpsPortal.Application/ClientOpsPortal.Application.csproj ClientOpsPortal.Application/
+COPY src/services/crm/ClientOpsPortal.Contracts/ClientOpsPortal.Contracts.csproj ClientOpsPortal.Contracts/
 COPY src/services/crm/ClientOpsPortal.Domain/ClientOpsPortal.Domain.csproj ClientOpsPortal.Domain/
 COPY src/services/crm/ClientOpsPortal.Infrastructure/ClientOpsPortal.Infrastructure.csproj ClientOpsPortal.Infrastructure/
 COPY src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ClientOpsPortal.Services.Directory.Client.csproj ../../services-directory/ClientOpsPortal.Services.Directory.Client/
@@ -20,6 +21,7 @@ RUN dotnet restore ClientOpsPortal.Api/ClientOpsPortal.Api.csproj
 # Copy source code
 COPY src/services/crm/ClientOpsPortal.Api/ ClientOpsPortal.Api/
 COPY src/services/crm/ClientOpsPortal.Application/ ClientOpsPortal.Application/
+COPY src/services/crm/ClientOpsPortal.Contracts/ ClientOpsPortal.Contracts/
 COPY src/services/crm/ClientOpsPortal.Domain/ ClientOpsPortal.Domain/
 COPY src/services/crm/ClientOpsPortal.Infrastructure/ ClientOpsPortal.Infrastructure/
 COPY src/services/services-directory/ClientOpsPortal.Services.Directory.Client/ ../../services-directory/ClientOpsPortal.Services.Directory.Client/
