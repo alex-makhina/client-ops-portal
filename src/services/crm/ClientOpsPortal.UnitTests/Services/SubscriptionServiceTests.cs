@@ -7,7 +7,7 @@ using ClientOpsPortal.Domain.Entities;
 using ClientOpsPortal.Domain.Enums;
 using ClientOpsPortal.Domain.Exceptions;
 using ClientOpsPortal.Domain.Interfaces.Repositories;
-using ClientOpsPortal.Services.Reporting.Contracts.Events;
+using ClientOpsPortal.Contracts.Events;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.DTOs;
 using ClientOpsPortal.Services.SubscriptionHistory.Contracts.Models;
 using MassTransit;
@@ -99,6 +99,18 @@ public class SubscriptionServiceTests
         // Настройка PublishEndpoint
         _publishEndpointMock
             .Setup(x => x.Publish(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<SubscriptionCreatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<SubscriptionUpdatedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _publishEndpointMock
+            .Setup(x => x.Publish(It.IsAny<SubscriptionDeletedEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         _sut = new SubscriptionService(
@@ -230,6 +242,10 @@ public class SubscriptionServiceTests
 
         _subscriptionRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _publishEndpointMock.Verify(
+            x => x.Publish(It.IsAny<SubscriptionCreatedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         _historyClientMock.Verify(

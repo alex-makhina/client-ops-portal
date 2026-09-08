@@ -13,7 +13,6 @@
     <Compile Remove="Controllers\SubscriptionHistoryStepController.cs" />
     <Compile Remove="Services\SubscriptionHistoryServiceTests.cs" />
     <Compile Remove="Services\SubscriptionHistoryStepServiceTests.cs" />
-    <Compile Remove="Services\SubscriptionServiceTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

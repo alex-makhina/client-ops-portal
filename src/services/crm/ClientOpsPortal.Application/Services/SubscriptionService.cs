@@ -59,6 +59,11 @@ namespace ClientOpsPortal.Application.Services
             await _subscriptionRepository.AddAsync(subscription, ct);
             await EnrichAsync(subscription, ct);
 
+            await _publishEndpoint.Publish(new SubscriptionCreatedEvent(
+                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
+                subscription.BeginDate, subscription.EndDate, DateTimeOffset.UtcNow
+            ), ct);
+
             var historyDto = await CreateHistory(
                 subscription.Id,
                 SubscriptionActionType.Open,
@@ -150,6 +155,11 @@ namespace ClientOpsPortal.Application.Services
             await _subscriptionRepository.UpdateAsync(subscription, ct);
             await EnrichAsync(subscription, ct);
 
+            await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
+                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
+                subscription.BeginDate, subscription.EndDate, DateTimeOffset.UtcNow
+            ), ct);
+
             if (historyDto != null)
             {
                 await _historyClient.UpdateHistoryStatusAsync(historyDto.Id, SubscriptionActionStatus.Pending, ct);
@@ -182,6 +192,11 @@ namespace ClientOpsPortal.Application.Services
 
             await _subscriptionRepository.UpdateAsync(subscription, ct);
             await EnrichAsync(subscription, ct);
+
+            await _publishEndpoint.Publish(new SubscriptionUpdatedEvent(
+                subscription.Id, subscription.ContractId, subscription.ServiceId, subscription.TariffPlanId,
+                subscription.BeginDate, subscription.EndDate, DateTimeOffset.UtcNow
+            ), ct);
 
             if (historyDto != null)
             {
